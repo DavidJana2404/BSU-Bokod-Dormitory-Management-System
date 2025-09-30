@@ -5,20 +5,31 @@ set -e
 
 echo "Starting Laravel application setup..."
 
-# Wait for database to be ready
+# Create necessary directories
+mkdir -p /var/log/supervisor
+mkdir -p /run/php
+
+# Wait for database to be ready (with timeout)
 echo "Waiting for database connection..."
-until php artisan migrate --force --no-interaction; do
-  echo "Database not ready, waiting..."
-  sleep 5
+counter=0
+max_attempts=30
+until php artisan migrate --force --no-interaction 2>/dev/null || [ $counter -eq $max_attempts ]; do
+  echo "Database not ready, waiting... (attempt $counter/$max_attempts)"
+  counter=$((counter + 1))
+  sleep 10
 done
+
+if [ $counter -eq $max_attempts ]; then
+    echo "Warning: Database connection timeout, continuing without migrations"
+fi
 
 echo "Running Laravel optimizations..."
 
 # Clear any existing cache
-php artisan config:clear
-php artisan route:clear
-php artisan view:clear
-php artisan cache:clear
+php artisan config:clear || true
+php artisan route:clear || true
+php artisan view:clear || true
+php artisan cache:clear || true
 
 # Generate application key if not set
 if [ -z "$APP_KEY" ]; then
@@ -27,14 +38,19 @@ if [ -z "$APP_KEY" ]; then
 fi
 
 # Cache configurations for better performance
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
+php artisan config:cache || true
+php artisan route:cache || true
+php artisan view:cache || true
 
-# Create storage link
-php artisan storage:link
+# Create storage link (ignore if already exists)
+php artisan storage:link 2>/dev/null || true
 
 echo "Starting web services..."
 
-# Start supervisor to manage nginx and php-fpm
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+# Start PHP-FPM in background
+php-fpm -D
+
+echo "PHP-FPM started, starting Nginx..."
+
+# Start nginx in foreground (this keeps the container running)
+exec nginx -g "daemon off;"

@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
     libonig-dev \
     libxml2-dev \
     libpq-dev \
@@ -15,7 +17,8 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     supervisor \
-    && docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd opcache \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,11 +45,9 @@ RUN chown -R www-data:www-data /var/www/html \
 # Copy nginx configuration
 COPY docker/nginx.conf /etc/nginx/sites-available/default
 
-# Copy PHP-FPM configuration
+# Copy PHP configurations
+COPY docker/php.ini /usr/local/etc/php/php.ini
 COPY docker/php-fpm.conf /usr/local/etc/php-fpm.d/www.conf
-
-# Copy supervisor configuration
-COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Create necessary directories
 RUN mkdir -p /run/php /var/log/supervisor
@@ -55,8 +56,8 @@ RUN mkdir -p /run/php /var/log/supervisor
 COPY docker/startup.sh /usr/local/bin/startup.sh
 RUN chmod +x /usr/local/bin/startup.sh
 
-# Expose port 80
-EXPOSE 80
+# Expose port 10000 (Render requirement)
+EXPOSE 10000
 
 # Start with our custom startup script
 CMD ["/usr/local/bin/startup.sh"]

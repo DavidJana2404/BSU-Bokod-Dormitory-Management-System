@@ -18,6 +18,15 @@ Route::get('/', function () {
     return Inertia::render('welcome');
 })->name('home');
 
+// Health check endpoint for deployment services
+Route::get('/health', function () {
+    return response()->json([
+        'status' => 'ok',
+        'timestamp' => now()->toISOString(),
+        'app' => config('app.name')
+    ]);
+});
+
 // Application routes - public routes for submitting applications
 Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
 Route::get('/api/dormitories', [ApplicationController::class, 'getDormitories'])->name('api.dormitories');
