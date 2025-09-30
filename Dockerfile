@@ -35,7 +35,12 @@ COPY . /var/www/html
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Install Node.js dependencies and build assets
-RUN npm ci && npm run build
+RUN npm ci --only=production
+RUN npm run build
+
+# Verify build output
+RUN ls -la public/build/ || echo "Build directory not found - checking for assets..."
+RUN find public/ -name "*.js" -o -name "*.css" | head -10 || echo "No JS/CSS files found"
 
 # Create Laravel directories and set permissions
 RUN mkdir -p /var/www/html/storage/framework/{cache,sessions,views} \

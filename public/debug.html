@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - BSU Bokod DMS</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <h1>BSU Bokod DMS - Debug Page</h1>
+    <div class="status success">
+        ✅ Static files are being served correctly by nginx
+    </div>
+    <p>If you can see this page, the web server is working.</p>
+    
+    <h2>Troubleshooting Links:</h2>
+    <ul>
+        <li><a href="/health">Health Check</a></li>
+        <li><a href="/debug-info">System Debug Info</a></li>
+        <li><a href="/">Main Application</a></li>
+    </ul>
+    
+    <h2>Common Issues:</h2>
+    <ul>
+        <li><strong>Blank Screen:</strong> Frontend assets not loading</li>
+        <li><strong>500 Error:</strong> Backend configuration issue</li>
+        <li><strong>Database Error:</strong> Environment variables not set</li>
+    </ul>
+</body>
+</html>
