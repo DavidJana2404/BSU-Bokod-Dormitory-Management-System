@@ -27,6 +27,25 @@ Route::get('/health', function () {
     ]);
 });
 
+// Debug endpoint for troubleshooting (remove in production)
+Route::get('/debug-info', function () {
+    return response()->json([
+        'php_version' => PHP_VERSION,
+        'laravel_version' => app()->version(),
+        'app_env' => config('app.env'),
+        'app_debug' => config('app.debug'),
+        'app_key_set' => !empty(config('app.key')),
+        'database' => [
+            'connection' => config('database.default'),
+            'host' => config('database.connections.' . config('database.default') . '.host'),
+            'database' => config('database.connections.' . config('database.default') . '.database'),
+        ],
+        'storage_writable' => is_writable(storage_path()),
+        'cache_writable' => is_writable(storage_path('framework/cache')),
+        'logs_writable' => is_writable(storage_path('logs')),
+    ]);
+});
+
 // Application routes - public routes for submitting applications
 Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
 Route::get('/api/dormitories', [ApplicationController::class, 'getDormitories'])->name('api.dormitories');
