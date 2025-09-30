@@ -29,15 +29,41 @@ echo "APP_ENV: $APP_ENV"
 echo "DB_CONNECTION: $DB_CONNECTION"
 
 echo "Setting up .env file for production..."
-# Create .env file from environment variables if it doesn't exist or is incomplete
-if [ ! -f /var/www/html/.env ] || [ ! -s /var/www/html/.env ]; then
-    echo "Creating .env file from environment variables..."
-    cat > /var/www/html/.env << EOF
-APP_NAME="${APP_NAME:-Laravel}"
+
+# Validate required environment variables
+echo "Validating environment variables..."
+required_vars="DB_HOST DB_DATABASE DB_USERNAME DB_PASSWORD"
+missing_vars=""
+
+for var in $required_vars; do
+    value=$(eval echo \$$var)
+    if [ -z "$value" ] || [[ "$value" == *"[Your"* ]] || [[ "$value" == *"internal hostname"* ]]; then
+        missing_vars="$missing_vars $var"
+        echo "❌ $var is not set or contains placeholder text"
+    else
+        echo "✅ $var is properly set"
+    fi
+done
+
+if [ -n "$missing_vars" ]; then
+    echo "❌ ERROR: Missing or invalid environment variables:$missing_vars"
+    echo "Please set these in your Render Dashboard → Environment:"
+    for var in $missing_vars; do
+        echo "  - $var"
+    done
+    echo "❌ CRITICAL: Cannot start without proper database configuration!"
+    echo "❌ Exiting to prevent invalid .env file creation..."
+    exit 1
+fi
+
+# Create .env file from validated environment variables
+echo "Creating .env file with validated values..."
+cat > /var/www/html/.env << EOF
+APP_NAME="${APP_NAME:-BSU Bokod DMS}"
 APP_ENV=${APP_ENV:-production}
 APP_KEY=${APP_KEY}
 APP_DEBUG=${APP_DEBUG:-false}
-APP_URL=${APP_URL}
+APP_URL=${APP_URL:-http://localhost}
 
 LOG_CHANNEL=${LOG_CHANNEL:-stack}
 LOG_LEVEL=${LOG_LEVEL:-error}
@@ -57,10 +83,9 @@ QUEUE_CONNECTION=${QUEUE_CONNECTION:-database}
 MAIL_MAILER=${MAIL_MAILER:-log}
 BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-12}
 EOF
-    echo ".env file created successfully"
-else
-    echo ".env file already exists"
-fi
+
+echo "✅ .env file created successfully with proper values"
+echo "Database connection will be: ${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
 
 echo "Running comprehensive environment check..."
 php /var/www/html/docker/check-env.php || {
@@ -68,18 +93,29 @@ php /var/www/html/docker/check-env.php || {
     echo "This might cause issues with the application"
 }
 
-# Wait for database to be ready (with timeout)
-echo "Waiting for database connection..."
-counter=0
-max_attempts=30
-until php artisan migrate --force --no-interaction 2>/dev/null || [ $counter -eq $max_attempts ]; do
-  echo "Database not ready, waiting... (attempt $counter/$max_attempts)"
-  counter=$((counter + 1))
-  sleep 10
-done
-
-if [ $counter -eq $max_attempts ]; then
-    echo "Warning: Database connection timeout, continuing without migrations"
+# Test database connection before proceeding
+echo "Testing database connection..."
+if php artisan migrate:status --no-interaction 2>/dev/null; then
+    echo "✅ Database connection successful"
+else
+    echo "❌ Database connection failed!"
+    echo "Attempting to run migrations..."
+    
+    # Wait for database to be ready (with timeout)
+    counter=0
+    max_attempts=10
+    until php artisan migrate --force --no-interaction 2>/dev/null || [ $counter -eq $max_attempts ]; do
+      echo "Database not ready, waiting... (attempt $((counter + 1))/$max_attempts)"
+      counter=$((counter + 1))
+      sleep 10
+    done
+    
+    if [ $counter -eq $max_attempts ]; then
+        echo "❌ CRITICAL: Database connection failed after $max_attempts attempts!"
+        echo "❌ Please check your database configuration in Render Dashboard"
+        echo "❌ Current settings: ${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
+        exit 1
+    fi
 fi
 
 echo "Running Laravel optimizations..."
