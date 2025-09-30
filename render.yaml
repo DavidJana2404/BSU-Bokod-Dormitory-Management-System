@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: bsu-bokod-dms
+    runtime: docker
+    plan: free
+    repo: https://github.com/DavidJana2404/BSU-Bokod-Dormitory-Management-System.git
+    region: oregon
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: APP_NAME
+        value: BSU Bokod DMS
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: SESSION_DRIVER
+        value: database
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+      - key: MAIL_MAILER
+        value: log
+      - key: LOG_CHANNEL
+        value: stack
+      - key: LOG_LEVEL
+        value: error
+      - key: BCRYPT_ROUNDS
+        value: 12
+
+databases:
+  - name: bsu-bokod-dms-db
+    plan: free
+    databaseName: dms_production
+    user: dms_user
