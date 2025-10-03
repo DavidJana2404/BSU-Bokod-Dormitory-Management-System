@@ -34,9 +34,11 @@ COPY . /var/www/html
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Install Node.js dependencies and build assets
-RUN npm ci --only=production
+# Install Node.js dependencies and build assets (include devDeps for build)
+RUN npm ci
 RUN npm run build
+# Remove devDependencies to keep image slim
+RUN npm prune --omit=dev
 
 # Verify build output
 RUN ls -la public/build/ || echo "Build directory not found - checking for assets..."
