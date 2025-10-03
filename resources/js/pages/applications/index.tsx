@@ -48,6 +48,7 @@ interface Application {
 
 interface ApplicationsPageProps extends PageProps {
     applications: Application[];
+    error?: string;
     flash?: {
         success?: string;
         error?: string;
@@ -55,7 +56,7 @@ interface ApplicationsPageProps extends PageProps {
 }
 
 export default function Applications() {
-    const { applications = [], flash } = usePage<ApplicationsPageProps>().props;
+    const { applications = [], error: serverError, flash } = usePage<ApplicationsPageProps>().props;
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
     const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
@@ -64,7 +65,7 @@ export default function Applications() {
     const [warningDialogOpen, setWarningDialogOpen] = useState(false);
     const [pendingApproval, setPendingApproval] = useState<Application | null>(null);
     const [pendingRejection, setPendingRejection] = useState<Application | null>(null);
-    const [error, setError] = useState<string | null>(flash?.error || null);
+    const [error, setError] = useState<string | null>(serverError || flash?.error || null);
     const [success, setSuccess] = useState<string | null>(flash?.success || null);
     
     // Auto-dismiss success messages after 5 seconds

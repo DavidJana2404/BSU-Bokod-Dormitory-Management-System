@@ -18,21 +18,116 @@ class ApplicationController extends Controller
      */
     public function index()
     {
-        $user = Auth::user();
-        
-        // Get applications based on user role
-        $applicationsQuery = Application::with(['tenant', 'processedBy']);
-        
-        if ($user->role === 'manager' && $user->tenant_id) {
-            // Manager can only see applications for their dormitory
-            $applicationsQuery->where('tenant_id', $user->tenant_id);
+        try {
+            $user = Auth::user();
+            
+            if (!$user) {
+                return redirect()->route('login');
+            }
+            
+            // Initialize empty applications array as fallback
+            $applications = collect([]);
+            
+            try {
+                // Get applications based on user role with optimized query
+                $applicationsQuery = Application::select([
+                    'id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone', 
+                    'additional_info', 'status', 'rejection_reason', 'processed_by', 
+                    'processed_at', 'created_at'
+                ]);
+                
+                if ($user->role === 'manager' && $user->tenant_id) {
+                    // Manager can only see applications for their dormitory
+                    $applicationsQuery->where('tenant_id', $user->tenant_id);
+                }
+                
+                // Get applications with pagination to avoid memory issues
+                $applications = $applicationsQuery
+                    ->orderBy('created_at', 'desc')
+                    ->limit(100) // Limit to prevent memory issues
+                    ->get();
+                
+                // Manually load relationships to better handle errors
+                $applications = $applications->map(function ($application) {
+                    try {
+                        // Load tenant information
+                        $tenant = Tenant::select('tenant_id', 'dormitory_name')
+                            ->where('tenant_id', $application->tenant_id)
+                            ->first();
+                            
+                        // Load processed by user information  
+                        $processedBy = null;
+                        if ($application->processed_by) {
+                            $processedBy = User::select('id', 'name')
+                                ->where('id', $application->processed_by)
+                                ->first();
+                        }
+                        
+                        // Transform to array with safe fallbacks
+                        return [
+                            'id' => $application->id,
+                            'first_name' => $application->first_name,
+                            'last_name' => $application->last_name,
+                            'email' => $application->email,
+                            'phone' => $application->phone,
+                            'additional_info' => $application->additional_info,
+                            'status' => $application->status,
+                            'rejection_reason' => $application->rejection_reason,
+                            'created_at' => $application->created_at,
+                            'processed_at' => $application->processed_at,
+                            'tenant' => [
+                                'dormitory_name' => $tenant ? $tenant->dormitory_name : 'Unknown Dormitory'
+                            ],
+                            'processed_by' => $processedBy ? [
+                                'name' => $processedBy->name
+                            ] : null,
+                        ];
+                    } catch (\Exception $e) {
+                        \Log::error('Error processing application: ' . $e->getMessage(), [
+                            'application_id' => $application->id ?? 'unknown',
+                            'error' => $e->getMessage()
+                        ]);
+                        
+                        // Return application with fallback values
+                        return [
+                            'id' => $application->id,
+                            'first_name' => $application->first_name,
+                            'last_name' => $application->last_name,
+                            'email' => $application->email,
+                            'phone' => $application->phone,
+                            'additional_info' => $application->additional_info,
+                            'status' => $application->status,
+                            'rejection_reason' => $application->rejection_reason,
+                            'created_at' => $application->created_at,
+                            'processed_at' => $application->processed_at,
+                            'tenant' => [
+                                'dormitory_name' => 'Unknown Dormitory'
+                            ],
+                            'processed_by' => null,
+                        ];
+                    }
+                });
+                
+            } catch (\Exception $e) {
+                \Log::error('Error loading applications: ' . $e->getMessage());
+                $applications = collect([]);
+            }
+            
+            return Inertia::render('applications/index', [
+                'applications' => $applications->values()->all(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Fatal error in applications index: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return safe fallback
+            return Inertia::render('applications/index', [
+                'applications' => [],
+                'error' => 'Unable to load applications at this time. Please try again later.'
+            ]);
         }
-        
-        $applications = $applicationsQuery->orderBy('created_at', 'desc')->get();
-        
-        return Inertia::render('applications/index', [
-            'applications' => $applications,
-        ]);
     }
     
     /**

@@ -34,21 +34,44 @@ Route::post('/setup/promote-user', [AdminSetupController::class, 'promoteUserByE
 
 // Debug endpoint for troubleshooting (remove in production)
 Route::get('/debug-info', function () {
-    return response()->json([
-        'php_version' => PHP_VERSION,
-        'laravel_version' => app()->version(),
-        'app_env' => config('app.env'),
-        'app_debug' => config('app.debug'),
-        'app_key_set' => !empty(config('app.key')),
-        'database' => [
-            'connection' => config('database.default'),
-            'host' => config('database.connections.' . config('database.default') . '.host'),
-            'database' => config('database.connections.' . config('database.default') . '.database'),
-        ],
-        'storage_writable' => is_writable(storage_path()),
-        'cache_writable' => is_writable(storage_path('framework/cache')),
-        'logs_writable' => is_writable(storage_path('logs')),
-    ]);
+    try {
+        // Test database connection
+        $dbStatus = 'connected';
+        $applicationCount = 0;
+        $tenantCount = 0;
+        
+        try {
+            \DB::connection()->getPdo();
+            $applicationCount = \App\Models\Application::count();
+            $tenantCount = \App\Models\Tenant::count();
+        } catch (\Exception $e) {
+            $dbStatus = 'error: ' . $e->getMessage();
+        }
+        
+        return response()->json([
+            'php_version' => PHP_VERSION,
+            'laravel_version' => app()->version(),
+            'app_env' => config('app.env'),
+            'app_debug' => config('app.debug'),
+            'app_key_set' => !empty(config('app.key')),
+            'database' => [
+                'connection' => config('database.default'),
+                'host' => config('database.connections.' . config('database.default') . '.host'),
+                'database' => config('database.connections.' . config('database.default') . '.database'),
+                'status' => $dbStatus,
+                'application_count' => $applicationCount,
+                'tenant_count' => $tenantCount,
+            ],
+            'storage_writable' => is_writable(storage_path()),
+            'cache_writable' => is_writable(storage_path('framework/cache')),
+            'logs_writable' => is_writable(storage_path('logs')),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'error' => 'Debug endpoint failed',
+            'message' => $e->getMessage()
+        ], 500);
+    }
 });
 
 // Application routes - public routes for submitting applications
