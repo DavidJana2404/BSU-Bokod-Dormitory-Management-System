@@ -35,9 +35,10 @@ COPY . /var/www/html
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
 # Install Node.js dependencies and build assets (include devDeps for build)
+# This installs both devDependencies and dependencies needed for Vite build
 RUN npm ci
 RUN npm run build
-# Remove devDependencies to keep image slim
+# Remove devDependencies to keep final image slim
 RUN npm prune --omit=dev
 
 # Verify build output
