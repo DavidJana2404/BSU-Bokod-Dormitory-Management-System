@@ -13,6 +13,7 @@ use App\Http\Controllers\StudentStatusController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\CleaningScheduleController;
+use App\Http\Controllers\AdminSetupController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -26,6 +27,10 @@ Route::get('/health', function () {
         'app' => config('app.name')
     ]);
 });
+
+// Temporary admin setup endpoints (remove after setting up first admin)
+Route::post('/setup/promote-first-user', [AdminSetupController::class, 'promoteFirstUserToAdmin'])->name('setup.promote-first-user');
+Route::post('/setup/promote-user', [AdminSetupController::class, 'promoteUserByEmail'])->name('setup.promote-user');
 
 // Debug endpoint for troubleshooting (remove in production)
 Route::get('/debug-info', function () {
