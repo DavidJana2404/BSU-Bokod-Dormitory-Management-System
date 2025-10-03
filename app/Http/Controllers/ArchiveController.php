@@ -15,6 +15,11 @@ class ArchiveController extends Controller
     {
         $user = $request->user();
         
+        // Cashiers are not allowed to access archive functionality
+        if ($user->role === 'cashier') {
+            abort(403, 'Access denied. Cashiers do not have access to archive functionality.');
+        }
+        
         if ($user->role === 'admin') {
             // Admin can see archived dormitories (system-wide)
             $archivedDormitories = Tenant::archived()
@@ -117,6 +122,11 @@ class ArchiveController extends Controller
     {
         $user = $request->user();
         
+        // Cashiers are not allowed to access archive functionality
+        if ($user->role === 'cashier') {
+            abort(403, 'Access denied. Cashiers do not have access to archive functionality.');
+        }
+        
         switch ($type) {
             case 'dormitory':
                 if ($user->role !== 'admin') {
@@ -162,6 +172,11 @@ class ArchiveController extends Controller
     {
         $user = $request->user();
         
+        // Cashiers are not allowed to access archive functionality
+        if ($user->role === 'cashier') {
+            abort(403, 'Access denied. Cashiers do not have access to archive functionality.');
+        }
+        
         switch ($type) {
             case 'dormitory':
                 if ($user->role !== 'admin') {
@@ -198,8 +213,44 @@ class ArchiveController extends Controller
             }
         }
         
-        $item->delete();
+        $item->forceDelete();
         
         return redirect()->back()->with('success', ucfirst($type) . ' permanently deleted.');
+    }
+    
+    public function clearAll(Request $request)
+    {
+        $user = $request->user();
+        
+        // Cashiers are not allowed to access archive functionality
+        if ($user->role === 'cashier') {
+            abort(403, 'Access denied. Cashiers do not have access to archive functionality.');
+        }
+        
+        $deletedCount = 0;
+        
+        if ($user->role === 'admin') {
+            // Admin can only clear dormitories (system-wide)
+            $deletedCount = Tenant::archived()->count();
+            Tenant::archived()->forceDelete();
+        } else {
+            // Manager can clear rooms, students, bookings from their tenant
+            $roomsCount = Room::where('tenant_id', $user->tenant_id)->archived()->count();
+            $studentsCount = Student::where('tenant_id', $user->tenant_id)->archived()->count();
+            $bookingsCount = Booking::where('tenant_id', $user->tenant_id)->archived()->count();
+            
+            $deletedCount = $roomsCount + $studentsCount + $bookingsCount;
+            
+            // Force delete all archived items for this tenant
+            Room::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
+            Student::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
+            Booking::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
+        }
+        
+        $message = $deletedCount > 0 
+            ? "Successfully cleared {$deletedCount} archived item(s)." 
+            : "No archived items to clear.";
+            
+        return redirect()->back()->with('success', $message);
     }
 }

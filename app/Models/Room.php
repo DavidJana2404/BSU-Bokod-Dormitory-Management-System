@@ -38,14 +38,11 @@ class Room extends Model
 
     /**
      * Get current active bookings for this room (excluding archived bookings)
+     * For semester-based bookings, we consider all non-archived bookings as current
      */
     public function currentBookings()
     {
-        $now = Carbon::now();
-        return $this->bookings()
-            ->notArchived()
-            ->where('check_in_date', '<=', $now)
-            ->where('check_out_date', '>=', $now);
+        return $this->bookings()->notArchived();
     }
 
     /**

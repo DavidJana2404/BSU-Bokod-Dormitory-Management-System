@@ -33,7 +33,7 @@ class StudentController extends Controller
         
         // Validation is handled by StudentFormRequest
         
-        $data = $request->only(['first_name', 'last_name', 'email', 'phone', 'check_in_date', 'check_out_date']);
+        $data = $request->only(['first_name', 'last_name', 'email', 'phone']);
         $data['tenant_id'] = $user->tenant_id;
         
         // Hash password only if provided
@@ -81,9 +81,9 @@ class StudentController extends Controller
                 'room_number' => $booking->room ? $booking->room->room_number : null,
                 'room_type' => $booking->room ? $booking->room->type : null,
                 'dormitory_name' => $booking->room && $booking->room->tenant ? $booking->room->tenant->dormitory_name : null,
-                'check_in_date' => $booking->check_in_date,
-                'check_out_date' => $booking->check_out_date,
-                'is_current' => $booking->check_in_date <= now() && $booking->check_out_date >= now(),
+                'semester_count' => $booking->semester_count,
+                'total_fee' => $booking->semester_count * 2000,
+                'is_current' => !is_null($booking->semester_count),
                 'created_at' => $booking->created_at,
             ];
         })->sortByDesc('created_at')->values();
@@ -101,7 +101,7 @@ class StudentController extends Controller
         
         // Validation is handled by StudentFormRequest
         
-        $data = $request->only(['first_name', 'last_name', 'email', 'phone', 'check_in_date', 'check_out_date']);
+        $data = $request->only(['first_name', 'last_name', 'email', 'phone']);
         
         // Update password if provided
         if ($request->filled('password')) {
@@ -146,11 +146,8 @@ class StudentController extends Controller
     private function mapStudentData()
     {
         return function ($student) {
-            // Get current active booking (if any)
-            $currentBooking = $student->bookings->filter(function ($booking) {
-                $now = now();
-                return $booking->check_in_date <= $now && $booking->check_out_date >= $now;
-            })->first();
+            // Get current active booking (if any) - for semester-based bookings, just get the first non-archived booking
+            $currentBooking = $student->bookings->first();
             
             return [
                 'student_id' => $student->student_id,
@@ -158,8 +155,6 @@ class StudentController extends Controller
                 'last_name' => $student->last_name,
                 'email' => $student->email,
                 'phone' => $student->phone,
-                'check_in_date' => $student->check_in_date,
-                'check_out_date' => $student->check_out_date,
                 'payment_status' => $student->payment_status ?? 'unpaid',
                 'payment_date' => $student->payment_date,
                 'amount_paid' => $student->amount_paid,
@@ -180,8 +175,8 @@ class StudentController extends Controller
                     'room_id' => $currentBooking->room_id,
                     'room_number' => $currentBooking->room ? $currentBooking->room->room_number : null,
                     'room_type' => $currentBooking->room ? $currentBooking->room->type : null,
-                    'check_in_date' => $currentBooking->check_in_date,
-                    'check_out_date' => $currentBooking->check_out_date,
+                    'semester_count' => $currentBooking->semester_count,
+                    'total_fee' => $currentBooking->semester_count * 2000,
                 ] : null,
                 'is_currently_booked' => $currentBooking !== null,
                 // Additional status information for better UI display

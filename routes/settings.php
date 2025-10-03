@@ -26,4 +26,5 @@ Route::middleware('auth')->group(function () {
     Route::get('settings/archive', [ArchiveController::class, 'index'])->name('archive.index');
     Route::post('settings/archive/restore/{type}/{id}', [ArchiveController::class, 'restore'])->name('archive.restore');
     Route::delete('settings/archive/force-delete/{type}/{id}', [ArchiveController::class, 'forceDelete'])->name('archive.forceDelete');
+    Route::delete('settings/archive/clear-all', [ArchiveController::class, 'clearAll'])->name('archive.clearAll');
 });

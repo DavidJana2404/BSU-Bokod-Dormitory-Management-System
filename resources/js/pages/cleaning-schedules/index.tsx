@@ -119,6 +119,14 @@ export default function CleaningSchedules() {
         router.delete(`/cleaning-schedules/${pendingDeleteId}`, {
             onSuccess: () => {
                 setPendingDeleteId(null);
+                setWarningDialogOpen(false);
+            },
+            onError: (errors) => {
+                console.error('Error deleting schedule:', errors);
+            },
+            onFinish: () => {
+                // Ensure the dialog is closed even if inertia navigation leaves it open
+                setWarningDialogOpen(false);
             }
         });
     };

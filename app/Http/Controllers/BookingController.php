@@ -76,8 +76,7 @@ class BookingController extends Controller
         $data = $request->validate([
             'student_id' => 'required|exists:students,student_id,tenant_id,' . $user->tenant_id,
             'room_id' => 'required|exists:rooms,room_id,tenant_id,' . $user->tenant_id,
-            'check_in_date' => 'required|date',
-            'check_out_date' => 'required|date|after:check_in_date',
+            'semester_count' => 'required|integer|min:1|max:10',
         ]);
         $data['tenant_id'] = $user->tenant_id;
         
@@ -91,7 +90,8 @@ class BookingController extends Controller
         
         Booking::create($data);
         
-        return redirect('/bookings');
+        // Use Inertia location redirect to force full page reload with fresh data
+        return Inertia::location('/bookings');
     }
 
     public function show($id)
@@ -107,8 +107,7 @@ class BookingController extends Controller
         // Only validate the fields that can be updated (student cannot be changed)
         $data = $request->validate([
             'room_id' => 'required|exists:rooms,room_id,tenant_id,' . $user->tenant_id,
-            'check_in_date' => 'required|date',
-            'check_out_date' => 'required|date|after:check_in_date',
+            'semester_count' => 'required|integer|min:1|max:10',
         ]);
         
         // If room is changing, check capacity of new room
@@ -123,7 +122,8 @@ class BookingController extends Controller
         
         $booking->update($data);
         
-        return redirect('/bookings');
+        // Use Inertia location redirect to force full page reload with fresh data
+        return Inertia::location('/bookings');
     }
 
     public function destroy(Request $request, $id)
@@ -132,7 +132,8 @@ class BookingController extends Controller
         $booking = Booking::findOrFail($id);
         $booking->archive();
         
-        return redirect('/bookings');
+        // Use Inertia location redirect to force full page reload with fresh data
+        return Inertia::location('/bookings');
     }
     
     public function restore($id)

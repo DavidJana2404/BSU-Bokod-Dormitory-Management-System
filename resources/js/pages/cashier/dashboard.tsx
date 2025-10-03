@@ -19,13 +19,17 @@ interface Student {
     email: string;
     phone: string;
     dormitory_name: string;
-    room_number: string;
+    room_number: string | null;
     payment_status: 'unpaid' | 'paid' | 'partial';
     payment_date: string | null;
     amount_paid: number | null;
     payment_notes: string | null;
     price_per_semester: number;
+    semester_count: number | null;
+    total_fee: number | null;
     tenant_id: number;
+    booking_id: number | null;
+    has_booking: boolean;
 }
 
 interface Stats {
@@ -76,8 +80,12 @@ export default function CashierDashboard() {
     // Automatically set amount when payment status changes
     useEffect(() => {
         if (selectedStudent && paymentStatus === 'paid') {
-            // Set the full amount from the room price
-            setAmountPaid(selectedStudent.price_per_semester?.toString() || '0');
+            // Set the full amount from the total semester fee (only if student has a booking)
+            if (selectedStudent.has_booking && selectedStudent.total_fee) {
+                setAmountPaid(selectedStudent.total_fee.toString());
+            } else {
+                setAmountPaid('0');
+            }
         } else if (paymentStatus === 'unpaid') {
             // Clear amount for unpaid status
             setAmountPaid('');
@@ -278,13 +286,31 @@ export default function CashierDashboard() {
                                                         </div>
                                                     </div>
                                                     
-                                                    {/* Semester Fee & Payment Date */}
+                                                    {/* Total Fee & Payment Info */}
                                                     <div className="grid grid-cols-2 gap-3">
                                                         <div className="space-y-1 text-center">
-                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Semester Fee</div>
-                                                            <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                                                ₱{student.price_per_semester?.toLocaleString() || 'N/A'}
+                                                            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                                                {student.has_booking ? 'Total Fee' : 'Status'}
                                                             </div>
+                                                            {student.has_booking ? (
+                                                                <>
+                                                                    <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                                                        ₱{student.total_fee?.toLocaleString() || 'N/A'}
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        {student.semester_count} semester{student.semester_count !== 1 ? 's' : ''}
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <div className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                                                                        No Booking
+                                                                    </div>
+                                                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                        Not assigned to room
+                                                                    </div>
+                                                                </>
+                                                            )}
                                                         </div>
                                                         <div className="space-y-1 text-center">
                                                             <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Payment Date</div>
@@ -325,8 +351,12 @@ export default function CashierDashboard() {
                                                     </div>
                                                     <div>
                                                         <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Room</div>
-                                                        <div className="font-medium text-gray-900 dark:text-gray-100">
-                                                            {student.room_number ? `${student.room_number}` : 'N/A'}
+                                                        <div className={`font-medium ${
+                                                            student.room_number 
+                                                                ? 'text-gray-900 dark:text-gray-100' 
+                                                                : 'text-orange-600 dark:text-orange-400'
+                                                        }`}>
+                                                            {student.room_number ? `${student.room_number}` : 'None'}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -374,7 +404,7 @@ export default function CashierDashboard() {
                                                             {student.dormitory_name}
                                                         </div>
                                                         <div className="text-xs text-gray-600 dark:text-gray-400">
-                                                            {student.room_number ? `Room ${student.room_number}` : 'No Room'}
+                                                            {student.room_number ? `Room ${student.room_number}` : 'No Room Assigned'}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -398,12 +428,30 @@ export default function CashierDashboard() {
                                                         </div>
                                                     </div>
 
-                                                    {/* Semester Fee */}
+                                                    {/* Total Fee */}
                                                     <div className="space-y-1 text-center">
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Semester Fee</div>
-                                                        <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                                                            ₱{student.price_per_semester?.toLocaleString() || 'N/A'}
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                            {student.has_booking ? 'Total Fee' : 'Status'}
                                                         </div>
+                                                        {student.has_booking ? (
+                                                            <>
+                                                                <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                                                    ₱{student.total_fee?.toLocaleString() || 'N/A'}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                    {student.semester_count} sem
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <div className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                                                                    No Booking
+                                                                </div>
+                                                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                    No room
+                                                                </div>
+                                                            </>
+                                                        )}
                                                     </div>
 
                                                     {/* Amount Paid */}
@@ -514,14 +562,25 @@ export default function CashierDashboard() {
                             {paymentStatus === 'paid' && selectedStudent && (
                                 <div>
                                     <Label htmlFor="amount-display">Amount Paid (₱)</Label>
-                                    <div className="p-3 bg-muted rounded-md border">
-                                        <div className="text-sm font-medium">
-                                            ₱{selectedStudent.price_per_semester?.toLocaleString() || '0'}
+                                    {selectedStudent.has_booking && selectedStudent.total_fee ? (
+                                        <div className="p-3 bg-muted rounded-md border">
+                                            <div className="text-sm font-medium">
+                                                ₱{selectedStudent.total_fee.toLocaleString()}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                Full payment for {selectedStudent.semester_count} semester{selectedStudent.semester_count !== 1 ? 's' : ''} (₱2,000/semester)
+                                            </div>
                                         </div>
-                                        <div className="text-xs text-muted-foreground mt-1">
-                                            Full payment for the semester
+                                    ) : (
+                                        <div className="p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                                            <div className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                                                Student has no active booking
+                                            </div>
+                                            <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                                Cannot process payment without a room booking
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             )}
                             

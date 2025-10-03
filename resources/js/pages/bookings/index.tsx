@@ -10,11 +10,20 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { Calendar, Plus, Edit3, Archive, Bed, DollarSign, Clock, AlertCircle, User } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
+import { useEffect } from 'react';
 
-const emptyForm = { student_id: '', room_id: '', check_in_date: '', check_out_date: '' };
+const emptyForm = { student_id: '', room_id: '', semester_count: 1 };
 
 export default function Bookings() {
-    const { bookings = [], students = [], rooms = [], errors, hasAnyStudents = false } = usePage().props;
+    const pageProps = usePage().props;
+    const { 
+        bookings = [], 
+        students = [], 
+        rooms = [], 
+        errors, 
+        hasAnyStudents = false 
+    } = pageProps || {};
+    
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [isEdit, setIsEdit] = useState(false);
@@ -26,15 +35,29 @@ export default function Bookings() {
     const [pendingArchiveId, setPendingArchiveId] = useState<number | null>(null);
     const [alertMessage, setAlertMessage] = useState('');
 
+    // Safe array initialization with fallbacks
     const studentList = Array.isArray(students) ? students : [];
     const roomList = Array.isArray(rooms) ? rooms : [];
     const bookingList = Array.isArray(bookings) ? bookings : [];
     
     // Check if there are available students for booking (only if there are students in the system)
-    const hasAvailableStudents = hasAnyStudents && studentList.length > 0;
+    const hasAvailableStudents = Boolean(hasAnyStudents) && Array.isArray(studentList) && studentList.length > 0;
     
     // Can create booking only if there are available students
     const canCreateBooking = hasAvailableStudents;
+    
+    // Effect to handle state inconsistencies and prevent blank pages
+    useEffect(() => {
+        // If we have bookings but no associated data, force a refresh
+        if (bookingList.length > 0) {
+            const hasInvalidBooking = bookingList.some((booking: any) => 
+                !booking || typeof booking !== 'object'
+            );
+            if (hasInvalidBooking) {
+                window.location.reload();
+            }
+        }
+    }, [bookingList]);
 
     // Filter rooms based on capacity
     const availableRooms = roomList.filter((r: any) => {
@@ -85,8 +108,7 @@ export default function Bookings() {
         setForm({
             student_id: booking.student_id,
             room_id: booking.room_id,
-            check_in_date: booking.check_in_date || '',
-            check_out_date: booking.check_out_date || '',
+            semester_count: booking.semester_count || 1,
         });
         setIsEdit(true);
         setEditId(booking.booking_id);
@@ -146,11 +168,10 @@ export default function Bookings() {
         setIsLoading(true);
         
         if (isEdit && editId) {
-            // For editing, only send the fields that can be updated (room and dates)
+            // For editing, only send the fields that can be updated (room and semester count)
             const updateData = {
                 room_id: form.room_id,
-                check_in_date: form.check_in_date,
-                check_out_date: form.check_out_date,
+                semester_count: form.semester_count,
             };
             
             router.put(`/bookings/${editId}`, updateData, {
@@ -161,6 +182,9 @@ export default function Bookings() {
                 onError: () => {
                     setIsLoading(false);
                 },
+                onFinish: () => {
+                    setIsLoading(false);
+                }
             });
         } else {
             // For new bookings, send all required fields
@@ -172,6 +196,9 @@ export default function Bookings() {
                 onError: () => {
                     setIsLoading(false);
                 },
+                onFinish: () => {
+                    setIsLoading(false);
+                }
             });
         }
     };
@@ -198,20 +225,27 @@ export default function Bookings() {
         });
     };
 
-    const calculateSemesters = (checkIn: string, checkOut: string) => {
-        if (!checkIn || !checkOut) return 0;
-        const start = new Date(checkIn);
-        const end = new Date(checkOut);
-        const diffTime = Math.abs(end.getTime() - start.getTime());
-        const months = diffTime / (1000 * 60 * 60 * 24 * 30.44); // Average days per month
-        return Math.ceil(months / 5); // 5 months per semester
+    const calculateTotal = (booking: any) => {
+        if (!booking.semester_count) return 0;
+        return booking.semester_count * 2000; // ₱2000 per semester
     };
 
-    const calculateTotal = (booking: any) => {
-        if (!booking.check_in_date || !booking.check_out_date) return 0;
-        const semesters = calculateSemesters(booking.check_in_date, booking.check_out_date);
-        return semesters * 2000; // ₱2000 per semester
-    };
+    // Add safety check to prevent blank pages during state transitions
+    if (pageProps === undefined || pageProps === null) {
+        return (
+            <AppLayout breadcrumbs={[{ title: 'Bookings', href: '/bookings' }]}>
+                <Head title="Bookings" />
+                <div className="p-6">
+                    <div className="flex items-center justify-center min-h-[400px]">
+                        <div className="text-center">
+                            <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                            <p className="text-gray-600 dark:text-gray-400">Loading bookings...</p>
+                        </div>
+                    </div>
+                </div>
+            </AppLayout>
+        );
+    }
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Bookings', href: '/bookings' }]}>
@@ -281,7 +315,7 @@ export default function Bookings() {
                             // Use student and room data directly from booking relationships
                             const student = booking.student || null;
                             const room = booking.room || null;
-                            const semesters = calculateSemesters(booking.check_in_date, booking.check_out_date);
+                            const semesters = booking.semester_count || 1;
                             const total = calculateTotal(booking);
                             
                             return (
@@ -330,17 +364,12 @@ export default function Bookings() {
                                                 <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                                                     <Clock size={16} className="text-green-500 flex-shrink-0" />
                                                     <div className="min-w-0 flex-1">
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Stay Period</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Duration</div>
                                                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                            {new Date(booking.check_in_date).toLocaleDateString('en-US', { 
-                                                                month: 'short', 
-                                                                day: 'numeric',
-                                                                year: 'numeric'
-                                                            })} - {new Date(booking.check_out_date).toLocaleDateString('en-US', { 
-                                                                month: 'short', 
-                                                                day: 'numeric',
-                                                                year: 'numeric'
-                                                            })}
+                                                            {semesters} semester{semesters !== 1 ? 's' : ''}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                            ₱2,000 per semester
                                                         </div>
                                                     </div>
                                                 </div>
@@ -405,30 +434,22 @@ export default function Bookings() {
                                                 </div>
                                             </div>
 
-                                            {/* Check In - 2 columns */}
+                                            {/* Duration - 2 columns */}
                                             <div className="col-span-2">
                                                 <div className="text-xs">
-                                                    <div className="text-gray-500 dark:text-gray-400">Check In</div>
+                                                    <div className="text-gray-500 dark:text-gray-400">Duration</div>
                                                     <div className="font-medium text-gray-900 dark:text-gray-100">
-                                                        {new Date(booking.check_in_date).toLocaleDateString('en-US', { 
-                                                            month: 'short', 
-                                                            day: 'numeric',
-                                                            year: '2-digit'
-                                                        })}
+                                                        {semesters} semester{semesters !== 1 ? 's' : ''}
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            {/* Check Out - 2 columns */}
+                                            {/* Rate - 2 columns */}
                                             <div className="col-span-2">
                                                 <div className="text-xs">
-                                                    <div className="text-gray-500 dark:text-gray-400">Check Out</div>
+                                                    <div className="text-gray-500 dark:text-gray-400">Rate</div>
                                                     <div className="font-medium text-gray-900 dark:text-gray-100">
-                                                        {new Date(booking.check_out_date).toLocaleDateString('en-US', { 
-                                                            month: 'short', 
-                                                            day: 'numeric',
-                                                            year: '2-digit'
-                                                        })}
+                                                        ₱2,000/semester
                                                     </div>
                                                 </div>
                                             </div>
@@ -626,46 +647,33 @@ export default function Bookings() {
                         </div>
 
                         <div className="space-y-2">
-                            <label htmlFor="check_in_date" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                <Calendar size={14} className="text-blue-500" />
-                                Check In Date
-                            </label>
-                            <Input 
-                                id="check_in_date" 
-                                name="check_in_date" 
-                                type="date" 
-                                value={form.check_in_date} 
-                                onChange={handleChange} 
-                                className="text-sm"
-                                required
-                            />
-                            {errors?.check_in_date && (
-                                <div className="text-xs text-red-500 dark:text-red-400">{errors.check_in_date}</div>
-                            )}
-                        </div>
-
-                        <div className="space-y-2">
-                            <label htmlFor="check_out_date" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                            <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                                 <Clock size={14} className="text-blue-500" />
-                                Check Out Date
+                                Number of Semesters
                             </label>
-                            <Input 
-                                id="check_out_date" 
-                                name="check_out_date" 
-                                type="date" 
-                                value={form.check_out_date} 
-                                onChange={handleChange} 
-                                className="text-sm"
-                                required
-                            />
-                            {errors?.check_out_date && (
-                                <div className="text-xs text-red-500 dark:text-red-400">{errors.check_out_date}</div>
+                            <Select value={String(form.semester_count)} onValueChange={(v: string) => setForm({ ...form, semester_count: parseInt(v) })}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select number of semesters" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+                                        <SelectItem key={count} value={String(count)}>
+                                            {count} semester{count !== 1 ? 's' : ''} - ₱{(count * 2000).toLocaleString()}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                Select how many semesters the student will stay in this room
+                            </div>
+                            {errors?.semester_count && (
+                                <div className="text-xs text-red-500 dark:text-red-400">{errors.semester_count}</div>
                             )}
                         </div>
 
                         {/* Booking Summary */}
-                        {form.room_id && form.check_in_date && form.check_out_date && (() => {
-                            const semesters = calculateSemesters(form.check_in_date, form.check_out_date);
+                        {form.room_id && form.semester_count && (() => {
+                            const semesters = form.semester_count;
                             const totalCost = semesters * 2000;
                             
                             return semesters > 0 && (
@@ -691,7 +699,6 @@ export default function Bookings() {
                                 </div>
                             );
                         })()}
-
 
                         <DialogFooter className="flex gap-3 pt-6">
                             <Button 

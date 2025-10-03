@@ -78,7 +78,7 @@ const typeConfig = {
 export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
     const [processing, setProcessing] = useState<{ [key: string]: boolean }>({});
     const [warningDialogOpen, setWarningDialogOpen] = useState(false);
-    const [warningAction, setWarningAction] = useState<'restore' | 'delete' | null>(null);
+    const [warningAction, setWarningAction] = useState<'restore' | 'delete' | 'clearAll' | null>(null);
     const [pendingItem, setPendingItem] = useState<{ type: string; id: number; title: string } | null>(null);
     const { auth } = usePage().props as any;
     const isAdmin = auth?.user?.role === 'admin';
@@ -92,6 +92,12 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
     const handleDelete = (type: string, id: number, title: string) => {
         setPendingItem({ type, id, title });
         setWarningAction('delete');
+        setWarningDialogOpen(true);
+    };
+
+    const handleClearAll = () => {
+        setPendingItem({ type: 'all', id: 0, title: 'all archived items' });
+        setWarningAction('clearAll');
         setWarningDialogOpen(true);
     };
 
@@ -135,6 +141,22 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                     setProcessing(prev => ({ ...prev, [key]: false }));
                 }
             });
+        } else if (warningAction === 'clearAll') {
+            router.delete('/settings/archive/clear-all', {
+                onSuccess: () => {
+                    setWarningDialogOpen(false);
+                    setPendingItem(null);
+                    setWarningAction(null);
+                },
+                onError: () => {
+                    setWarningDialogOpen(false);
+                    setPendingItem(null);
+                    setWarningAction(null);
+                },
+                onFinish: () => {
+                    setProcessing(prev => ({ ...prev, [key]: false }));
+                }
+            });
         }
     };
 
@@ -145,6 +167,10 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
             return `Are you sure you want to restore "${pendingItem.title}"?\n\nThis will return the item to its original location and make it active again.`;
         } else if (warningAction === 'delete') {
             return `Are you sure you want to permanently delete "${pendingItem.title}"?\n\nThis action cannot be undone and the item will be completely removed from the database.`;
+        } else if (warningAction === 'clearAll') {
+            const totalItems = stats.total;
+            const itemText = isAdmin ? 'dormitories' : 'rooms, students, and bookings';
+            return `Are you sure you want to permanently delete ALL ${totalItems} archived ${itemText}?\n\nThis action cannot be undone and all archived items will be completely removed from the database.`;
         }
         
         return '';
@@ -223,10 +249,24 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                     {/* Archived Items */}
                     <Card className="flex-1">
                         <CardHeader className="pb-4">
-                            <CardTitle className="flex items-center gap-2 text-lg">
-                                <ArchiveIcon className="h-5 w-5" />
-                                Archived Items ({archivedItems.length})
-                            </CardTitle>
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <ArchiveIcon className="h-5 w-5" />
+                                    Archived Items ({archivedItems.length})
+                                </CardTitle>
+                                {archivedItems.length > 0 && (
+                                    <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={handleClearAll}
+                                        disabled={processing['clearAll']}
+                                        className="h-8 px-3 text-xs"
+                                    >
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        {processing['clearAll'] ? 'Clearing...' : 'Clear All'}
+                                    </Button>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent className="pt-0">
                         {archivedItems.length === 0 ? (
@@ -337,10 +377,18 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                     setWarningAction(null);
                 }}
                 onConfirm={confirmAction}
-                title={warningAction === 'restore' ? 'Restore Item?' : 'Delete Forever?'}
+                title={
+                    warningAction === 'restore' ? 'Restore Item?' : 
+                    warningAction === 'clearAll' ? 'Clear All Archives?' : 
+                    'Delete Forever?'
+                }
                 message={getWarningMessage()}
-                confirmText={warningAction === 'restore' ? 'Restore Item' : 'Delete Forever'}
-                isDestructive={warningAction === 'delete'}
+                confirmText={
+                    warningAction === 'restore' ? 'Restore Item' : 
+                    warningAction === 'clearAll' ? 'Clear All' : 
+                    'Delete Forever'
+                }
+                isDestructive={warningAction === 'delete' || warningAction === 'clearAll'}
             />
         </AppLayout>
     );

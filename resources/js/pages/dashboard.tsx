@@ -21,8 +21,7 @@ interface CurrentStudent {
     last_name: string;
     email: string;
     phone: string;
-    check_in_date: string;
-    check_out_date: string;
+    semester_count: number;
 }
 
 interface DetailedRoom {
@@ -421,14 +420,14 @@ export default function Dashboard() {
                                                                     <span>📞</span> {student.phone}
                                                                 </div>
                                                                 <div className="text-xs text-gray-500 dark:text-gray-500 mt-2 pt-2 border-t border-blue-200 dark:border-blue-700">
-                                                                    <div className="font-medium mb-1">Stay Period:</div>
+                                                                    <div className="font-medium mb-1">Duration:</div>
                                                                     <div className="flex items-center gap-1">
                                                                         <span>📅</span>
-                                                                        {new Date(student.check_in_date).toLocaleDateString()}
+                                                                        {student.semester_count} semester{student.semester_count !== 1 ? 's' : ''}
                                                                     </div>
                                                                     <div className="flex items-center gap-1">
-                                                                        <span>📅</span>
-                                                                        {new Date(student.check_out_date).toLocaleDateString()}
+                                                                        <span>💰</span>
+                                                                        ₱{(student.semester_count * 2000).toLocaleString()}
                                                                     </div>
                                                                 </div>
                                                             </div>

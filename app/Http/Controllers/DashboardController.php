@@ -107,10 +107,8 @@ class DashboardController extends Controller
                     ->whereNull('students.archived_at')
                     ->join('bookings', 'students.student_id', '=', 'bookings.student_id')
                     ->where('bookings.room_id', $room->room_id)
-                    ->where('bookings.check_in_date', '<=', now())
-                    ->where('bookings.check_out_date', '>=', now())
                     ->whereNull('bookings.archived_at')
-                    ->select('students.*', 'bookings.check_in_date', 'bookings.check_out_date')
+                    ->select('students.*', 'bookings.semester_count')
                     ->get()
                     ->map(function ($student) {
                         return [
@@ -119,8 +117,7 @@ class DashboardController extends Controller
                             'last_name' => $student->last_name,
                             'email' => $student->email,
                             'phone' => $student->phone,
-                            'check_in_date' => $student->check_in_date,
-                            'check_out_date' => $student->check_out_date,
+                            'semester_count' => $student->semester_count,
                         ];
                     })->toArray();
                 

@@ -35,8 +35,6 @@ interface Student {
     last_name: string;
     email: string;
     phone: string;
-    check_in_date: string;
-    check_out_date: string;
     payment_status: string;
     payment_date?: string;
     amount_paid?: number;
@@ -56,8 +54,8 @@ interface Student {
         room_id: string;
         room_number: string;
         room_type: string;
-        check_in_date: string;
-        check_out_date: string;
+        semester_count: number;
+        total_fee: number;
     };
     all_bookings: Array<{
         booking_id: string;
@@ -65,8 +63,8 @@ interface Student {
         room_number: string;
         room_type: string;
         dormitory_name: string;
-        check_in_date: string;
-        check_out_date: string;
+        semester_count: number;
+        total_fee: number;
         is_current: boolean;
         created_at: string;
     }>;
@@ -76,7 +74,7 @@ interface Student {
 }
 
 export default function StudentShow() {
-    const { student }: { student: Student } = usePage().props;
+    const { student } = usePage<{ student: Student }>().props;
     
     const handleEdit = () => {
         // Navigate back to students index page and trigger edit modal
@@ -366,15 +364,15 @@ export default function StudentShow() {
                                     </div>
                                     <Separator />
                                     <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Check-in Date</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Duration</label>
                                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            {formatDate(student.current_booking.check_in_date)}
+                                            {student.current_booking.semester_count} semester{student.current_booking.semester_count !== 1 ? 's' : ''}
                                         </p>
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Check-out Date</label>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            {formatDate(student.current_booking.check_out_date)}
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Fee</label>
+                                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                            ₱{student.current_booking.total_fee.toLocaleString()}
                                         </p>
                                     </div>
                                 </CardContent>
@@ -490,7 +488,10 @@ export default function StudentShow() {
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                                    {formatDate(booking.check_in_date)} - {formatDate(booking.check_out_date)}
+                                                    {booking.semester_count} semester{booking.semester_count !== 1 ? 's' : ''}
+                                                </p>
+                                                <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                    ₱{booking.total_fee.toLocaleString()}
                                                 </p>
                                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                                     Booked: {formatDateTime(booking.created_at)}

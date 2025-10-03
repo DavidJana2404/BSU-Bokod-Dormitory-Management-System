@@ -141,11 +141,11 @@ class Student extends Authenticatable
     
     /**
      * Get the current active booking for this student.
+     * For semester-based bookings, we get the first non-archived booking
      */
     public function currentBooking()
     {
-        return $this->bookings()->where('check_in_date', '<=', now())
-                                 ->where('check_out_date', '>=', now())
+        return $this->bookings()->whereNull('archived_at')
                                  ->first();
     }
     

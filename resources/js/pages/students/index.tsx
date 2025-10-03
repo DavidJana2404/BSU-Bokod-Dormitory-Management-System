@@ -373,16 +373,12 @@ export default function Students() {
                                                 <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                                                     <Calendar size={16} className="text-blue-500 flex-shrink-0" />
                                                     <div className="min-w-0">
-                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Booking Period</div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">Booking Details</div>
                                                         <div className="text-xs font-medium text-gray-900 dark:text-gray-100">
-                                                            {new Date(student.current_booking.check_in_date).toLocaleDateString('en-US', { 
-                                                                month: 'short', 
-                                                                day: 'numeric'
-                                                            })} - {new Date(student.current_booking.check_out_date).toLocaleDateString('en-US', { 
-                                                                month: 'short', 
-                                                                day: 'numeric',
-                                                                year: 'numeric'
-                                                            })}
+                                                            {student.current_booking.semester_count} semester{student.current_booking.semester_count !== 1 ? 's' : ''}
+                                                        </div>
+                                                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                            ₱{(student.current_booking.total_fee || 0).toLocaleString()}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -420,21 +416,17 @@ export default function Students() {
                                                     <span className="truncate">{student.phone}</span>
                                                 </div>
                                                 
-                                                {/* Booking Period for Desktop */}
+                                                {/* Booking Details for Desktop */}
                                                 {student.is_currently_booked && student.current_booking && (
                                                     <div className="flex items-start gap-2 text-gray-600 dark:text-gray-400 text-xs xl:text-sm">
                                                         <Calendar size={12} className="text-blue-500 flex-shrink-0 mt-0.5" />
                                                         <div className="min-w-0 flex-1">
-                                                            <div className="text-xs text-gray-500 dark:text-gray-400">Booking Period:</div>
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400">Booking Details:</div>
                                                             <div className="font-medium text-gray-900 dark:text-gray-100 text-xs leading-tight">
-                                                                {new Date(student.current_booking.check_in_date).toLocaleDateString('en-US', { 
-                                                                    month: 'short', 
-                                                                    day: 'numeric'
-                                                                })} - {new Date(student.current_booking.check_out_date).toLocaleDateString('en-US', { 
-                                                                    month: 'short', 
-                                                                    day: 'numeric',
-                                                                    year: 'numeric'
-                                                                })}
+                                                                {student.current_booking.semester_count} semester{student.current_booking.semester_count !== 1 ? 's' : ''}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                ₱{(student.current_booking.total_fee || 0).toLocaleString()}
                                                             </div>
                                                         </div>
                                                     </div>

@@ -189,7 +189,7 @@ class ApplicationApprovalTest extends TestCase
     /** @test */
     public function applications_index_shows_processed_applications_correctly()
     {
-        // Create some processed applications
+        // Create some processed applications with explicit timestamps
         $approvedApp = Application::create([
             'tenant_id' => $this->tenant->tenant_id,
             'first_name' => 'Jane',
@@ -199,6 +199,7 @@ class ApplicationApprovalTest extends TestCase
             'status' => 'approved',
             'processed_by' => $this->user->id,
             'processed_at' => now()->subHours(2),
+            'created_at' => now()->subHours(1), // oldest
         ]);
 
         $rejectedApp = Application::create([
@@ -211,7 +212,11 @@ class ApplicationApprovalTest extends TestCase
             'rejection_reason' => 'Test rejection',
             'processed_by' => $this->user->id,
             'processed_at' => now()->subHours(1),
+            'created_at' => now()->subMinutes(30), // middle
         ]);
+        
+        // Update the pending application to be newest
+        $this->application->update(['created_at' => now()]); // newest
 
         $response = $this->actingAs($this->user)
             ->get('/applications');
@@ -220,9 +225,9 @@ class ApplicationApprovalTest extends TestCase
         $response->assertInertia(fn (Assert $page) => $page
             ->component('applications/index')
             ->has('applications', 3) // pending + approved + rejected
-            ->where('applications.0.status', 'pending')
-            ->where('applications.1.status', 'rejected') // ordered by created_at desc
-            ->where('applications.2.status', 'approved')
+            ->where('applications.0.status', 'pending') // newest (original pending application)
+            ->where('applications.1.status', 'approved') // second (approved application)
+            ->where('applications.2.status', 'rejected') // third (rejected application)
         );
     }
 }

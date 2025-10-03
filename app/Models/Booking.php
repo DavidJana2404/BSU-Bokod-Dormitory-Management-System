@@ -14,16 +14,13 @@ class Booking extends Model
         'tenant_id',
         'student_id',
         'room_id',
-        'check_in_date',
-        'check_out_date',
+        'semester_count',
         'archived_at',
     ];
 
     public $timestamps = false;
 
     protected $dates = [
-        'check_in_date',
-        'check_out_date',
         'archived_at',
     ];
 
@@ -45,14 +42,19 @@ class Booking extends Model
 
     /**
      * Check if this booking is currently active
+     * For semester-based bookings, we consider them active if not archived
      */
     public function isActive()
     {
-        $now = Carbon::now();
-        $checkIn = Carbon::parse($this->check_in_date);
-        $checkOut = Carbon::parse($this->check_out_date);
-        
-        return $now->between($checkIn, $checkOut) || $now->isSameDay($checkIn) || $now->isSameDay($checkOut);
+        return !$this->isArchived();
+    }
+    
+    /**
+     * Calculate total cost based on semester count
+     */
+    public function getTotalCost()
+    {
+        return $this->semester_count * 2000; // ₱2000 per semester
     }
 
     /**

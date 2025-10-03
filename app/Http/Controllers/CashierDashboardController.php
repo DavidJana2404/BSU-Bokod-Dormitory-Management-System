@@ -22,21 +22,32 @@ class CashierDashboardController extends Controller
             return redirect()->route('dashboard');
         }
         
-        // Get all students with their payment status and dormitory information
+        // Get all students with their payment status, dormitory information, and semester-based booking details
         $students = Student::join('tenants', 'students.tenant_id', '=', 'tenants.tenant_id')
-            ->leftJoin('bookings', 'students.student_id', '=', 'bookings.student_id')
+            ->leftJoin('bookings', function($join) {
+                $join->on('students.student_id', '=', 'bookings.student_id')
+                     ->whereNull('bookings.archived_at'); // Only get active bookings
+            })
             ->leftJoin('rooms', 'bookings.room_id', '=', 'rooms.room_id')
+            ->whereNull('students.archived_at') // Only get non-archived students
             ->select(
                 'students.*',
                 'tenants.dormitory_name',
                 'rooms.room_number',
                 'rooms.price_per_semester',
+                'bookings.semester_count',
+                'bookings.booking_id',
                 DB::raw('CONCAT(students.first_name, " ", students.last_name) as full_name')
             )
             ->orderBy('students.payment_status')
             ->orderBy('students.first_name')
             ->get()
             ->map(function ($student) {
+                // Only calculate fees for students who actually have bookings
+                $hasBooking = !is_null($student->booking_id);
+                $semesterCount = $hasBooking ? ($student->semester_count ?? 1) : null;
+                $totalFee = $hasBooking ? ($semesterCount * 2000) : null; // ₱2000 per semester
+                
                 return [
                     'student_id' => $student->student_id,
                     'full_name' => $student->full_name,
@@ -50,8 +61,12 @@ class CashierDashboardController extends Controller
                     'payment_date' => $student->payment_date,
                     'amount_paid' => $student->amount_paid,
                     'payment_notes' => $student->payment_notes,
-                    'price_per_semester' => $student->price_per_semester,
+                    'semester_count' => $semesterCount,
+                    'total_fee' => $totalFee,
+                    'price_per_semester' => 2000, // Fixed price per semester
                     'tenant_id' => $student->tenant_id,
+                    'booking_id' => $student->booking_id,
+                    'has_booking' => $hasBooking,
                 ];
             });
         

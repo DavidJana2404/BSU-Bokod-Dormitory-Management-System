@@ -47,42 +47,13 @@ interface StayStatus {
 }
 
 export default function StudentDashboard({ student, cleaningSchedules }: StudentDashboardProps) {
-    /**
-     * Format date string to readable format
-     */
-    const formatDate = (dateString?: string): string => {
-        if (!dateString) return 'Not set';
-        
-        try {
-            return new Date(dateString).toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long'
-            });
-        } catch {
-            return 'Invalid date';
-        }
-    };
+
 
     /**
-     * Calculate days between two dates
-     */
-    const calculateDaysBetween = (date1?: string, date2?: string): number => {
-        if (!date1 || !date2) return 0;
-        
-        const firstDate = new Date(date1);
-        const secondDate = new Date(date2);
-        const diffTime = Math.abs(secondDate.getTime() - firstDate.getTime());
-        
-        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    };
-
-    /**
-     * Get stay status with enhanced information
+     * Get stay status with enhanced information based on semester booking
      */
     const getStayStatus = (): StayStatus => {
-        if (!student.current_booking?.check_in_date || !student.current_booking?.check_out_date) {
+        if (!student.current_booking || !student.current_booking.semester_count) {
             return { 
                 status: 'No Booking', 
                 color: 'text-gray-600', 
@@ -92,47 +63,21 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
             };
         }
         
-        const today = new Date();
-        const checkIn = new Date(student.current_booking.check_in_date);
-        const checkOut = new Date(student.current_booking.check_out_date);
+        // For semester-based booking, we consider the booking as active if it exists
+        const semesterCount = student.current_booking.semester_count;
+        const semesterText = semesterCount === 1 ? 'semester' : 'semesters';
         
-        // Reset time to compare dates only
-        today.setHours(0, 0, 0, 0);
-        checkIn.setHours(0, 0, 0, 0);
-        checkOut.setHours(0, 0, 0, 0);
-        
-        if (today < checkIn) {
-            const daysUntil = Math.ceil((checkIn.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            return { 
-                status: 'Upcoming Stay', 
-                color: 'text-blue-600', 
-                bgColor: 'bg-blue-100',
-                icon: Clock,
-                description: `Check-in in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`
-            };
-        } else if (today >= checkIn && today <= checkOut) {
-            const daysLeft = Math.ceil((checkOut.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            return { 
-                status: 'Current Stay', 
-                color: 'text-green-600', 
-                bgColor: 'bg-green-100',
-                icon: CheckCircle,
-                description: `${daysLeft} day${daysLeft !== 1 ? 's' : ''} remaining`
-            };
-        } else {
-            return { 
-                status: 'Past Stay', 
-                color: 'text-gray-600', 
-                bgColor: 'bg-gray-100',
-                icon: CheckCircle,
-                description: 'Stay completed'
-            };
-        }
+        return { 
+            status: 'Current Booking', 
+            color: 'text-green-600', 
+            bgColor: 'bg-green-100',
+            icon: CheckCircle,
+            description: `Enrolled for ${semesterCount} ${semesterText}`
+        };
     };
 
     const stayInfo = getStayStatus();
     const StatusIcon = stayInfo.icon;
-    const totalStayDays = calculateDaysBetween(student.current_booking?.check_in_date, student.current_booking?.check_out_date);
     
     // Status management state
     const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
@@ -234,12 +179,12 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
                         <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                             <CalendarCheck className="text-green-600 dark:text-green-400" size={24} />
                         </div>
-                        <div className="text-lg font-semibold mb-2 text-green-800 dark:text-green-200">Check-in Date</div>
-                        <div className="text-sm font-bold text-green-900 dark:text-green-100 mb-1">
-                            {student.current_booking?.check_in_date ? new Date(student.current_booking.check_in_date).toLocaleDateString() : 'No booking'}
+                        <div className="text-lg font-semibold mb-2 text-green-800 dark:text-green-200">Semester Count</div>
+                        <div className="text-xl font-bold text-green-900 dark:text-green-100 mb-1">
+                            {student.current_booking?.semester_count || 0}
                         </div>
                         <div className="text-xs text-green-600 dark:text-green-400">
-                            {student.current_booking?.check_in_date ? new Date(student.current_booking.check_in_date).toLocaleDateString('en-US', { weekday: 'long' }) : 'Not scheduled'}
+                            {student.current_booking?.semester_count === 1 ? 'Semester' : 'Semesters'} Enrolled
                         </div>
                     </Card>
                     
@@ -247,12 +192,12 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
                         <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                             <Calendar className="text-purple-600 dark:text-purple-400" size={24} />
                         </div>
-                        <div className="text-lg font-semibold mb-2 text-purple-800 dark:text-purple-200">Check-out Date</div>
-                        <div className="text-sm font-bold text-purple-900 dark:text-purple-100 mb-1">
-                            {student.current_booking?.check_out_date ? new Date(student.current_booking.check_out_date).toLocaleDateString() : 'No booking'}
+                        <div className="text-lg font-semibold mb-2 text-purple-800 dark:text-purple-200">Total Fee</div>
+                        <div className="text-lg font-bold text-purple-900 dark:text-purple-100 mb-1">
+                            ₱{student.current_booking?.total_fee?.toLocaleString() || '0'}
                         </div>
                         <div className="text-xs text-purple-600 dark:text-purple-400">
-                            {student.current_booking?.check_out_date ? new Date(student.current_booking.check_out_date).toLocaleDateString('en-US', { weekday: 'long' }) : 'Not scheduled'}
+                            Semester Fee
                         </div>
                     </Card>
                     
@@ -261,7 +206,7 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
                             <Bed className="text-orange-600 dark:text-orange-400" size={24} />
                         </div>
                         <div className="text-lg font-semibold mb-2 text-orange-800 dark:text-orange-200">
-                            {student.current_booking?.room ? 'Room Assignment' : 'Stay Duration'}
+                            Room Assignment
                         </div>
                         {student.current_booking?.room ? (
                             <>
@@ -274,11 +219,11 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
                             </>
                         ) : (
                             <>
-                                <div className="text-3xl font-bold text-orange-900 dark:text-orange-100 mb-1">
-                                    {totalStayDays > 0 ? totalStayDays : 0}
+                                <div className="text-lg font-bold text-orange-900 dark:text-orange-100 mb-1">
+                                    No Room
                                 </div>
                                 <div className="text-xs text-orange-600 dark:text-orange-400">
-                                    {totalStayDays === 1 ? 'Night' : 'Nights'}
+                                    Assigned Yet
                                 </div>
                             </>
                         )}
@@ -401,26 +346,20 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
                     <Card className="bg-white dark:bg-gray-900 border dark:border-gray-700 overflow-hidden lg:col-span-1">
                         {/* Card Header with Status Color */}
                         <div className={`px-6 py-4 border-b ${
-                            stayInfo.status === 'Current Stay' 
+                            stayInfo.status === 'Current Booking' 
                                 ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-700'
-                                : stayInfo.status === 'Upcoming Stay'
-                                    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700'
-                                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                         }`}>
                             <div className="flex items-center gap-3">
                                 <div className={`p-2 rounded-lg ${
-                                    stayInfo.status === 'Current Stay' 
+                                    stayInfo.status === 'Current Booking' 
                                         ? 'bg-green-100 dark:bg-green-800/50'
-                                        : stayInfo.status === 'Upcoming Stay'
-                                            ? 'bg-blue-100 dark:bg-blue-800/50'
-                                            : 'bg-gray-100 dark:bg-gray-700'
+                                        : 'bg-gray-100 dark:bg-gray-700'
                                 }`}>
                                     <StatusIcon className={`${
-                                        stayInfo.status === 'Current Stay' 
+                                        stayInfo.status === 'Current Booking' 
                                             ? 'text-green-600 dark:text-green-400'
-                                            : stayInfo.status === 'Upcoming Stay'
-                                                ? 'text-blue-600 dark:text-blue-400'
-                                                : 'text-gray-600 dark:text-gray-400'
+                                            : 'text-gray-600 dark:text-gray-400'
                                     }`} size={20} />
                                 </div>
                                 <div>
@@ -436,38 +375,49 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
                                 {/* Status Badge */}
                                 <div className="flex items-center justify-center mb-6">
                                     <Badge className={`px-6 py-2 text-sm font-semibold ${
-                                        stayInfo.status === 'Current Stay' 
+                                        stayInfo.status === 'Current Booking' 
                                             ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                            : stayInfo.status === 'Upcoming Stay'
-                                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                                : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
+                                            : 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
                                     }`}>
                                         {stayInfo.status}
                                     </Badge>
                                 </div>
 
-                                {/* Dates Grid */}
+                                {/* Semester Information Grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg text-center">
                                         <CalendarCheck className="mx-auto mb-2 text-green-600 dark:text-green-400" size={24} />
-                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Check-in</p>
-                                        <p className="font-bold text-gray-900 dark:text-gray-100">{formatDate(student.current_booking?.check_in_date)}</p>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Semester Count</p>
+                                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                                            {student.current_booking?.semester_count || 0}
+                                        </p>
+                                        <p className="text-xs text-green-600 dark:text-green-400">
+                                            {(student.current_booking?.semester_count || 0) === 1 ? 'Semester' : 'Semesters'}
+                                        </p>
                                     </div>
                                     
                                     <div className="p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg text-center">
                                         <Calendar className="mx-auto mb-2 text-purple-600 dark:text-purple-400" size={24} />
-                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Check-out</p>
-                                        <p className="font-bold text-gray-900 dark:text-gray-100">{formatDate(student.current_booking?.check_out_date)}</p>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">Total Fee</p>
+                                        <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                                            ₱{student.current_booking?.total_fee?.toLocaleString() || '0'}
+                                        </p>
+                                        <p className="text-xs text-purple-600 dark:text-purple-400">
+                                            Semester Fee
+                                        </p>
                                     </div>
                                 </div>
 
-                                {/* Duration Info */}
-                                {totalStayDays > 0 && (
+                                {/* Room Assignment Info */}
+                                {student.current_booking?.room && (
                                     <div className="mt-6 p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg text-center">
                                         <Bed className="mx-auto mb-2 text-orange-600 dark:text-orange-400" size={20} />
-                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Duration</p>
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Room Assignment</p>
                                         <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-                                            {totalStayDays} {totalStayDays === 1 ? 'Night' : 'Nights'}
+                                            Room {student.current_booking.room.room_number}
+                                        </p>
+                                        <p className="text-xs text-orange-600 dark:text-orange-400">
+                                            {student.current_booking.room.room_type}
                                         </p>
                                     </div>
                                 )}

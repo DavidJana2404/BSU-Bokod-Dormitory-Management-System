@@ -92,8 +92,7 @@ export interface Booking {
     student_id: number;
     room_id: number;
     tenant_id: number;
-    check_in_date: string;
-    check_out_date?: string;
+    semester_count: number;
     status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
     total_amount?: number;
     notes?: string;
@@ -147,8 +146,8 @@ export interface StudentDashboardProps {
         status_updated_at?: string | null;
         current_booking?: {
             id: number;
-            check_in_date: string;
-            check_out_date: string;
+            semester_count: number;
+            total_fee: number;
             room?: {
                 id: number;
                 room_number: string;
