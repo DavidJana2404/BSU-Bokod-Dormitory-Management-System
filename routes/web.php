@@ -33,7 +33,7 @@ Route::post('/setup/promote-first-user', [AdminSetupController::class, 'promoteF
 Route::post('/setup/promote-user', [AdminSetupController::class, 'promoteUserByEmail'])->name('setup.promote-user');
 
 // Emergency database fix endpoint (remove after fixing production)
-// Deployment trigger: 2025-10-05 12:24 - Comprehensive booking debugging deployed
+// Deployment trigger: 2025-01-05 12:57:35 - Retry after timeout
 Route::get('/fix-booking-schema', function () {
     try {
         // Log the fix attempt
