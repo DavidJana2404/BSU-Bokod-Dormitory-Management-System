@@ -188,19 +188,12 @@ export default function Bookings() {
             });
         } else {
             // For new bookings, send all required fields
-            console.log('Submitting booking form with data:', form);
-            console.log('Available students:', studentList);
-            console.log('Available rooms:', availableRooms);
-            
             router.post('/bookings', form, {
                 onSuccess: () => {
-                    console.log('Booking created successfully');
                     handleClose();
                     setIsLoading(false);
                 },
                 onError: (errors) => {
-                    console.error('Booking creation failed:', errors);
-                    console.error('Form data that failed:', form);
                     setIsLoading(false);
                     
                     // Show specific error messages
