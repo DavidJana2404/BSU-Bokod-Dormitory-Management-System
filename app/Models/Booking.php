@@ -66,28 +66,52 @@ class Booking extends Model
 
         // When a booking is created, update room status
         static::created(function ($booking) {
-            $booking->updateRoomStatus();
+            try {
+                $booking->updateRoomStatus();
+            } catch (\Exception $e) {
+                \Log::warning('Error updating room status after booking created', [
+                    'booking_id' => $booking->booking_id,
+                    'room_id' => $booking->room_id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         });
 
         // When a booking is updated, update room status
         static::updated(function ($booking) {
-            $booking->updateRoomStatus();
-            
-            // If room_id changed, update both old and new rooms
-            if ($booking->isDirty('room_id')) {
-                $oldRoomId = $booking->getOriginal('room_id');
-                if ($oldRoomId) {
-                    $oldRoom = Room::find($oldRoomId);
-                    if ($oldRoom) {
-                        $oldRoom->updateStatusBasedOnBookings();
+            try {
+                $booking->updateRoomStatus();
+                
+                // If room_id changed, update both old and new rooms
+                if ($booking->isDirty('room_id')) {
+                    $oldRoomId = $booking->getOriginal('room_id');
+                    if ($oldRoomId) {
+                        $oldRoom = Room::find($oldRoomId);
+                        if ($oldRoom) {
+                            $oldRoom->updateStatusBasedOnBookings();
+                        }
                     }
                 }
+            } catch (\Exception $e) {
+                \Log::warning('Error updating room status after booking updated', [
+                    'booking_id' => $booking->booking_id,
+                    'room_id' => $booking->room_id,
+                    'error' => $e->getMessage()
+                ]);
             }
         });
 
         // When a booking is deleted, update room status
         static::deleted(function ($booking) {
-            $booking->updateRoomStatus();
+            try {
+                $booking->updateRoomStatus();
+            } catch (\Exception $e) {
+                \Log::warning('Error updating room status after booking deleted', [
+                    'booking_id' => $booking->booking_id,
+                    'room_id' => $booking->room_id,
+                    'error' => $e->getMessage()
+                ]);
+            }
         });
     }
 

@@ -250,9 +250,17 @@ class BookingController extends Controller
     {
         try {
             $user = $request->user();
+            \Log::info('BookingController store called', [
+                'user_id' => $user ? $user->id : 'null',
+                'request_data' => $request->all()
+            ]);
             
             if (!$user || !$user->tenant_id) {
-                return redirect()->route('bookings.index')->with('error', 'Unauthorized access.');
+                \Log::warning('BookingController store: Unauthorized access', [
+                    'user_id' => $user ? $user->id : 'null',
+                    'tenant_id' => $user ? $user->tenant_id : 'null'
+                ]);
+                return back()->withErrors(['error' => 'Unauthorized access.']);
             }
             
             // Check if there are any students in the system before allowing booking creation
@@ -262,7 +270,8 @@ class BookingController extends Controller
                     ->count();
                     
                 if ($totalStudents === 0) {
-                    return redirect()->route('bookings.index')->withErrors([
+                    \Log::warning('Booking creation blocked: No students in system', ['tenant_id' => $user->tenant_id]);
+                    return back()->withErrors([
                         'student_id' => 'Cannot create a booking because there are no students in the system yet. Please add students first before creating bookings.'
                     ]);
                 }
@@ -271,7 +280,7 @@ class BookingController extends Controller
                     'tenant_id' => $user->tenant_id,
                     'error' => $e->getMessage()
                 ]);
-                return redirect()->route('bookings.index')->with('error', 'Unable to validate booking. Please try again.');
+                return back()->withErrors(['error' => 'Unable to validate booking. Please try again.']);
             }
             
             // Validate input data
@@ -284,7 +293,11 @@ class BookingController extends Controller
                 ]);
                 $data['tenant_id'] = $user->tenant_id;
             } catch (\Illuminate\Validation\ValidationException $e) {
-                return redirect()->route('bookings.index')->withErrors($e->errors());
+                \Log::warning('Booking validation failed', [
+                    'errors' => $e->errors(),
+                    'request_data' => $request->all()
+                ]);
+                return back()->withErrors($e->errors());
             }
             
             // Check room capacity with error handling
@@ -296,7 +309,11 @@ class BookingController extends Controller
                     ->first();
                 
                 if (!$room) {
-                    return redirect()->route('bookings.index')->withErrors([
+                    \Log::warning('Booking creation blocked: Room not found', [
+                        'room_id' => $data['room_id'],
+                        'tenant_id' => $user->tenant_id
+                    ]);
+                    return back()->withErrors([
                         'room_id' => 'Selected room is not available.'
                     ]);
                 }
@@ -316,7 +333,12 @@ class BookingController extends Controller
                 
                 $maxCapacity = $room->max_capacity ?? 0;
                 if ($currentOccupancy >= $maxCapacity) {
-                    return redirect()->route('bookings.index')->withErrors([
+                    \Log::warning('Booking creation blocked: Room at capacity', [
+                        'room_id' => $room->room_id,
+                        'current_occupancy' => $currentOccupancy,
+                        'max_capacity' => $maxCapacity
+                    ]);
+                    return back()->withErrors([
                         'room_id' => 'This room is at maximum capacity (' . $maxCapacity . ' students). Current occupancy: ' . $currentOccupancy . '/' . $maxCapacity
                     ]);
                 }
@@ -325,7 +347,7 @@ class BookingController extends Controller
                     'room_id' => $data['room_id'] ?? 'unknown',
                     'error' => $e->getMessage()
                 ]);
-                return redirect()->route('bookings.index')->with('error', 'Unable to validate room availability. Please try again.');
+                return back()->withErrors(['error' => 'Unable to validate room availability. Please try again.']);
             }
             
             // Check for duplicate booking
@@ -335,7 +357,11 @@ class BookingController extends Controller
                     ->first();
                     
                 if ($existingBooking) {
-                    return redirect()->route('bookings.index')->withErrors([
+                    \Log::warning('Booking creation blocked: Student already has booking', [
+                        'student_id' => $data['student_id'],
+                        'existing_booking_id' => $existingBooking->booking_id
+                    ]);
+                    return back()->withErrors([
                         'student_id' => 'This student already has an active booking.'
                     ]);
                 }
@@ -347,10 +373,12 @@ class BookingController extends Controller
             }
             
             // Create booking with transaction
-            \DB::transaction(function () use ($data) {
-                Booking::create($data);
+            $booking = null;
+            \DB::transaction(function () use ($data, &$booking) {
+                $booking = Booking::create($data);
                 
                 \Log::info('Booking created successfully', [
+                    'booking_id' => $booking->booking_id,
                     'student_id' => $data['student_id'],
                     'room_id' => $data['room_id'],
                     'semester_count' => $data['semester_count'],
@@ -358,7 +386,8 @@ class BookingController extends Controller
                 ]);
             });
             
-            return redirect()->route('bookings.index')->with('success', 'Booking created successfully!');
+            // Use Inertia location redirect to force full page reload with fresh data
+            return Inertia::location('/bookings');
             
         } catch (\Exception $e) {
             \Log::error('Fatal error creating booking', [
@@ -367,7 +396,7 @@ class BookingController extends Controller
                 'request_data' => $request->all()
             ]);
             
-            return redirect()->route('bookings.index')->with('error', 'Unable to create booking. Please try again later.');
+            return back()->withErrors(['error' => 'Unable to create booking. Please try again later.']);
         }
     }
 

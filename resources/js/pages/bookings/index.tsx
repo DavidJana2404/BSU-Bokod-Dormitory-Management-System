@@ -193,8 +193,24 @@ export default function Bookings() {
                     handleClose();
                     setIsLoading(false);
                 },
-                onError: () => {
+                onError: (errors) => {
+                    console.error('Booking creation failed:', errors);
                     setIsLoading(false);
+                    
+                    // Show specific error messages
+                    if (errors.error) {
+                        setAlertMessage(errors.error);
+                        setAlertDialogOpen(true);
+                    } else if (errors.student_id) {
+                        setAlertMessage(errors.student_id);
+                        setAlertDialogOpen(true);
+                    } else if (errors.room_id) {
+                        setAlertMessage(errors.room_id);
+                        setAlertDialogOpen(true);
+                    } else {
+                        setAlertMessage('Unable to create booking. Please check the form and try again.');
+                        setAlertDialogOpen(true);
+                    }
                 },
                 onFinish: () => {
                     setIsLoading(false);

@@ -103,20 +103,29 @@ class Room extends Model
      */
     public function updateStatusBasedOnBookings()
     {
-        // Skip if room is in maintenance
-        if ($this->status === 'maintenance') {
+        try {
+            // Skip if room is in maintenance
+            if ($this->status === 'maintenance') {
+                return false;
+            }
+
+            $isAtCapacity = $this->isAtCapacity();
+            $newStatus = $isAtCapacity ? 'occupied' : 'available';
+
+            if ($this->status !== $newStatus) {
+                $this->update(['status' => $newStatus]);
+                return true;
+            }
+
+            return false;
+        } catch (\Exception $e) {
+            \Log::warning('Error updating room status based on bookings', [
+                'room_id' => $this->room_id,
+                'current_status' => $this->status,
+                'error' => $e->getMessage()
+            ]);
             return false;
         }
-
-        $isAtCapacity = $this->isAtCapacity();
-        $newStatus = $isAtCapacity ? 'occupied' : 'available';
-
-        if ($this->status !== $newStatus) {
-            $this->update(['status' => $newStatus]);
-            return true;
-        }
-
-        return false;
     }
 
     /**
