@@ -12,38 +12,108 @@ class DormitoryController extends Controller
 {
     public function index()
     {
-        $dormitories = Tenant::with('manager')
-            ->notArchived()
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($dormitory) {
-                // Get essential statistics
-                $totalRooms = Room::where('tenant_id', $dormitory->tenant_id)->count();
-                $totalStudents = \App\Models\Student::where('tenant_id', $dormitory->tenant_id)->count();
-                $totalBookings = Booking::where('tenant_id', $dormitory->tenant_id)->count();
+        try {
+            $dormitories = collect([]);
+            
+            try {
+                $dormitoriesData = Tenant::select('tenant_id', 'dormitory_name', 'address', 'contact_number', 'created_at')
+                    ->whereNull('archived_at')
+                    ->orderBy('created_at', 'desc')
+                    ->limit(50)
+                    ->get();
                 
-                return [
-                    'tenant_id' => $dormitory->tenant_id,
-                    'dormitory_name' => $dormitory->dormitory_name,
-                    'address' => $dormitory->address,
-                    'contact_number' => $dormitory->contact_number,
-                    'created_at' => $dormitory->created_at,
-                    'manager' => $dormitory->manager ? [
-                        'id' => $dormitory->manager->id,
-                        'name' => $dormitory->manager->name,
-                        'email' => $dormitory->manager->email,
-                    ] : null,
-                    'statistics' => [
-                        'total_rooms' => $totalRooms,
-                        'total_students' => $totalStudents,
-                        'total_bookings' => $totalBookings,
-                    ],
-                ];
-            });
-        
-        return Inertia::render('dormitories', [
-            'dormitories' => $dormitories,
-        ]);
+                $dormitories = $dormitoriesData->map(function ($dormitory) {
+                    try {
+                        // Get essential statistics with error handling
+                        $totalRooms = 0;
+                        $totalStudents = 0;
+                        $totalBookings = 0;
+                        $manager = null;
+                        
+                        try {
+                            $totalRooms = Room::where('tenant_id', $dormitory->tenant_id)->whereNull('archived_at')->count();
+                        } catch (\Exception $e) {
+                            \Log::warning('Error counting rooms for dormitory', ['tenant_id' => $dormitory->tenant_id, 'error' => $e->getMessage()]);
+                        }
+                        
+                        try {
+                            $totalStudents = \App\Models\Student::where('tenant_id', $dormitory->tenant_id)->whereNull('archived_at')->count();
+                        } catch (\Exception $e) {
+                            \Log::warning('Error counting students for dormitory', ['tenant_id' => $dormitory->tenant_id, 'error' => $e->getMessage()]);
+                        }
+                        
+                        try {
+                            $totalBookings = Booking::where('tenant_id', $dormitory->tenant_id)->whereNull('archived_at')->count();
+                        } catch (\Exception $e) {
+                            \Log::warning('Error counting bookings for dormitory', ['tenant_id' => $dormitory->tenant_id, 'error' => $e->getMessage()]);
+                        }
+                        
+                        try {
+                            $manager = \App\Models\User::select('id', 'name', 'email')
+                                ->where('tenant_id', $dormitory->tenant_id)
+                                ->where('role', 'manager')
+                                ->first();
+                        } catch (\Exception $e) {
+                            \Log::warning('Error loading manager for dormitory', ['tenant_id' => $dormitory->tenant_id, 'error' => $e->getMessage()]);
+                        }
+                        
+                        return [
+                            'tenant_id' => $dormitory->tenant_id,
+                            'dormitory_name' => $dormitory->dormitory_name,
+                            'address' => $dormitory->address,
+                            'contact_number' => $dormitory->contact_number,
+                            'created_at' => $dormitory->created_at,
+                            'manager' => $manager ? [
+                                'id' => $manager->id,
+                                'name' => $manager->name,
+                                'email' => $manager->email,
+                            ] : null,
+                            'statistics' => [
+                                'total_rooms' => $totalRooms,
+                                'total_students' => $totalStudents,
+                                'total_bookings' => $totalBookings,
+                            ],
+                        ];
+                    } catch (\Exception $e) {
+                        \Log::error('Error mapping dormitory data', [
+                            'tenant_id' => $dormitory->tenant_id,
+                            'error' => $e->getMessage()
+                        ]);
+                        
+                        return [
+                            'tenant_id' => $dormitory->tenant_id,
+                            'dormitory_name' => $dormitory->dormitory_name,
+                            'address' => $dormitory->address,
+                            'contact_number' => $dormitory->contact_number,
+                            'created_at' => $dormitory->created_at,
+                            'manager' => null,
+                            'statistics' => [
+                                'total_rooms' => 0,
+                                'total_students' => 0,
+                                'total_bookings' => 0,
+                            ],
+                        ];
+                    }
+                });
+            } catch (\Exception $e) {
+                \Log::error('Error loading dormitories', ['error' => $e->getMessage()]);
+            }
+            
+            return Inertia::render('dormitories', [
+                'dormitories' => $dormitories->values()->all(),
+            ]);
+            
+        } catch (\Exception $e) {
+            \Log::error('Fatal error in dormitories index', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return Inertia::render('dormitories', [
+                'dormitories' => [],
+                'error' => 'Unable to load dormitories. Please try again later.'
+            ]);
+        }
     }
 
     public function store(Request $request)
