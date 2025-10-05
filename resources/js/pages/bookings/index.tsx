@@ -188,13 +188,19 @@ export default function Bookings() {
             });
         } else {
             // For new bookings, send all required fields
+            console.log('Submitting booking form with data:', form);
+            console.log('Available students:', studentList);
+            console.log('Available rooms:', availableRooms);
+            
             router.post('/bookings', form, {
                 onSuccess: () => {
+                    console.log('Booking created successfully');
                     handleClose();
                     setIsLoading(false);
                 },
                 onError: (errors) => {
                     console.error('Booking creation failed:', errors);
+                    console.error('Form data that failed:', form);
                     setIsLoading(false);
                     
                     // Show specific error messages
@@ -207,8 +213,13 @@ export default function Bookings() {
                     } else if (errors.room_id) {
                         setAlertMessage(errors.room_id);
                         setAlertDialogOpen(true);
+                    } else if (errors.semester_count) {
+                        setAlertMessage(errors.semester_count);
+                        setAlertDialogOpen(true);
                     } else {
-                        setAlertMessage('Unable to create booking. Please check the form and try again.');
+                        // Show all errors if available
+                        const errorMessage = Object.values(errors).flat().join(', ') || 'Unable to create booking. Please check the form and try again.';
+                        setAlertMessage(errorMessage);
                         setAlertDialogOpen(true);
                     }
                 },

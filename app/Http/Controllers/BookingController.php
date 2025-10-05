@@ -286,12 +286,58 @@ class BookingController extends Controller
             // Validate input data
             $data = [];
             try {
+                \Log::info('Validating booking data', [
+                    'request_data' => $request->all(),
+                    'tenant_id' => $user->tenant_id
+                ]);
+                
                 $data = $request->validate([
-                    'student_id' => 'required|exists:students,student_id,tenant_id,' . $user->tenant_id,
-                    'room_id' => 'required|exists:rooms,room_id,tenant_id,' . $user->tenant_id,
+                    'student_id' => 'required|string',
+                    'room_id' => 'required|string', 
                     'semester_count' => 'required|integer|min:1|max:10',
                 ]);
+                
+                // Convert string IDs to integers
+                $data['student_id'] = (int) $data['student_id'];
+                $data['room_id'] = (int) $data['room_id'];
                 $data['tenant_id'] = $user->tenant_id;
+                
+                \Log::info('Booking data after validation', [
+                    'validated_data' => $data
+                ]);
+                
+                // Manual validation for student existence
+                $student = Student::where('student_id', $data['student_id'])
+                    ->where('tenant_id', $user->tenant_id)
+                    ->whereNull('archived_at')
+                    ->first();
+                    
+                if (!$student) {
+                    \Log::warning('Student not found for booking', [
+                        'student_id' => $data['student_id'],
+                        'tenant_id' => $user->tenant_id
+                    ]);
+                    return back()->withErrors([
+                        'student_id' => 'Selected student not found or not available.'
+                    ]);
+                }
+                
+                // Manual validation for room existence
+                $roomExists = Room::where('room_id', $data['room_id'])
+                    ->where('tenant_id', $user->tenant_id)
+                    ->whereNull('archived_at')
+                    ->first();
+                    
+                if (!$roomExists) {
+                    \Log::warning('Room not found for booking', [
+                        'room_id' => $data['room_id'],
+                        'tenant_id' => $user->tenant_id
+                    ]);
+                    return back()->withErrors([
+                        'room_id' => 'Selected room not found or not available.'
+                    ]);
+                }
+                
             } catch (\Illuminate\Validation\ValidationException $e) {
                 \Log::warning('Booking validation failed', [
                     'errors' => $e->errors(),
@@ -393,10 +439,20 @@ class BookingController extends Controller
             \Log::error('Fatal error creating booking', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
+                'user_id' => $user ? $user->id : 'null',
+                'tenant_id' => $user ? $user->tenant_id : 'null',
+                'line' => $e->getLine(),
+                'file' => $e->getFile()
             ]);
             
-            return back()->withErrors(['error' => 'Unable to create booking. Please try again later.']);
+            // Create log file if it doesn't exist to ensure we can see errors
+            $logPath = storage_path('logs/laravel.log');
+            if (!file_exists($logPath)) {
+                touch($logPath);
+            }
+            
+            return back()->withErrors(['error' => 'Unable to create booking: ' . $e->getMessage()]);
         }
     }
 
