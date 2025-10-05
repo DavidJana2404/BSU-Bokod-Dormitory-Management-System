@@ -248,42 +248,66 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
+        // Create detailed log entry
+        \Log::info('=== BOOKING CREATION START ===', [
+            'timestamp' => now(),
+            'ip' => $request->ip(),
+            'user_agent' => $request->userAgent()
+        ]);
+        
         try {
             $user = $request->user();
-            \Log::info('BookingController store called', [
+            \Log::info('Step 1: User authentication check', [
                 'user_id' => $user ? $user->id : 'null',
+                'user_email' => $user ? $user->email : 'null',
+                'tenant_id' => $user ? $user->tenant_id : 'null',
                 'request_data' => $request->all()
             ]);
             
             if (!$user || !$user->tenant_id) {
-                \Log::warning('BookingController store: Unauthorized access', [
+                \Log::error('Step 1 FAILED: Unauthorized access', [
                     'user_id' => $user ? $user->id : 'null',
                     'tenant_id' => $user ? $user->tenant_id : 'null'
                 ]);
                 return back()->withErrors(['error' => 'Unauthorized access.']);
             }
             
+            \Log::info('Step 1 SUCCESS: User authenticated', [
+                'user_id' => $user->id,
+                'tenant_id' => $user->tenant_id
+            ]);
+            
             // Check if there are any students in the system before allowing booking creation
+            \Log::info('Step 2: Checking student count');
             try {
                 $totalStudents = Student::where('tenant_id', $user->tenant_id)
                     ->whereNull('archived_at')
                     ->count();
                     
+                \Log::info('Step 2: Student count result', [
+                    'total_students' => $totalStudents,
+                    'tenant_id' => $user->tenant_id
+                ]);
+                    
                 if ($totalStudents === 0) {
-                    \Log::warning('Booking creation blocked: No students in system', ['tenant_id' => $user->tenant_id]);
+                    \Log::error('Step 2 FAILED: No students in system', ['tenant_id' => $user->tenant_id]);
                     return back()->withErrors([
                         'student_id' => 'Cannot create a booking because there are no students in the system yet. Please add students first before creating bookings.'
                     ]);
                 }
+                
+                \Log::info('Step 2 SUCCESS: Students exist', ['total_students' => $totalStudents]);
             } catch (\Exception $e) {
-                \Log::error('Error checking student count for booking', [
+                \Log::error('Step 2 EXCEPTION: Error checking student count', [
                     'tenant_id' => $user->tenant_id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
                 return back()->withErrors(['error' => 'Unable to validate booking. Please try again.']);
             }
             
             // Validate input data
+            \Log::info('Step 3: Validating input data', ['raw_request' => $request->all()]);
             $data = [];
             try {
                 $data = $request->validate([
@@ -292,10 +316,14 @@ class BookingController extends Controller
                     'semester_count' => 'required|integer|min:1|max:10',
                 ]);
                 
+                \Log::info('Step 3: Validation passed', ['validated_data' => $data]);
+                
                 // Convert string IDs to integers
                 $data['student_id'] = (int) $data['student_id'];
                 $data['room_id'] = (int) $data['room_id'];
                 $data['tenant_id'] = $user->tenant_id;
+                
+                \Log::info('Step 3 SUCCESS: Data converted and prepared', ['final_data' => $data]);
                 
             } catch (\Illuminate\Validation\ValidationException $e) {
                 \Log::warning('Booking validation failed', [
@@ -306,6 +334,7 @@ class BookingController extends Controller
             }
             
             // Check room capacity with error handling
+            \Log::info('Step 4: Checking room capacity');
             try {
                 $room = Room::select('room_id', 'max_capacity')
                     ->where('room_id', $data['room_id'])
@@ -313,8 +342,17 @@ class BookingController extends Controller
                     ->whereNull('archived_at')
                     ->first();
                 
+                \Log::info('Step 4: Room lookup result', [
+                    'room_found' => $room ? true : false,
+                    'room_data' => $room ? $room->toArray() : null,
+                    'search_criteria' => [
+                        'room_id' => $data['room_id'],
+                        'tenant_id' => $user->tenant_id
+                    ]
+                ]);
+                
                 if (!$room) {
-                    \Log::warning('Booking creation blocked: Room not found', [
+                    \Log::error('Step 4 FAILED: Room not found', [
                         'room_id' => $data['room_id'],
                         'tenant_id' => $user->tenant_id
                     ]);
@@ -324,21 +362,34 @@ class BookingController extends Controller
                 }
                 
                 // Check current occupancy safely
+                \Log::info('Step 5: Checking room occupancy');
                 $currentOccupancy = 0;
                 try {
                     $currentOccupancy = Booking::where('room_id', $room->room_id)
                         ->whereNull('archived_at')
                         ->count();
+                        
+                    \Log::info('Step 5: Occupancy count result', [
+                        'current_occupancy' => $currentOccupancy,
+                        'room_id' => $room->room_id
+                    ]);
                 } catch (\Exception $e) {
-                    \Log::warning('Error calculating room occupancy for booking', [
+                    \Log::error('Step 5 EXCEPTION: Error calculating room occupancy', [
                         'room_id' => $room->room_id,
-                        'error' => $e->getMessage()
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
                     ]);
                 }
                 
                 $maxCapacity = $room->max_capacity ?? 0;
+                \Log::info('Step 5: Capacity check', [
+                    'current_occupancy' => $currentOccupancy,
+                    'max_capacity' => $maxCapacity,
+                    'is_at_capacity' => $currentOccupancy >= $maxCapacity
+                ]);
+                
                 if ($currentOccupancy >= $maxCapacity) {
-                    \Log::warning('Booking creation blocked: Room at capacity', [
+                    \Log::error('Step 5 FAILED: Room at capacity', [
                         'room_id' => $room->room_id,
                         'current_occupancy' => $currentOccupancy,
                         'max_capacity' => $maxCapacity
@@ -347,6 +398,10 @@ class BookingController extends Controller
                         'room_id' => 'This room is at maximum capacity (' . $maxCapacity . ' students). Current occupancy: ' . $currentOccupancy . '/' . $maxCapacity
                     ]);
                 }
+                
+                \Log::info('Step 5 SUCCESS: Room has capacity', [
+                    'available_spots' => $maxCapacity - $currentOccupancy
+                ]);
             } catch (\Exception $e) {
                 \Log::error('Error checking room capacity for booking', [
                     'room_id' => $data['room_id'] ?? 'unknown',
@@ -356,13 +411,20 @@ class BookingController extends Controller
             }
             
             // Check for duplicate booking
+            \Log::info('Step 6: Checking for duplicate bookings');
             try {
                 $existingBooking = Booking::where('student_id', $data['student_id'])
                     ->whereNull('archived_at')
                     ->first();
                     
+                \Log::info('Step 6: Duplicate booking check result', [
+                    'existing_booking_found' => $existingBooking ? true : false,
+                    'existing_booking_id' => $existingBooking ? $existingBooking->booking_id : null,
+                    'student_id' => $data['student_id']
+                ]);
+                    
                 if ($existingBooking) {
-                    \Log::warning('Booking creation blocked: Student already has booking', [
+                    \Log::error('Step 6 FAILED: Student already has booking', [
                         'student_id' => $data['student_id'],
                         'existing_booking_id' => $existingBooking->booking_id
                     ]);
@@ -370,38 +432,60 @@ class BookingController extends Controller
                         'student_id' => 'This student already has an active booking.'
                     ]);
                 }
+                
+                \Log::info('Step 6 SUCCESS: No duplicate booking found');
             } catch (\Exception $e) {
-                \Log::warning('Error checking for duplicate booking', [
+                \Log::error('Step 6 EXCEPTION: Error checking for duplicate booking', [
                     'student_id' => $data['student_id'] ?? 'unknown',
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
             }
             
             // Create booking with transaction
+            \Log::info('Step 8: Starting database transaction');
             $booking = null;
-            \DB::transaction(function () use ($data, &$booking) {
-                $booking = Booking::create($data);
+            try {
+                \DB::transaction(function () use ($data, &$booking) {
+                    \Log::info('Step 8a: Inside transaction, attempting to create booking', ['data' => $data]);
+                    
+                    $booking = Booking::create($data);
+                    
+                    \Log::info('Step 8b: Booking record created', [
+                        'booking_id' => $booking->booking_id,
+                        'created_booking' => $booking->toArray()
+                    ]);
+                });
                 
-                \Log::info('Booking created successfully', [
-                    'booking_id' => $booking->booking_id,
-                    'student_id' => $data['student_id'],
-                    'room_id' => $data['room_id'],
-                    'semester_count' => $data['semester_count'],
-                    'tenant_id' => $data['tenant_id']
+                \Log::info('Step 8 SUCCESS: Transaction completed', [
+                    'booking_id' => $booking ? $booking->booking_id : 'null'
                 ]);
-            });
-            
-            // Use Inertia location redirect to force full page reload with fresh data
-            return Inertia::location('/bookings');
+                
+                \Log::info('=== BOOKING CREATION SUCCESS ===');
+                
+                // Use Inertia location redirect to force full page reload with fresh data
+                return Inertia::location('/bookings');
+                
+            } catch (\Exception $transactionException) {
+                \Log::error('Step 8 EXCEPTION: Database transaction failed', [
+                    'error' => $transactionException->getMessage(),
+                    'trace' => $transactionException->getTraceAsString(),
+                    'data' => $data
+                ]);
+                return back()->withErrors(['error' => 'Database error: ' . $transactionException->getMessage()]);
+            }
             
         } catch (\Exception $e) {
-            \Log::error('Fatal error creating booking', [
+            \Log::error('=== BOOKING CREATION FATAL ERROR ===', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all()
+                'request_data' => $request->all(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
             ]);
             
-            return back()->withErrors(['error' => 'Unable to create booking. Please try again later.']);
+            // Show detailed error for debugging (change back to generic message after fixing)
+            return back()->withErrors(['error' => 'BOOKING DEBUG ERROR: ' . $e->getMessage() . ' (File: ' . basename($e->getFile()) . ':' . $e->getLine() . ')']);
         }
     }
 
