@@ -6,6 +6,7 @@ use App\Http\Requests\ApplicationFormRequest;
 use App\Models\Application;
 use App\Models\Student;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -37,9 +38,20 @@ class ApplicationController extends Controller
                     'processed_at', 'created_at'
                 ]);
                 
+                // Check if user has proper role and tenant access
+                if (!isset($user->role)) {
+                    \Log::warning('User without role attempting to access applications', [
+                        'user_id' => $user->id ?? 'unknown'
+                    ]);
+                    throw new \Exception('Invalid user role');
+                }
+                
                 if ($user->role === 'manager' && $user->tenant_id) {
                     // Manager can only see applications for their dormitory
                     $applicationsQuery->where('tenant_id', $user->tenant_id);
+                } elseif ($user->role === 'manager' && !$user->tenant_id) {
+                    // Manager without tenant_id should see no applications
+                    $applicationsQuery->where('id', -1); // This will return empty results
                 }
                 
                 // Get applications with pagination to avoid memory issues
@@ -51,17 +63,36 @@ class ApplicationController extends Controller
                 // Manually load relationships to better handle errors
                 $applications = $applications->map(function ($application) {
                     try {
-                        // Load tenant information
-                        $tenant = Tenant::select('tenant_id', 'dormitory_name')
-                            ->where('tenant_id', $application->tenant_id)
-                            ->first();
+                        // Load tenant information with error handling
+                        $tenant = null;
+                        try {
+                            if ($application->tenant_id) {
+                                $tenant = Tenant::select('tenant_id', 'dormitory_name')
+                                    ->where('tenant_id', $application->tenant_id)
+                                    ->first();
+                            }
+                        } catch (\Exception $e) {
+                            \Log::warning('Error loading tenant for application', [
+                                'application_id' => $application->id,
+                                'tenant_id' => $application->tenant_id,
+                                'error' => $e->getMessage()
+                            ]);
+                        }
                             
-                        // Load processed by user information  
+                        // Load processed by user information with error handling
                         $processedBy = null;
-                        if ($application->processed_by) {
-                            $processedBy = User::select('id', 'name')
-                                ->where('id', $application->processed_by)
-                                ->first();
+                        try {
+                            if ($application->processed_by) {
+                                $processedBy = User::select('id', 'name')
+                                    ->where('id', $application->processed_by)
+                                    ->first();
+                            }
+                        } catch (\Exception $e) {
+                            \Log::warning('Error loading processed_by user for application', [
+                                'application_id' => $application->id,
+                                'processed_by' => $application->processed_by,
+                                'error' => $e->getMessage()
+                            ]);
                         }
                         
                         // Transform to array with safe fallbacks
