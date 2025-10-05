@@ -36,19 +36,61 @@ Route::post('/setup/promote-user', [AdminSetupController::class, 'promoteUserByE
 // Deployment trigger: 2025-10-05 12:24 - Comprehensive booking debugging deployed
 Route::get('/fix-booking-schema', function () {
     try {
+        // Log the fix attempt
+        \Log::info('Database schema fix endpoint accessed');
+        
         // Check if semester_count column exists
         $hasColumn = \Schema::hasColumn('bookings', 'semester_count');
         
+        \Log::info('Schema check result', ['has_semester_count_column' => $hasColumn]);
+        
         if (!$hasColumn) {
-            // Run the specific migration to fix the schema
-            \Artisan::call('migrate:rollback', ['--step' => 1]);
-            \Artisan::call('migrate');
+            \Log::info('Attempting to fix schema - running migration');
             
-            return response()->json([
-                'status' => 'success',
-                'message' => 'Database schema fixed - semester_count column added to bookings table',
-                'rollback_output' => \Artisan::output(),
-            ]);
+            try {
+                // Try to add the column directly if migration fails
+                \DB::statement('ALTER TABLE bookings ADD COLUMN semester_count INTEGER DEFAULT 1');
+                
+                \Log::info('Added semester_count column directly via SQL');
+                
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Database schema fixed - semester_count column added to bookings table via direct SQL',
+                    'method' => 'direct_sql'
+                ]);
+            } catch (\Exception $directException) {
+                \Log::warning('Direct SQL failed, trying migration approach', ['error' => $directException->getMessage()]);
+                
+                // Fallback to migration approach
+                try {
+                    \Artisan::call('migrate:rollback', ['--step' => 1]);
+                    $rollbackOutput = \Artisan::output();
+                    \Artisan::call('migrate');
+                    $migrateOutput = \Artisan::output();
+                    
+                    \Log::info('Migration approach completed');
+                    
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => 'Database schema fixed via migration rollback and re-run',
+                        'method' => 'migration',
+                        'rollback_output' => $rollbackOutput,
+                        'migrate_output' => $migrateOutput
+                    ]);
+                } catch (\Exception $migrationException) {
+                    \Log::error('Both direct SQL and migration failed', [
+                        'direct_error' => $directException->getMessage(),
+                        'migration_error' => $migrationException->getMessage()
+                    ]);
+                    
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Both direct SQL and migration approaches failed',
+                        'direct_error' => $directException->getMessage(),
+                        'migration_error' => $migrationException->getMessage()
+                    ], 500);
+                }
+            }
         } else {
             return response()->json([
                 'status' => 'already_fixed',
@@ -56,9 +98,15 @@ Route::get('/fix-booking-schema', function () {
             ]);
         }
     } catch (\Exception $e) {
+        \Log::error('Schema fix endpoint failed', [
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        
         return response()->json([
             'status' => 'error',
             'message' => 'Failed to fix database schema: ' . $e->getMessage(),
+            'trace' => $e->getTraceAsString()
         ], 500);
     }
 })->name('fix.booking.schema');

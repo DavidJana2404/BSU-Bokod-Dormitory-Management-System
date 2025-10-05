@@ -442,6 +442,33 @@ class BookingController extends Controller
                 ]);
             }
             
+            // Verify database schema before attempting to create booking
+            \Log::info('Step 7: Verifying database schema');
+            try {
+                $hasColumn = \Schema::hasColumn('bookings', 'semester_count');
+                \Log::info('Step 7: Schema check result', ['has_semester_count' => $hasColumn]);
+                
+                if (!$hasColumn) {
+                    \Log::warning('Step 7: Missing semester_count column, attempting to fix');
+                    try {
+                        \DB::statement('ALTER TABLE bookings ADD COLUMN semester_count INTEGER DEFAULT 1');
+                        \Log::info('Step 7: Successfully added semester_count column');
+                    } catch (\Exception $schemaException) {
+                        \Log::error('Step 7 FAILED: Cannot add semester_count column', [
+                            'error' => $schemaException->getMessage()
+                        ]);
+                        return back()->withErrors(['error' => 'Database schema error: Missing semester_count column. Please contact administrator.']);
+                    }
+                }
+                
+                \Log::info('Step 7 SUCCESS: Database schema verified');
+            } catch (\Exception $schemaCheckException) {
+                \Log::error('Step 7 EXCEPTION: Schema check failed', [
+                    'error' => $schemaCheckException->getMessage()
+                ]);
+                // Continue anyway, let the actual insert fail with proper error if needed
+            }
+            
             // Create booking with transaction
             \Log::info('Step 8: Starting database transaction');
             $booking = null;
