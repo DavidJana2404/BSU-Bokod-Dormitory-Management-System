@@ -8,6 +8,7 @@ use App\Models\Student;
 use App\Models\Tenant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 
@@ -149,85 +150,158 @@ class ApplicationController extends Controller
      */
     public function approve(Application $application)
     {
-        if ($application->status !== 'pending') {
-            if (request()->header('X-Inertia')) {
-                return back()->with('error', 'Application has already been processed.');
-            }
-            if (request()->expectsJson()) {
-                return response()->json(['message' => 'Application has already been processed.'], 422);
-            }
-            return redirect()->route('applications.index')->with('error', 'Application has already been processed.');
-        }
-        
-        $user = Auth::user();
-        
-        // Ensure user is authenticated and has a role
-        if (!$user || !isset($user->role)) {
-            if (request()->header('X-Inertia')) {
-                return back()->with('error', 'You must be logged in to process applications.');
-            }
-            if (request()->expectsJson()) {
-                return response()->json(['message' => 'You must be logged in to process applications.'], 401);
-            }
-            return redirect()->route('applications.index')->with('error', 'You must be logged in to process applications.');
-        }
-        
-        // Check if manager has permission to approve this application
-        if ($user->role === 'manager' && isset($user->tenant_id) && $user->tenant_id !== $application->tenant_id) {
-            if (request()->header('X-Inertia')) {
-                return back()->with('error', 'You do not have permission to process this application.');
-            }
-            if (request()->expectsJson()) {
-                return response()->json(['message' => 'You do not have permission to process this application.'], 403);
-            }
-            return redirect()->route('applications.index')->with('error', 'You do not have permission to process this application.');
-        }
-        
         try {
-            // Create student record WITHOUT password - student must set one to gain access
-            $student = Student::create([
-                'tenant_id' => $application->tenant_id,
-                'first_name' => $application->first_name,
-                'last_name' => $application->last_name,
-                'email' => $application->email,
-                'phone' => $application->phone,
-                'password' => null, // No password - student cannot log in until password is set
-                'status' => 'in',
-                'payment_status' => 'unpaid',
+            // Validate application status
+            if ($application->status !== 'pending') {
+                \Log::warning('Attempt to approve non-pending application', [
+                    'application_id' => $application->id,
+                    'current_status' => $application->status
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'Application has already been processed.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'Application has already been processed.'], 422);
+                }
+                return redirect()->route('applications.index')->with('error', 'Application has already been processed.');
+            }
+            
+            $user = Auth::user();
+            
+            // Ensure user is authenticated and has a role
+            if (!$user || !isset($user->role)) {
+                \Log::error('Unauthorized approval attempt', [
+                    'application_id' => $application->id,
+                    'user_id' => $user ? $user->id : 'null',
+                    'user_role' => $user ? $user->role ?? 'null' : 'null'
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'You must be logged in to process applications.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'You must be logged in to process applications.'], 401);
+                }
+                return redirect()->route('applications.index')->with('error', 'You must be logged in to process applications.');
+            }
+            
+            // Check if manager has permission to approve this application
+            if ($user->role === 'manager' && isset($user->tenant_id) && $user->tenant_id !== $application->tenant_id) {
+                \Log::warning('Manager attempted to approve application outside their dormitory', [
+                    'user_id' => $user->id,
+                    'user_tenant_id' => $user->tenant_id,
+                    'application_tenant_id' => $application->tenant_id,
+                    'application_id' => $application->id
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'You do not have permission to process this application.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'You do not have permission to process this application.'], 403);
+                }
+                return redirect()->route('applications.index')->with('error', 'You do not have permission to process this application.');
+            }
+            
+            // Initialize variables
+            $student = null;
+            $studentCreated = false;
+            
+            // Use database transaction for data consistency
+            \DB::transaction(function () use ($application, $user, &$student, &$studentCreated) {
+                try {
+                    // Check if student with this email already exists
+                    $existingStudent = Student::where('email', $application->email)
+                        ->whereNull('archived_at')
+                        ->first();
+                    
+                    if ($existingStudent) {
+                        throw new \Exception('A student with this email already exists in the system.');
+                    }
+                    
+                    // Create student record WITHOUT password
+                    $student = Student::create([
+                        'tenant_id' => $application->tenant_id,
+                        'first_name' => $application->first_name,
+                        'last_name' => $application->last_name,
+                        'email' => $application->email,
+                        'phone' => $application->phone,
+                        'password' => null, // No password - student must set one to gain access
+                        'status' => 'in',
+                        'payment_status' => 'unpaid',
+                    ]);
+                    
+                    $studentCreated = true;
+                    
+                    // Update application status
+                    $application->update([
+                        'status' => 'approved',
+                        'processed_by' => $user->id,
+                        'processed_at' => now(),
+                    ]);
+                    
+                    \Log::info('Application approved successfully', [
+                        'application_id' => $application->id,
+                        'student_id' => $student->id,
+                        'processed_by' => $user->id
+                    ]);
+                    
+                } catch (\Exception $e) {
+                    \Log::error('Error in application approval transaction', [
+                        'application_id' => $application->id,
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString()
+                    ]);
+                    throw $e; // Re-throw to trigger rollback
+                }
+            });
+            
+            // Prepare response data
+            $successMessage = 'Application approved successfully! Student has been added to the system.';
+            $responseData = [
+                'message' => $successMessage,
+                'student_id' => $student ? $student->id : null,
+                'application_id' => $application->id
+            ];
+            
+            // For Inertia.js requests, redirect back with success message
+            if (request()->header('X-Inertia')) {
+                return redirect()->route('applications.index')->with('success', $successMessage);
+            }
+            
+            // For AJAX requests, return JSON
+            if (request()->expectsJson()) {
+                return response()->json($responseData);
+            }
+            
+            return redirect()->route('applications.index')
+                ->with('success', $successMessage . ' The student must contact administration to set up their password before they can access the system.');
+                
+        } catch (\Exception $e) {
+            \Log::error('Fatal error in application approval', [
+                'application_id' => $application->id ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
-            // Update application status
-            $application->update([
-                'status' => 'approved',
-                'processed_by' => $user->id,
-                'processed_at' => now(),
-            ]);
-        } catch (\Exception $e) {
-            \Log::error('Failed to approve application: ' . $e->getMessage());
+            $errorMessage = 'Failed to approve application. Please try again.';
+            
+            // Handle specific errors
+            if (str_contains($e->getMessage(), 'email already exists')) {
+                $errorMessage = 'Cannot approve: A student with this email already exists in the system.';
+            } elseif (str_contains($e->getMessage(), 'tenant_id')) {
+                $errorMessage = 'Invalid dormitory. Please contact system administrator.';
+            }
             
             if (request()->header('X-Inertia')) {
-                return back()->with('error', 'Failed to approve application. Please try again.');
+                return back()->with('error', $errorMessage);
             }
             if (request()->expectsJson()) {
-                return response()->json(['message' => 'Failed to approve application. Please try again.'], 500);
+                return response()->json(['message' => $errorMessage], 500);
             }
-            return redirect()->route('applications.index')->with('error', 'Failed to approve application. Please try again.');
+            return redirect()->route('applications.index')->with('error', $errorMessage);
         }
-        
-        // For Inertia.js requests, redirect back with success message
-        if (request()->header('X-Inertia')) {
-            return redirect()->route('applications.index')->with('success', 'Application approved successfully! Student has been added to the system.');
-        }
-        
-        // For AJAX requests, return JSON
-        if (request()->expectsJson()) {
-            return response()->json([
-                'message' => 'Application approved successfully! Student has been added to the system.',
-                'student_id' => $student->id
-            ]);
-        }
-        
-        return redirect()->route('applications.index')->with('success', 'Application approved successfully! Student has been added to the system. The student must contact administration to set up their password before they can access the system.');
     }
     
     /**
@@ -235,89 +309,133 @@ class ApplicationController extends Controller
      */
     public function reject(Request $request, Application $application)
     {
-        if ($application->status !== 'pending') {
-            if (request()->header('X-Inertia')) {
-                return back()->with('error', 'Application has already been processed.');
-            }
-            if (request()->expectsJson()) {
-                return response()->json(['message' => 'Application has already been processed.'], 422);
-            }
-            return redirect()->route('applications.index')->with('error', 'Application has already been processed.');
-        }
-        
-        $user = Auth::user();
-        
-        // Ensure user is authenticated and has a role
-        if (!$user || !isset($user->role)) {
-            if (request()->header('X-Inertia')) {
-                return back()->with('error', 'You must be logged in to process applications.');
-            }
-            if (request()->expectsJson()) {
-                return response()->json(['message' => 'You must be logged in to process applications.'], 401);
-            }
-            return redirect()->route('applications.index')->with('error', 'You must be logged in to process applications.');
-        }
-        
-        // Check if manager has permission to reject this application
-        if ($user->role === 'manager' && isset($user->tenant_id) && $user->tenant_id !== $application->tenant_id) {
-            if (request()->header('X-Inertia')) {
-                return back()->with('error', 'You do not have permission to process this application.');
-            }
-            if (request()->expectsJson()) {
-                return response()->json(['message' => 'You do not have permission to process this application.'], 403);
-            }
-            return redirect()->route('applications.index')->with('error', 'You do not have permission to process this application.');
-        }
-        
         try {
-            $validated = $request->validate([
-                'rejection_reason' => 'required|string|max:1000',
-            ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Validate application status
+            if ($application->status !== 'pending') {
+                \Log::warning('Attempt to reject non-pending application', [
+                    'application_id' => $application->id,
+                    'current_status' => $application->status
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'Application has already been processed.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'Application has already been processed.'], 422);
+                }
+                return redirect()->route('applications.index')->with('error', 'Application has already been processed.');
+            }
+            
+            $user = Auth::user();
+            
+            // Ensure user is authenticated and has a role
+            if (!$user || !isset($user->role)) {
+                \Log::error('Unauthorized rejection attempt', [
+                    'application_id' => $application->id,
+                    'user_id' => $user ? $user->id : 'null',
+                    'user_role' => $user ? $user->role ?? 'null' : 'null'
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'You must be logged in to process applications.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'You must be logged in to process applications.'], 401);
+                }
+                return redirect()->route('applications.index')->with('error', 'You must be logged in to process applications.');
+            }
+            
+            // Check if manager has permission to reject this application
+            if ($user->role === 'manager' && isset($user->tenant_id) && $user->tenant_id !== $application->tenant_id) {
+                \Log::warning('Manager attempted to reject application outside their dormitory', [
+                    'user_id' => $user->id,
+                    'user_tenant_id' => $user->tenant_id,
+                    'application_tenant_id' => $application->tenant_id,
+                    'application_id' => $application->id
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'You do not have permission to process this application.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'You do not have permission to process this application.'], 403);
+                }
+                return redirect()->route('applications.index')->with('error', 'You do not have permission to process this application.');
+            }
+            
+            // Validate rejection reason
+            $validated = [];
+            try {
+                $validated = $request->validate([
+                    'rejection_reason' => 'required|string|max:1000',
+                ]);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                \Log::warning('Invalid rejection reason provided', [
+                    'application_id' => $application->id,
+                    'validation_errors' => $e->errors()
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()
+                        ->withErrors($e->errors())
+                        ->with('error', 'Please provide a valid rejection reason.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+                }
+                throw $e;
+            }
+            
+            // Use database transaction for consistency
+            DB::transaction(function () use ($application, $user, $validated) {
+                $application->update([
+                    'status' => 'rejected',
+                    'rejection_reason' => $validated['rejection_reason'],
+                    'processed_by' => $user->id,
+                    'processed_at' => now(),
+                ]);
+                
+                \Log::info('Application rejected successfully', [
+                    'application_id' => $application->id,
+                    'processed_by' => $user->id,
+                    'rejection_reason' => substr($validated['rejection_reason'], 0, 100) // Log first 100 chars
+                ]);
+            });
+            
+            $successMessage = 'Application rejected successfully!';
+            
+            // For Inertia.js requests, redirect back with success message
             if (request()->header('X-Inertia')) {
-                return back()
-                    ->withErrors($e->errors())
-                    ->with('error', 'Please provide a valid rejection reason.');
+                return redirect()->route('applications.index')->with('success', $successMessage);
             }
+            
+            // For AJAX requests, return JSON
             if (request()->expectsJson()) {
-                return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+                return response()->json([
+                    'message' => $successMessage,
+                    'application_id' => $application->id
+                ]);
             }
-            throw $e;
-        }
-        
-        try {
-            // Update application status
-            $application->update([
-                'status' => 'rejected',
-                'rejection_reason' => $validated['rejection_reason'],
-                'processed_by' => $user->id,
-                'processed_at' => now(),
-            ]);
+            
+            return redirect()->route('applications.index')->with('success', $successMessage);
+            
         } catch (\Exception $e) {
-            \Log::error('Failed to reject application: ' . $e->getMessage());
+            \Log::error('Fatal error in application rejection', [
+                'application_id' => $application->id ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $errorMessage = 'Failed to reject application. Please try again.';
             
             if (request()->header('X-Inertia')) {
-                return back()->with('error', 'Failed to reject application. Please try again.');
+                return back()->with('error', $errorMessage);
             }
             if (request()->expectsJson()) {
-                return response()->json(['message' => 'Failed to reject application. Please try again.'], 500);
+                return response()->json(['message' => $errorMessage], 500);
             }
-            return redirect()->route('applications.index')->with('error', 'Failed to reject application. Please try again.');
+            return redirect()->route('applications.index')->with('error', $errorMessage);
         }
-        
-        // For Inertia.js requests, redirect back with success message
-        if (request()->header('X-Inertia')) {
-            return redirect()->route('applications.index')->with('success', 'Application rejected successfully!');
-        }
-        
-        // For AJAX requests, return JSON
-        if (request()->expectsJson()) {
-            return response()->json([
-                'message' => 'Application rejected successfully.'
-            ]);
-        }
-        
-        return redirect()->route('applications.index')->with('success', 'Application rejected successfully.');
     }
     
     /**
