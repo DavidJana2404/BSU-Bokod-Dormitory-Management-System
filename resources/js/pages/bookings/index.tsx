@@ -3,7 +3,7 @@ import AppLayout from '@/layouts/app-layout';
 import { usePage, router } from '@inertiajs/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
@@ -549,6 +549,9 @@ export default function Bookings() {
                             </div>
                             <DialogTitle className="text-xl">{isEdit ? 'Edit Booking' : 'Add New Booking'}</DialogTitle>
                         </div>
+                        <DialogDescription className="text-sm text-gray-600 dark:text-gray-400">
+                            {isEdit ? 'Update the booking details below.' : 'Fill in the details to create a new booking.'}
+                        </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-6 mt-6">
@@ -582,11 +585,11 @@ export default function Bookings() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {!hasAnyStudents ? (
-                                            <SelectItem value="" disabled>
+                                            <SelectItem value="none" disabled>
                                                 No students exist in the system
                                             </SelectItem>
                                         ) : studentList.length === 0 ? (
-                                            <SelectItem value="" disabled>
+                                            <SelectItem value="none" disabled>
                                                 All students already have bookings
                                             </SelectItem>
                                         ) : (
@@ -624,7 +627,7 @@ export default function Bookings() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     {availableRooms.length === 0 ? (
-                                        <SelectItem value="" disabled>
+                                        <SelectItem value="none" disabled>
                                             No available rooms
                                         </SelectItem>
                                     ) : (
