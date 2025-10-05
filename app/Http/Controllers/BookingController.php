@@ -16,8 +16,13 @@ class BookingController extends Controller
     {
         try {
             $user = $request->user();
+            \Log::info('BookingController index called', ['user_id' => $user ? $user->id : 'null']);
             
             if (!$user || !$user->tenant_id) {
+                \Log::warning('BookingController index: No user or tenant_id', [
+                    'user_id' => $user ? $user->id : 'null',
+                    'tenant_id' => $user ? $user->tenant_id : 'null'
+                ]);
                 return Inertia::render('bookings/index', [
                     'bookings' => [],
                     'students' => [],
@@ -144,7 +149,7 @@ class BookingController extends Controller
             
             try {
                 // Get rooms with capacity information
-                $roomsData = Room::select('room_id', 'tenant_id', 'room_number', 'type', 'price_per_night', 'status', 'max_capacity')
+                $roomsData = Room::select('room_id', 'tenant_id', 'room_number', 'type', 'price_per_semester', 'status', 'max_capacity')
                     ->where('tenant_id', $user->tenant_id)
                     ->whereNull('archived_at')
                     ->limit(50)
@@ -172,7 +177,7 @@ class BookingController extends Controller
                             'tenant_id' => $room->tenant_id,
                             'room_number' => $room->room_number,
                             'type' => $room->type,
-                            'price_per_night' => $room->price_per_night,
+                            'price_per_semester' => $room->price_per_semester,
                             'status' => $room->status,
                             'max_capacity' => $maxCapacity,
                             'current_occupancy' => $currentOccupancy,
@@ -191,7 +196,7 @@ class BookingController extends Controller
                             'tenant_id' => $room->tenant_id,
                             'room_number' => $room->room_number,
                             'type' => $room->type,
-                            'price_per_night' => $room->price_per_night,
+                            'price_per_semester' => $room->price_per_semester,
                             'status' => $room->status,
                             'max_capacity' => 0,
                             'current_occupancy' => 0,
@@ -207,6 +212,14 @@ class BookingController extends Controller
                     'error' => $e->getMessage()
                 ]);
             }
+            
+            \Log::info('BookingController index returning data', [
+                'bookings_count' => $bookings->count(),
+                'students_count' => $students->count(),
+                'rooms_count' => $rooms->count(),
+                'hasAnyStudents' => $hasAnyStudents,
+                'tenant_id' => $user->tenant_id
+            ]);
             
             return Inertia::render('bookings/index', [
                 'bookings' => $bookings->values()->all(),
