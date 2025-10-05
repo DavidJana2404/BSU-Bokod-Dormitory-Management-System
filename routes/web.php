@@ -33,6 +33,7 @@ Route::post('/setup/promote-first-user', [AdminSetupController::class, 'promoteF
 Route::post('/setup/promote-user', [AdminSetupController::class, 'promoteUserByEmail'])->name('setup.promote-user');
 
 // Emergency database fix endpoint (remove after fixing production)
+// Deployment trigger: 2025-10-05 12:24 - Comprehensive booking debugging deployed
 Route::get('/fix-booking-schema', function () {
     try {
         // Check if semester_count column exists
