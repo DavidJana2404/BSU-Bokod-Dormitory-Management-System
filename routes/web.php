@@ -32,6 +32,36 @@ Route::get('/health', function () {
 Route::post('/setup/promote-first-user', [AdminSetupController::class, 'promoteFirstUserToAdmin'])->name('setup.promote-first-user');
 Route::post('/setup/promote-user', [AdminSetupController::class, 'promoteUserByEmail'])->name('setup.promote-user');
 
+// Emergency database fix endpoint (remove after fixing production)
+Route::get('/fix-booking-schema', function () {
+    try {
+        // Check if semester_count column exists
+        $hasColumn = \Schema::hasColumn('bookings', 'semester_count');
+        
+        if (!$hasColumn) {
+            // Run the specific migration to fix the schema
+            \Artisan::call('migrate:rollback', ['--step' => 1]);
+            \Artisan::call('migrate');
+            
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Database schema fixed - semester_count column added to bookings table',
+                'rollback_output' => \Artisan::output(),
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'already_fixed',
+                'message' => 'Database schema is already correct - semester_count column exists',
+            ]);
+        }
+    } catch (\Exception $e) {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to fix database schema: ' . $e->getMessage(),
+        ], 500);
+    }
+})->name('fix.booking.schema');
+
 // Debug endpoint for troubleshooting (remove in production)
 Route::get('/debug-info', function () {
     try {

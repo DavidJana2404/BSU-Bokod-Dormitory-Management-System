@@ -188,31 +188,43 @@ export default function Bookings() {
             });
         } else {
             // For new bookings, send all required fields
+            console.log('[DEBUG] Submitting booking form with data:', form);
+            console.log('[DEBUG] Available students:', studentList.length);
+            console.log('[DEBUG] Available rooms:', availableRooms.length);
+            
             router.post('/bookings', form, {
-                onSuccess: () => {
+                onSuccess: (response) => {
+                    console.log('[DEBUG] Booking created successfully:', response);
                     handleClose();
                     setIsLoading(false);
                 },
                 onError: (errors) => {
+                    console.error('[DEBUG] Booking creation failed - Full error object:', errors);
+                    console.error('[DEBUG] Form data that failed:', form);
                     setIsLoading(false);
                     
                     // Show specific error messages
                     if (errors.error) {
+                        console.log('[DEBUG] Showing error:', errors.error);
                         setAlertMessage(errors.error);
                         setAlertDialogOpen(true);
                     } else if (errors.student_id) {
+                        console.log('[DEBUG] Showing student_id error:', errors.student_id);
                         setAlertMessage(errors.student_id);
                         setAlertDialogOpen(true);
                     } else if (errors.room_id) {
+                        console.log('[DEBUG] Showing room_id error:', errors.room_id);
                         setAlertMessage(errors.room_id);
                         setAlertDialogOpen(true);
                     } else if (errors.semester_count) {
+                        console.log('[DEBUG] Showing semester_count error:', errors.semester_count);
                         setAlertMessage(errors.semester_count);
                         setAlertDialogOpen(true);
                     } else {
                         // Show all errors if available
+                        console.log('[DEBUG] Showing generic error. All errors:', errors);
                         const errorMessage = Object.values(errors).flat().join(', ') || 'Unable to create booking. Please check the form and try again.';
-                        setAlertMessage(errorMessage);
+                        setAlertMessage('DEBUGGING: ' + errorMessage + ' (Check console for details)');
                         setAlertDialogOpen(true);
                     }
                 },
