@@ -4,7 +4,8 @@
 import AppLayout from '@/layouts/app-layout';
 import { Head, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription as CardDesc } from '@/components/ui/card';
-import { Users, Bed, CalendarCheck2, Building2, UserCog } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Users, Bed, CalendarCheck2, Building2, UserCog, AlertTriangle } from 'lucide-react';
 import React from 'react';
 
 interface Room {
@@ -47,8 +48,26 @@ interface Dormitory {
 }
 
 export default function Dashboard() {
-    const { isAdmin, dormitories, dormitory, studentsCount, roomsCount, bookingsCount, totalDormitories, totalRooms, totalManagers, totalStudents, rooms, auth } = usePage().props as unknown as any;
+    const { isAdmin, dormitories, dormitory, studentsCount, roomsCount, bookingsCount, totalDormitories, totalRooms, totalManagers, totalStudents, rooms, auth, error } = usePage().props as unknown as any;
     const user = auth?.user;
+    
+    // Show error message if there's a server error
+    if (error) {
+        return (
+            <AppLayout breadcrumbs={[{ title: 'Dashboard', href: '/dashboard' }]}>
+                <Head title="Dashboard" />
+                <div className="p-6">
+                    <Alert variant="destructive" className="max-w-2xl mx-auto">
+                        <AlertTriangle className="h-4 w-4" />
+                        <AlertDescription>
+                            {error}
+                        </AlertDescription>
+                    </Alert>
+                </div>
+            </AppLayout>
+        );
+    }
+    
     if (user?.role === 'manager' && !user?.tenant_id) {
         return (
             <AppLayout breadcrumbs={[{ title: 'Dashboard', href: '/dashboard' }]}>
