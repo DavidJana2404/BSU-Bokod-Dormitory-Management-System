@@ -15,6 +15,20 @@ class BookingController extends Controller
     public function index(Request $request)
     {
         try {
+            // Test database connection first
+            try {
+                \DB::connection()->getPdo();
+            } catch (\Exception $dbException) {
+                \Log::error('Database connection failed in BookingController index', [
+                    'error' => $dbException->getMessage()
+                ]);
+                
+                return response()->json([
+                    'error' => 'Database connection failed',
+                    'message' => 'Unable to connect to database. Please try again later.'
+                ], 503);
+            }
+            
             $user = $request->user();
             \Log::info('BookingController index called', ['user_id' => $user ? $user->id : 'null']);
             
@@ -518,44 +532,134 @@ class BookingController extends Controller
 
     public function show($id)
     {
-        return response()->json(Booking::findOrFail($id));
+        try {
+            // Test database connection first
+            \DB::connection()->getPdo();
+            
+            $booking = Booking::findOrFail($id);
+            return response()->json($booking);
+        } catch (\Exception $e) {
+            \Log::error('Error loading booking details', [
+                'booking_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to load booking details',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $user = $request->user();
-        $booking = Booking::findOrFail($id);
-        
-        // Only validate the fields that can be updated (student cannot be changed)
-        $data = $request->validate([
-            'room_id' => 'required|exists:rooms,room_id,tenant_id,' . $user->tenant_id,
-            'semester_count' => 'required|integer|min:1|max:10',
-        ]);
-        
-        // If room is changing, check capacity of new room
-        if ($data['room_id'] != $booking->room_id) {
-            $newRoom = Room::find($data['room_id']);
-            if (!$newRoom || !$newRoom->canAccommodate(1)) {
-                return back()->withErrors([
-                    'room_id' => 'The selected room is at maximum capacity (' . $newRoom->max_capacity . ' students). Current occupancy: ' . $newRoom->getCurrentOccupancy() . '/' . $newRoom->max_capacity
-                ]);
+        try {
+            // Test database connection first
+            \DB::connection()->getPdo();
+            
+            $user = $request->user();
+            
+            if (!$user || !$user->tenant_id) {
+                return back()->withErrors(['error' => 'Unauthorized access.']);
             }
+            
+            $booking = Booking::findOrFail($id);
+            
+            // Only validate the fields that can be updated (student cannot be changed)
+            $data = $request->validate([
+                'room_id' => 'required|integer',
+                'semester_count' => 'required|integer|min:1|max:10',
+            ]);
+            
+            // If room is changing, check capacity of new room
+            if ($data['room_id'] != $booking->room_id) {
+                try {
+                    $newRoom = Room::where('room_id', $data['room_id'])
+                        ->where('tenant_id', $user->tenant_id)
+                        ->whereNull('archived_at')
+                        ->first();
+                        
+                    if (!$newRoom) {
+                        return back()->withErrors([
+                            'room_id' => 'Selected room is not available.'
+                        ]);
+                    }
+                    
+                    $currentOccupancy = Booking::where('room_id', $newRoom->room_id)
+                        ->whereNull('archived_at')
+                        ->where('booking_id', '!=', $booking->booking_id) // Exclude current booking
+                        ->count();
+                        
+                    if ($currentOccupancy >= $newRoom->max_capacity) {
+                        return back()->withErrors([
+                            'room_id' => 'The selected room is at maximum capacity (' . $newRoom->max_capacity . ' students). Current occupancy: ' . $currentOccupancy . '/' . $newRoom->max_capacity
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('Error checking room capacity for booking update', [
+                        'booking_id' => $id,
+                        'room_id' => $data['room_id'],
+                        'error' => $e->getMessage()
+                    ]);
+                    return back()->withErrors(['error' => 'Unable to validate room availability.']);
+                }
+            }
+            
+            $booking->update($data);
+            
+            // Use Inertia location redirect to force full page reload with fresh data
+            return Inertia::location('/bookings');
+            
+        } catch (\Exception $e) {
+            \Log::error('Error updating booking', [
+                'booking_id' => $id,
+                'error' => $e->getMessage(),
+                'data' => $request->all()
+            ]);
+            
+            return back()->withErrors(['error' => 'Failed to update booking: ' . $e->getMessage()]);
         }
-        
-        $booking->update($data);
-        
-        // Use Inertia location redirect to force full page reload with fresh data
-        return Inertia::location('/bookings');
     }
 
     public function destroy(Request $request, $id)
     {
-        $user = $request->user();
-        $booking = Booking::findOrFail($id);
-        $booking->archive();
-        
-        // Use Inertia location redirect to force full page reload with fresh data
-        return Inertia::location('/bookings');
+        try {
+            // Test database connection first
+            \DB::connection()->getPdo();
+            
+            $user = $request->user();
+            
+            if (!$user || !$user->tenant_id) {
+                return back()->withErrors(['error' => 'Unauthorized access.']);
+            }
+            
+            $booking = Booking::findOrFail($id);
+            
+            // Verify booking belongs to user's tenant
+            if ($booking->tenant_id !== $user->tenant_id) {
+                return back()->withErrors(['error' => 'Unauthorized access to this booking.']);
+            }
+            
+            $booking->archive();
+            
+            \Log::info('Booking archived successfully', [
+                'booking_id' => $id,
+                'user_id' => $user->id,
+                'tenant_id' => $user->tenant_id
+            ]);
+            
+            // Use Inertia location redirect to force full page reload with fresh data
+            return Inertia::location('/bookings');
+            
+        } catch (\Exception $e) {
+            \Log::error('Error archiving booking', [
+                'booking_id' => $id,
+                'error' => $e->getMessage(),
+                'user_id' => $request->user() ? $request->user()->id : 'null'
+            ]);
+            
+            return back()->withErrors(['error' => 'Failed to archive booking: ' . $e->getMessage()]);
+        }
     }
     
     public function restore($id)
