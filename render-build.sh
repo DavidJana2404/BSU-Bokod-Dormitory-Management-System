@@ -57,3 +57,6 @@ echo "Creating storage link..."
 php artisan storage:link
 
 echo "=== Build Complete ==="
+echo "Application will bind to port: \$PORT (default: 10000)"
+echo "Nginx configuration updated for Render deployment"
+echo "Ready for web service startup"
