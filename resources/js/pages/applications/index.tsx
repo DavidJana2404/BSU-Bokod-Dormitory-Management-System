@@ -2,7 +2,7 @@ import AppLayout from '@/layouts/app-layout';
 import { usePage, router } from '@inertiajs/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -460,6 +460,9 @@ export default function Applications() {
                     <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Application Details</DialogTitle>
+                            <DialogDescription>
+                                View detailed information about this student application.
+                            </DialogDescription>
                         </DialogHeader>
                         {selectedApplication && (
                             <div className="space-y-6">
@@ -537,6 +540,9 @@ export default function Applications() {
                     <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                             <DialogTitle>Reject Application</DialogTitle>
+                            <DialogDescription>
+                                Provide a reason for rejecting this application.
+                            </DialogDescription>
                         </DialogHeader>
                         {selectedApplication && (
                             <div className="space-y-4">

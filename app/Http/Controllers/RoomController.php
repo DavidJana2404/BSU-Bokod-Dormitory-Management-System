@@ -11,6 +11,20 @@ class RoomController extends Controller
     public function index(Request $request)
     {
         try {
+            // Test database connection first
+            try {
+                \DB::connection()->getPdo();
+            } catch (\Exception $dbException) {
+                \Log::error('Database connection failed in RoomController', [
+                    'error' => $dbException->getMessage()
+                ]);
+                
+                return response()->json([
+                    'error' => 'Database connection failed',
+                    'message' => 'Unable to connect to database. Please try again later.'
+                ], 503);
+            }
+            
             $user = $request->user();
             
             if (!$user || !$user->tenant_id) {
@@ -23,6 +37,12 @@ class RoomController extends Controller
             
             $rooms = [];
             try {
+                // Check if rooms table exists and has required columns
+                if (!\Schema::hasTable('rooms')) {
+                    \Log::error('Rooms table does not exist');
+                    throw new \Exception('Rooms table not found');
+                }
+                
                 $rooms = Room::select(['room_id', 'tenant_id', 'room_number', 'type', 'price_per_semester', 'status', 'max_capacity'])
                     ->where('tenant_id', $user->tenant_id)
                     ->whereNull('archived_at')
@@ -32,8 +52,15 @@ class RoomController extends Controller
                 \Log::error('Error loading rooms', [
                     'user_id' => $user->id,
                     'tenant_id' => $user->tenant_id,
-                    'error' => $e->getMessage()
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString()
                 ]);
+                
+                // Return error response instead of empty data
+                return response()->json([
+                    'error' => 'Database error',
+                    'message' => 'Unable to load rooms: ' . $e->getMessage()
+                ], 500);
             }
             
             return Inertia::render('rooms/index', [
@@ -47,11 +74,10 @@ class RoomController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return Inertia::render('rooms/index', [
-                'rooms' => [],
-                'tenant_id' => null,
-                'error' => 'Unable to load rooms. Please try again later.'
-            ]);
+            return response()->json([
+                'error' => 'Server error',
+                'message' => 'Fatal error occurred: ' . $e->getMessage()
+            ], 500);
         }
     }
 
@@ -83,31 +109,76 @@ class RoomController extends Controller
 
     public function show($id)
     {
-        return response()->json(Room::findOrFail($id));
+        try {
+            // Test database connection first
+            \DB::connection()->getPdo();
+            
+            $room = Room::findOrFail($id);
+            return response()->json($room);
+        } catch (\Exception $e) {
+            \Log::error('Error loading room details', [
+                'room_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return response()->json([
+                'error' => 'Failed to load room details',
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function update(Request $request, $id)
     {
-        $user = $request->user();
-        $room = Room::findOrFail($id);
-        $room->update($request->all());
-        $rooms = Room::where('tenant_id', $user->tenant_id)->notArchived()->get();
-        return Inertia::render('rooms/index', [
-            'rooms' => $rooms,
-            'tenant_id' => $user->tenant_id
-        ]);
+        try {
+            // Test database connection first
+            \DB::connection()->getPdo();
+            
+            $user = $request->user();
+            $room = Room::findOrFail($id);
+            $room->update($request->all());
+            
+            $rooms = Room::where('tenant_id', $user->tenant_id)->whereNull('archived_at')->get();
+            
+            return Inertia::render('rooms/index', [
+                'rooms' => $rooms,
+                'tenant_id' => $user->tenant_id
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error updating room', [
+                'room_id' => $id,
+                'error' => $e->getMessage(),
+                'data' => $request->all()
+            ]);
+            
+            return redirect()->route('rooms.index')->with('error', 'Failed to update room: ' . $e->getMessage());
+        }
     }
 
     public function destroy($id)
     {
-        $user = request()->user();
-        $room = Room::findOrFail($id);
-        $room->archive();
-        $rooms = Room::where('tenant_id', $user->tenant_id)->notArchived()->get();
-        return Inertia::render('rooms/index', [
-            'rooms' => $rooms,
-            'tenant_id' => $user->tenant_id
-        ]);
+        try {
+            // Test database connection first
+            \DB::connection()->getPdo();
+            
+            $user = request()->user();
+            $room = Room::findOrFail($id);
+            $room->archive();
+            
+            $rooms = Room::where('tenant_id', $user->tenant_id)->whereNull('archived_at')->get();
+            
+            return Inertia::render('rooms/index', [
+                'rooms' => $rooms,
+                'tenant_id' => $user->tenant_id
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error archiving room', [
+                'room_id' => $id,
+                'error' => $e->getMessage()
+            ]);
+            
+            return redirect()->route('rooms.index')->with('error', 'Failed to archive room: ' . $e->getMessage());
+        }
     }
     
     public function restore($id)
