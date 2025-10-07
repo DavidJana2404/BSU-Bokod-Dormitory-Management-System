@@ -48,15 +48,12 @@ class BookingController extends Controller
                 ]);
             }
             
-            // Use cache for frequent queries (5-minute cache)
-            $cacheKey = "bookings_index_{$user->tenant_id}_" . md5($request->fullUrl());
-            $cacheTime = 300; // 5 minutes
+            // DISABLE CACHING TEMPORARILY TO FIX BOOKING DISPLAY ISSUES
+            // $cacheKey = "bookings_index_{$user->tenant_id}_" . md5($request->fullUrl());
+            // $cacheTime = 300; // 5 minutes
             
-            if (\Cache::has($cacheKey) && !$request->has('refresh')) {
-                $cachedData = \Cache::get($cacheKey);
-                \Log::info('BookingController index served from cache', ['tenant_id' => $user->tenant_id]);
-                return Inertia::render('bookings/index', $cachedData);
-            }
+            // Always fetch fresh data for now
+            \Log::info('BookingController index loading fresh data', ['tenant_id' => $user->tenant_id]);
             
             // Initialize default values
             $bookings = collect([]);
@@ -185,8 +182,8 @@ class BookingController extends Controller
                 'hasAnyStudents' => $hasAnyStudents,
             ];
             
-            // Cache the response data for 5 minutes
-            \Cache::put($cacheKey, $responseData, $cacheTime);
+            // Cache disabled temporarily to fix display issues
+            // \Cache::put($cacheKey, $responseData, $cacheTime);
             
             \Log::info('BookingController index returning data', [
                 'bookings_count' => $bookings->count(),
@@ -224,324 +221,79 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
-        // Set execution timeout for this request
-        set_time_limit(60);
-        
-        \Log::info('=== BOOKING CREATION START ===', [
-            'timestamp' => now(),
-            'ip' => $request->ip(),
-            'memory_usage' => memory_get_usage(true) / 1024 / 1024 . 'MB'
-        ]);
-        
         try {
-            // Validate database connection first
-            try {
-                \DB::connection()->getPdo();
-            } catch (\Exception $dbException) {
-                \Log::error('Database connection failed during booking creation', [
-                    'error' => $dbException->getMessage()
-                ]);
-                return back()->withErrors(['error' => 'Database connection failed. Please try again.']);
-            }
-            
             $user = $request->user();
             
             if (!$user || !$user->tenant_id) {
-                \Log::error('Unauthorized booking creation attempt', [
-                    'user_id' => $user ? $user->id : 'null',
-                    'tenant_id' => $user ? $user->tenant_id : 'null'
-                ]);
-                
-                if ($request->expectsJson() || $request->wantsJson()) {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Unauthorized access.'
-                    ], 401);
-                }
                 return back()->withErrors(['error' => 'Unauthorized access.']);
             }
-            
-            // Check if there are any students in the system before allowing booking creation
-            \Log::info('Step 2: Checking student count');
-            try {
-                $totalStudents = Student::where('tenant_id', $user->tenant_id)
-                    ->whereNull('archived_at')
-                    ->count();
-                    
-                \Log::info('Step 2: Student count result', [
-                    'total_students' => $totalStudents,
-                    'tenant_id' => $user->tenant_id
-                ]);
-                    
-                if ($totalStudents === 0) {
-                    \Log::error('Step 2 FAILED: No students in system', ['tenant_id' => $user->tenant_id]);
-                    return back()->withErrors([
-                        'student_id' => 'Cannot create a booking because there are no students in the system yet. Please add students first before creating bookings.'
-                    ]);
-                }
-                
-                \Log::info('Step 2 SUCCESS: Students exist', ['total_students' => $totalStudents]);
-            } catch (\Exception $e) {
-                \Log::error('Step 2 EXCEPTION: Error checking student count', [
-                    'tenant_id' => $user->tenant_id,
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-                return back()->withErrors(['error' => 'Unable to validate booking. Please try again.']);
-            }
-            
-            // Validate input data
-            \Log::info('Step 3: Validating input data', ['raw_request' => $request->all()]);
-            $data = [];
-            try {
-                $data = $request->validate([
-                    'student_id' => 'required|string',
-                    'room_id' => 'required|string', 
-                    'semester_count' => 'required|integer|min:1|max:10',
-                ]);
-                
-                \Log::info('Step 3: Validation passed', ['validated_data' => $data]);
-                
-                // Convert string IDs to integers
-                $data['student_id'] = (int) $data['student_id'];
-                $data['room_id'] = (int) $data['room_id'];
-                $data['tenant_id'] = $user->tenant_id;
-                
-                \Log::info('Step 3 SUCCESS: Data converted and prepared', ['final_data' => $data]);
-                
-            } catch (\Illuminate\Validation\ValidationException $e) {
-                \Log::warning('Booking validation failed', [
-                    'errors' => $e->errors(),
-                    'request_data' => $request->all()
-                ]);
-                
-                // For AJAX requests, return JSON validation errors
-                if ($request->expectsJson() || $request->wantsJson() || $request->header('Accept') === 'application/json') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => 'Validation failed',
-                        'errors' => $e->errors()
-                    ], 422);
-                }
-                
-                return back()->withErrors($e->errors())->withInput();
-            }
-            
-            // Check room capacity with error handling
-            \Log::info('Step 4: Checking room capacity');
-            try {
-                $room = Room::select('room_id', 'max_capacity')
-                    ->where('room_id', $data['room_id'])
-                    ->where('tenant_id', $user->tenant_id)
-                    ->whereNull('archived_at')
-                    ->first();
-                
-                \Log::info('Step 4: Room lookup result', [
-                    'room_found' => $room ? true : false,
-                    'room_data' => $room ? $room->toArray() : null,
-                    'search_criteria' => [
-                        'room_id' => $data['room_id'],
-                        'tenant_id' => $user->tenant_id
-                    ]
-                ]);
-                
-                if (!$room) {
-                    \Log::error('Step 4 FAILED: Room not found', [
-                        'room_id' => $data['room_id'],
-                        'tenant_id' => $user->tenant_id
-                    ]);
-                    return back()->withErrors([
-                        'room_id' => 'Selected room is not available.'
-                    ]);
-                }
-                
-                // Check current occupancy safely
-                \Log::info('Step 5: Checking room occupancy');
-                $currentOccupancy = 0;
-                try {
-                    $currentOccupancy = Booking::where('room_id', $room->room_id)
-                        ->whereNull('archived_at')
-                        ->count();
-                        
-                    \Log::info('Step 5: Occupancy count result', [
-                        'current_occupancy' => $currentOccupancy,
-                        'room_id' => $room->room_id
-                    ]);
-                } catch (\Exception $e) {
-                    \Log::error('Step 5 EXCEPTION: Error calculating room occupancy', [
-                        'room_id' => $room->room_id,
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
-                }
-                
-                $maxCapacity = $room->max_capacity ?? 0;
-                \Log::info('Step 5: Capacity check', [
-                    'current_occupancy' => $currentOccupancy,
-                    'max_capacity' => $maxCapacity,
-                    'is_at_capacity' => $currentOccupancy >= $maxCapacity
-                ]);
-                
-                if ($currentOccupancy >= $maxCapacity) {
-                    \Log::error('Step 5 FAILED: Room at capacity', [
-                        'room_id' => $room->room_id,
-                        'current_occupancy' => $currentOccupancy,
-                        'max_capacity' => $maxCapacity
-                    ]);
-                    return back()->withErrors([
-                        'room_id' => 'This room is at maximum capacity (' . $maxCapacity . ' students). Current occupancy: ' . $currentOccupancy . '/' . $maxCapacity
-                    ]);
-                }
-                
-                \Log::info('Step 5 SUCCESS: Room has capacity', [
-                    'available_spots' => $maxCapacity - $currentOccupancy
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Error checking room capacity for booking', [
-                    'room_id' => $data['room_id'] ?? 'unknown',
-                    'error' => $e->getMessage()
-                ]);
-                return back()->withErrors(['error' => 'Unable to validate room availability. Please try again.']);
-            }
-            
-            // Check for duplicate booking
-            \Log::info('Step 6: Checking for duplicate bookings');
-            try {
-                $existingBooking = Booking::where('student_id', $data['student_id'])
-                    ->whereNull('archived_at')
-                    ->first();
-                    
-                \Log::info('Step 6: Duplicate booking check result', [
-                    'existing_booking_found' => $existingBooking ? true : false,
-                    'existing_booking_id' => $existingBooking ? $existingBooking->booking_id : null,
-                    'student_id' => $data['student_id']
-                ]);
-                    
-                if ($existingBooking) {
-                    \Log::error('Step 6 FAILED: Student already has booking', [
-                        'student_id' => $data['student_id'],
-                        'existing_booking_id' => $existingBooking->booking_id
-                    ]);
-                    
-                    // Always return a proper response (don't rely on AJAX detection)
-                    // Check if this is likely an AJAX/API request
-                    if ($request->expectsJson() || $request->wantsJson() || $request->header('Accept') === 'application/json') {
-                        \Log::info('Returning JSON conflict response for duplicate booking');
-                        return response()->json([
-                            'success' => false,
-                            'message' => 'This student already has an active booking.',
-                            'errors' => [
-                                'student_id' => ['This student already has an active booking.']
-                            ]
-                        ], 422); // Use 422 instead of 409 for better compatibility
-                    }
-                    
-                    \Log::info('Returning redirect response for duplicate booking');
-                    return back()->withErrors([
-                        'student_id' => 'This student already has an active booking.'
-                    ])->withInput();
-                }
-                
-                \Log::info('Step 6 SUCCESS: No duplicate booking found');
-            } catch (\Exception $e) {
-                \Log::error('Step 6 EXCEPTION: Error checking for duplicate booking', [
-                    'student_id' => $data['student_id'] ?? 'unknown',
-                    'error' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString()
-                ]);
-            }
-            
-            // Verify database schema before attempting to create booking
-            \Log::info('Step 7: Verifying database schema');
-            try {
-                $hasColumn = \Schema::hasColumn('bookings', 'semester_count');
-                \Log::info('Step 7: Schema check result', ['has_semester_count' => $hasColumn]);
-                
-                if (!$hasColumn) {
-                    \Log::warning('Step 7: Missing semester_count column, attempting to fix');
-                    try {
-                        \DB::statement('ALTER TABLE bookings ADD COLUMN semester_count INTEGER DEFAULT 1');
-                        \Log::info('Step 7: Successfully added semester_count column');
-                    } catch (\Exception $schemaException) {
-                        \Log::error('Step 7 FAILED: Cannot add semester_count column', [
-                            'error' => $schemaException->getMessage()
-                        ]);
-                        return back()->withErrors(['error' => 'Database schema error: Missing semester_count column. Please contact administrator.']);
-                    }
-                }
-                
-                \Log::info('Step 7 SUCCESS: Database schema verified');
-            } catch (\Exception $schemaCheckException) {
-                \Log::error('Step 7 EXCEPTION: Schema check failed', [
-                    'error' => $schemaCheckException->getMessage()
-                ]);
-                // Continue anyway, let the actual insert fail with proper error if needed
-            }
-            
-            // Create booking with transaction
-            \Log::info('Step 8: Starting database transaction');
-            $booking = null;
-            try {
-                \DB::transaction(function () use ($data, &$booking) {
-                    \Log::info('Step 8a: Inside transaction, attempting to create booking', ['data' => $data]);
-                    
-                    $booking = Booking::create($data);
-                    
-                    \Log::info('Step 8b: Booking record created', [
-                        'booking_id' => $booking->booking_id,
-                        'created_booking' => $booking->toArray()
-                    ]);
-                });
-                
-                \Log::info('Step 8 SUCCESS: Transaction completed', [
-                    'booking_id' => $booking ? $booking->booking_id : 'null'
-                ]);
-                
-                \Log::info('=== BOOKING CREATION SUCCESS ===');
-                
-                // For AJAX requests, return JSON response
-                if ($request->expectsJson() || $request->wantsJson()) {
-                    return response()->json([
-                        'success' => true,
-                        'message' => 'Booking created successfully',
-                        'booking_id' => $booking ? $booking->booking_id : null,
-                        'redirect' => '/bookings'
-                    ], 201);
-                }
-                
-                // Use Inertia location redirect to force full page reload with fresh data
-                return Inertia::location('/bookings');
-                
-            } catch (\Exception $transactionException) {
-                \Log::error('Step 8 EXCEPTION: Database transaction failed', [
-                    'error' => $transactionException->getMessage(),
-                    'trace' => $transactionException->getTraceAsString(),
-                    'data' => $data
-                ]);
-                return back()->withErrors(['error' => 'Database error: ' . $transactionException->getMessage()]);
-            }
-            
-        } catch (\Exception $e) {
-            \Log::error('=== BOOKING CREATION FATAL ERROR ===', [
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'request_data' => $request->all(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
+
+            // Simple validation
+            $data = $request->validate([
+                'student_id' => 'required|integer',
+                'room_id' => 'required|integer', 
+                'semester_count' => 'required|integer|min:1|max:10',
             ]);
             
-            // For AJAX requests, return JSON error
-            if ($request->expectsJson() || $request->wantsJson() || $request->header('Accept') === 'application/json') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Unable to create booking. Please try again.',
-                    'error' => $e->getMessage(),
-                    'debug' => 'File: ' . basename($e->getFile()) . ':' . $e->getLine()
-                ], 500);
+            $data['tenant_id'] = $user->tenant_id;
+            
+            // Check if student already has booking
+            $existingBooking = Booking::where('student_id', $data['student_id'])
+                ->whereNull('archived_at')
+                ->first();
+                
+            if ($existingBooking) {
+                return back()->withErrors([
+                    'student_id' => 'This student already has an active booking.'
+                ])->withInput();
             }
             
-            // For regular requests, return with error
-            return back()->withErrors(['error' => 'Unable to create booking: ' . $e->getMessage()])->withInput();
+            // Check room capacity
+            $room = Room::where('room_id', $data['room_id'])
+                ->where('tenant_id', $user->tenant_id)
+                ->whereNull('archived_at')
+                ->first();
+                
+            if (!$room) {
+                return back()->withErrors([
+                    'room_id' => 'Selected room is not available.'
+                ]);
+            }
+            
+            $currentOccupancy = Booking::where('room_id', $room->room_id)
+                ->whereNull('archived_at')
+                ->count();
+                
+            if ($currentOccupancy >= ($room->max_capacity ?? 0)) {
+                return back()->withErrors([
+                    'room_id' => 'This room is at maximum capacity.'
+                ]);
+            }
+            
+            // Create booking
+            $booking = Booking::create($data);
+            
+            // CLEAR ALL CACHE after creating booking
+            \Cache::flush();
+            
+            \Log::info('Booking created successfully', [
+                'booking_id' => $booking->booking_id,
+                'student_id' => $data['student_id'],
+                'room_id' => $data['room_id']
+            ]);
+            
+            return redirect()->route('bookings.index')
+                ->with('success', 'Booking created successfully.');
+                
+        } catch (\Exception $e) {
+            \Log::error('Booking creation failed', [
+                'error' => $e->getMessage(),
+                'request_data' => $request->all()
+            ]);
+            
+            return back()->withErrors([
+                'error' => 'Failed to create booking: ' . $e->getMessage()
+            ])->withInput();
         }
     }
 
