@@ -374,8 +374,11 @@ class BookingController extends Controller
             
             $booking->update($data);
             
-            // Use Inertia location redirect to force full page reload with fresh data
-            return Inertia::location('/bookings');
+            // CLEAR ALL CACHE after updating booking
+            \Cache::flush();
+            
+            return redirect()->route('bookings.index')
+                ->with('success', 'Booking updated successfully.');
             
         } catch (\Exception $e) {
             \Log::error('Error updating booking', [
@@ -391,9 +394,6 @@ class BookingController extends Controller
     public function destroy(Request $request, $id)
     {
         try {
-            // Test database connection first
-            \DB::connection()->getPdo();
-            
             $user = $request->user();
             
             if (!$user || !$user->tenant_id) {
@@ -407,7 +407,11 @@ class BookingController extends Controller
                 return back()->withErrors(['error' => 'Unauthorized access to this booking.']);
             }
             
+            // Archive the booking
             $booking->archive();
+            
+            // CLEAR ALL CACHE after archiving booking
+            \Cache::flush();
             
             \Log::info('Booking archived successfully', [
                 'booking_id' => $id,
@@ -415,42 +419,53 @@ class BookingController extends Controller
                 'tenant_id' => $user->tenant_id
             ]);
             
-            // For AJAX requests, return JSON response
-            if ($request->expectsJson() || $request->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Booking archived successfully',
-                    'booking_id' => $id
-                ]);
-            }
-            
-            // For regular requests, use Inertia location redirect
-            return Inertia::location('/bookings');
+            return redirect()->route('bookings.index')
+                ->with('success', 'Booking archived successfully.');
             
         } catch (\Exception $e) {
             \Log::error('Error archiving booking', [
                 'booking_id' => $id,
                 'error' => $e->getMessage(),
-                'user_id' => $request->user() ? $request->user()->id : 'null'
+                'user_id' => $user->id ?? 'null'
             ]);
             
-            return back()->withErrors(['error' => 'Failed to archive booking: ' . $e->getMessage()]);
+            return back()->withErrors([
+                'error' => 'Failed to archive booking: ' . $e->getMessage()
+            ]);
         }
     }
     
     public function restore($id)
     {
-        $user = request()->user();
-        $booking = Booking::findOrFail($id);
-        $booking->restore();
-        return redirect()->back()->with('success', 'Booking restored successfully.');
+        try {
+            $user = request()->user();
+            $booking = Booking::findOrFail($id);
+            $booking->restore();
+            
+            // CLEAR ALL CACHE after restoring booking
+            \Cache::flush();
+            
+            return redirect()->route('bookings.index')
+                ->with('success', 'Booking restored successfully.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to restore booking: ' . $e->getMessage()]);
+        }
     }
     
     public function forceDelete($id)
     {
-        $user = request()->user();
-        $booking = Booking::findOrFail($id);
-        $booking->delete();
-        return redirect()->back()->with('success', 'Booking permanently deleted.');
+        try {
+            $user = request()->user();
+            $booking = Booking::findOrFail($id);
+            $booking->delete();
+            
+            // CLEAR ALL CACHE after deleting booking
+            \Cache::flush();
+            
+            return redirect()->route('bookings.index')
+                ->with('success', 'Booking permanently deleted.');
+        } catch (\Exception $e) {
+            return back()->withErrors(['error' => 'Failed to delete booking: ' . $e->getMessage()]);
+        }
     }
 }
