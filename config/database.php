@@ -94,7 +94,22 @@ return [
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => 'require',
+            'sslmode' => env('DB_SSL_MODE', 'require'),
+            // Render optimizations
+            'options' => extension_loaded('pdo_pgsql') ? [
+                \PDO::ATTR_TIMEOUT => 60, // Connection timeout
+                \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
+                \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
+                \PDO::ATTR_EMULATE_PREPARES => false,
+                \PDO::ATTR_PERSISTENT => env('DB_PERSISTENT', false),
+            ] : [],
+            'pool' => [
+                'min_connections' => env('DB_POOL_MIN', 1),
+                'max_connections' => env('DB_POOL_MAX', 10),
+            ],
+            'connect_timeout' => env('DB_CONNECT_TIMEOUT', 60),
+            'read_timeout' => env('DB_READ_TIMEOUT', 60),
+            'write_timeout' => env('DB_WRITE_TIMEOUT', 60),
         ],
 
         'sqlsrv' => [

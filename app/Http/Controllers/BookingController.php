@@ -15,9 +15,10 @@ class BookingController extends Controller
     public function index(Request $request)
     {
         try {
-            // Test database connection first
+            // Test database connection with timeout
             try {
                 \DB::connection()->getPdo();
+                \DB::connection()->enableQueryLog();
             } catch (\Exception $dbException) {
                 \Log::error('Database connection failed in BookingController index', [
                     'error' => $dbException->getMessage()
@@ -47,88 +48,57 @@ class BookingController extends Controller
                 ]);
             }
             
+            // Use cache for frequent queries (5-minute cache)
+            $cacheKey = "bookings_index_{$user->tenant_id}_" . md5($request->fullUrl());
+            $cacheTime = 300; // 5 minutes
+            
+            if (\Cache::has($cacheKey) && !$request->has('refresh')) {
+                $cachedData = \Cache::get($cacheKey);
+                \Log::info('BookingController index served from cache', ['tenant_id' => $user->tenant_id]);
+                return Inertia::render('bookings/index', $cachedData);
+            }
+            
             // Initialize default values
             $bookings = collect([]);
-            $allStudents = collect([]);
+            $students = collect([]);
             $rooms = collect([]);
             $hasAnyStudents = false;
             
             try {
-                // Get bookings with safe relationship loading
-                $bookingsData = Booking::select([
-                    'booking_id', 'tenant_id', 'student_id', 'room_id', 'semester_count', 'archived_at'
+                // OPTIMIZED: Get bookings with eager loading to prevent N+1 queries
+                $bookingsData = Booking::with([
+                    'student:student_id,first_name,last_name,email,tenant_id',
+                    'room:room_id,room_number,type,max_capacity,tenant_id'
                 ])
+                ->select(['booking_id', 'tenant_id', 'student_id', 'room_id', 'semester_count', 'archived_at'])
                 ->where('tenant_id', $user->tenant_id)
                 ->whereNull('archived_at')
+                ->orderBy('booking_id', 'desc')
                 ->limit(100)
                 ->get();
                 
+                // Transform bookings data efficiently
                 $bookings = $bookingsData->map(function ($booking) {
-                    try {
-                        // Load student and room data safely
-                        $student = null;
-                        $room = null;
-                        
-                        try {
-                            $student = Student::select('student_id', 'first_name', 'last_name', 'email')
-                                ->where('student_id', $booking->student_id)
-                                ->whereNull('archived_at')
-                                ->first();
-                        } catch (\Exception $e) {
-                            \Log::warning('Error loading student for booking', [
-                                'booking_id' => $booking->booking_id,
-                                'student_id' => $booking->student_id,
-                                'error' => $e->getMessage()
-                            ]);
-                        }
-                        
-                        try {
-                            $room = Room::select('room_id', 'room_number', 'type', 'max_capacity')
-                                ->where('room_id', $booking->room_id)
-                                ->whereNull('archived_at')
-                                ->first();
-                        } catch (\Exception $e) {
-                            \Log::warning('Error loading room for booking', [
-                                'booking_id' => $booking->booking_id,
-                                'room_id' => $booking->room_id,
-                                'error' => $e->getMessage()
-                            ]);
-                        }
-                        
-                        return [
-                            'booking_id' => $booking->booking_id,
-                            'student_id' => $booking->student_id,
-                            'room_id' => $booking->room_id,
-                            'semester_count' => $booking->semester_count,
-                            'student' => $student ? [
-                                'student_id' => $student->student_id,
-                                'first_name' => $student->first_name,
-                                'last_name' => $student->last_name,
-                                'email' => $student->email,
-                            ] : null,
-                            'room' => $room ? [
-                                'room_id' => $room->room_id,
-                                'room_number' => $room->room_number,
-                                'type' => $room->type,
-                                'max_capacity' => $room->max_capacity,
-                            ] : null,
-                        ];
-                    } catch (\Exception $e) {
-                        \Log::error('Error mapping booking data', [
-                            'booking_id' => $booking->booking_id,
-                            'error' => $e->getMessage()
-                        ]);
-                        
-                        return [
-                            'booking_id' => $booking->booking_id,
-                            'student_id' => $booking->student_id,
-                            'room_id' => $booking->room_id,
-                            'semester_count' => $booking->semester_count,
-                            'student' => null,
-                            'room' => null,
-                        ];
-                    }
+                    return [
+                        'booking_id' => $booking->booking_id,
+                        'student_id' => $booking->student_id,
+                        'room_id' => $booking->room_id,
+                        'semester_count' => $booking->semester_count,
+                        'student' => $booking->student ? [
+                            'student_id' => $booking->student->student_id,
+                            'first_name' => $booking->student->first_name,
+                            'last_name' => $booking->student->last_name,
+                            'email' => $booking->student->email,
+                        ] : null,
+                        'room' => $booking->room ? [
+                            'room_id' => $booking->room->room_id,
+                            'room_number' => $booking->room->room_number,
+                            'type' => $booking->room->type,
+                            'max_capacity' => $booking->room->max_capacity,
+                        ] : null,
+                    ];
                 });
+                
             } catch (\Exception $e) {
                 \Log::error('Error loading bookings', [
                     'tenant_id' => $user->tenant_id,
@@ -137,7 +107,7 @@ class BookingController extends Controller
             }
             
             try {
-                // Get all students for this tenant
+                // OPTIMIZED: Get students efficiently with a single query
                 $allStudents = Student::select('student_id', 'first_name', 'last_name', 'email')
                     ->where('tenant_id', $user->tenant_id)
                     ->whereNull('archived_at')
@@ -146,13 +116,12 @@ class BookingController extends Controller
                 
                 $hasAnyStudents = $allStudents->count() > 0;
                 
-                // Filter out students who already have active bookings
-                $studentsWithBookings = $bookings->pluck('student_id')->toArray();
-                $availableStudents = $allStudents->filter(function ($student) use ($studentsWithBookings) {
+                // Filter out students who already have active bookings more efficiently
+                $studentsWithBookings = $bookingsData->pluck('student_id')->toArray();
+                $students = $allStudents->filter(function ($student) use ($studentsWithBookings) {
                     return !in_array($student->student_id, $studentsWithBookings);
-                });
+                })->values(); // Reset array keys
                 
-                $students = $availableStudents->values(); // Reset array keys
             } catch (\Exception $e) {
                 \Log::error('Error loading students', [
                     'tenant_id' => $user->tenant_id,
@@ -162,86 +131,79 @@ class BookingController extends Controller
             }
             
             try {
-                // Get rooms with capacity information
-                $roomsData = Room::select('room_id', 'tenant_id', 'room_number', 'type', 'price_per_semester', 'status', 'max_capacity')
-                    ->where('tenant_id', $user->tenant_id)
-                    ->whereNull('archived_at')
-                    ->limit(50)
-                    ->get();
+                // OPTIMIZED: Get rooms with occupancy count in single query using join
+                $roomsQuery = Room::select([
+                    'rooms.room_id', 'rooms.tenant_id', 'rooms.room_number', 'rooms.type', 
+                    'rooms.price_per_semester', 'rooms.status', 'rooms.max_capacity',
+                    \DB::raw('COALESCE(booking_counts.occupancy_count, 0) as current_occupancy')
+                ])
+                ->leftJoin(\DB::raw('(
+                    SELECT room_id, COUNT(*) as occupancy_count 
+                    FROM bookings 
+                    WHERE archived_at IS NULL 
+                    GROUP BY room_id
+                ) as booking_counts'), 'rooms.room_id', '=', 'booking_counts.room_id')
+                ->where('rooms.tenant_id', $user->tenant_id)
+                ->whereNull('rooms.archived_at')
+                ->limit(50);
+                
+                $roomsData = $roomsQuery->get();
                 
                 $rooms = $roomsData->map(function ($room) {
-                    try {
-                        $currentOccupancy = 0;
-                        try {
-                            $currentOccupancy = Booking::where('room_id', $room->room_id)
-                                ->whereNull('archived_at')
-                                ->count();
-                        } catch (\Exception $e) {
-                            \Log::warning('Error calculating room occupancy', [
-                                'room_id' => $room->room_id,
-                                'error' => $e->getMessage()
-                            ]);
-                        }
-                        
-                        $maxCapacity = $room->max_capacity ?? 0;
-                        $availableCapacity = max(0, $maxCapacity - $currentOccupancy);
-                        
-                        return [
-                            'room_id' => $room->room_id,
-                            'tenant_id' => $room->tenant_id,
-                            'room_number' => $room->room_number,
-                            'type' => $room->type,
-                            'price_per_semester' => $room->price_per_semester,
-                            'status' => $room->status,
-                            'max_capacity' => $maxCapacity,
-                            'current_occupancy' => $currentOccupancy,
-                            'available_capacity' => $availableCapacity,
-                            'is_at_capacity' => $currentOccupancy >= $maxCapacity,
-                            'can_accommodate' => $availableCapacity > 0,
-                        ];
-                    } catch (\Exception $e) {
-                        \Log::error('Error mapping room data', [
-                            'room_id' => $room->room_id,
-                            'error' => $e->getMessage()
-                        ]);
-                        
-                        return [
-                            'room_id' => $room->room_id,
-                            'tenant_id' => $room->tenant_id,
-                            'room_number' => $room->room_number,
-                            'type' => $room->type,
-                            'price_per_semester' => $room->price_per_semester,
-                            'status' => $room->status,
-                            'max_capacity' => 0,
-                            'current_occupancy' => 0,
-                            'available_capacity' => 0,
-                            'is_at_capacity' => true,
-                            'can_accommodate' => false,
-                        ];
-                    }
+                    $maxCapacity = $room->max_capacity ?? 0;
+                    $currentOccupancy = $room->current_occupancy ?? 0;
+                    $availableCapacity = max(0, $maxCapacity - $currentOccupancy);
+                    
+                    return [
+                        'room_id' => $room->room_id,
+                        'tenant_id' => $room->tenant_id,
+                        'room_number' => $room->room_number,
+                        'type' => $room->type,
+                        'price_per_semester' => $room->price_per_semester,
+                        'status' => $room->status,
+                        'max_capacity' => $maxCapacity,
+                        'current_occupancy' => $currentOccupancy,
+                        'available_capacity' => $availableCapacity,
+                        'is_at_capacity' => $currentOccupancy >= $maxCapacity,
+                        'can_accommodate' => $availableCapacity > 0,
+                    ];
                 });
             } catch (\Exception $e) {
                 \Log::error('Error loading rooms', [
                     'tenant_id' => $user->tenant_id,
                     'error' => $e->getMessage()
                 ]);
+                $rooms = collect([]);
             }
+            
+            // Prepare response data
+            $responseData = [
+                'bookings' => $bookings->values()->all(),
+                'students' => $students,
+                'rooms' => $rooms->values()->all(),
+                'tenant_id' => $user->tenant_id,
+                'hasAnyStudents' => $hasAnyStudents,
+            ];
+            
+            // Cache the response data for 5 minutes
+            \Cache::put($cacheKey, $responseData, $cacheTime);
             
             \Log::info('BookingController index returning data', [
                 'bookings_count' => $bookings->count(),
                 'students_count' => $students->count(),
                 'rooms_count' => $rooms->count(),
                 'hasAnyStudents' => $hasAnyStudents,
-                'tenant_id' => $user->tenant_id
+                'tenant_id' => $user->tenant_id,
+                'cached' => true
             ]);
             
-            return Inertia::render('bookings/index', [
-                'bookings' => $bookings->values()->all(),
-                'students' => $students,
-                'rooms' => $rooms->values()->all(),
-                'tenant_id' => $user->tenant_id,
-                'hasAnyStudents' => $hasAnyStudents,
-            ]);
+            // Log query count if debug enabled
+            if (config('app.debug')) {
+                $queries = \DB::getQueryLog();
+                \Log::info('BookingController queries executed', ['query_count' => count($queries)]);
+            }
+            
+            return Inertia::render('bookings/index', $responseData);
             
         } catch (\Exception $e) {
             \Log::error('Fatal error in bookings index', [
@@ -262,34 +224,42 @@ class BookingController extends Controller
 
     public function store(Request $request)
     {
-        // Create detailed log entry
+        // Set execution timeout for this request
+        set_time_limit(60);
+        
         \Log::info('=== BOOKING CREATION START ===', [
             'timestamp' => now(),
             'ip' => $request->ip(),
-            'user_agent' => $request->userAgent()
+            'memory_usage' => memory_get_usage(true) / 1024 / 1024 . 'MB'
         ]);
         
         try {
+            // Validate database connection first
+            try {
+                \DB::connection()->getPdo();
+            } catch (\Exception $dbException) {
+                \Log::error('Database connection failed during booking creation', [
+                    'error' => $dbException->getMessage()
+                ]);
+                return back()->withErrors(['error' => 'Database connection failed. Please try again.']);
+            }
+            
             $user = $request->user();
-            \Log::info('Step 1: User authentication check', [
-                'user_id' => $user ? $user->id : 'null',
-                'user_email' => $user ? $user->email : 'null',
-                'tenant_id' => $user ? $user->tenant_id : 'null',
-                'request_data' => $request->all()
-            ]);
             
             if (!$user || !$user->tenant_id) {
-                \Log::error('Step 1 FAILED: Unauthorized access', [
+                \Log::error('Unauthorized booking creation attempt', [
                     'user_id' => $user ? $user->id : 'null',
                     'tenant_id' => $user ? $user->tenant_id : 'null'
                 ]);
+                
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unauthorized access.'
+                    ], 401);
+                }
                 return back()->withErrors(['error' => 'Unauthorized access.']);
             }
-            
-            \Log::info('Step 1 SUCCESS: User authenticated', [
-                'user_id' => $user->id,
-                'tenant_id' => $user->tenant_id
-            ]);
             
             // Check if there are any students in the system before allowing booking creation
             \Log::info('Step 2: Checking student count');

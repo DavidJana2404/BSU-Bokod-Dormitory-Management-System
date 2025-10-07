@@ -43,8 +43,8 @@ services:
           property: password
       - key: SESSION_DRIVER
         value: database
-      - key: CACHE_STORE
-        value: database
+      - key: CACHE_DRIVER
+        value: file
       - key: QUEUE_CONNECTION
         value: database
       - key: MAIL_MAILER
@@ -61,6 +61,27 @@ services:
         value: local
       - key: SESSION_LIFETIME
         value: 120
+      # Render Optimizations
+      - key: RENDER_MAX_EXECUTION_TIME
+        value: 60
+      - key: RENDER_MEMORY_LIMIT
+        value: 512M
+      - key: RENDER_DB_TIMEOUT
+        value: 60
+      - key: RENDER_CACHE_TTL
+        value: 300
+      - key: RENDER_EAGER_LOADING
+        value: true
+      - key: RENDER_GZIP
+        value: true
+      - key: DB_SSL_MODE
+        value: require
+      - key: DB_POOL_MIN
+        value: 1
+      - key: DB_POOL_MAX
+        value: 10
+      - key: CACHE_FILE_LOCKING
+        value: true
 
 databases:
   - name: bsu-bokod-dms-db

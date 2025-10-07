@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'database'),
+    'default' => env('CACHE_DRIVER', 'file'),
 
     /*
     |--------------------------------------------------------------------------
@@ -50,6 +50,10 @@ return [
             'driver' => 'file',
             'path' => storage_path('framework/cache/data'),
             'lock_path' => storage_path('framework/cache/data'),
+            // Render optimizations
+            'serialize' => true,
+            'file_locking' => env('CACHE_FILE_LOCKING', true),
+            'permissions' => 0755,
         ],
 
         'memcached' => [
