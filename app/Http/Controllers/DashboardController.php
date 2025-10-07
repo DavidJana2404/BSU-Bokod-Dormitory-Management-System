@@ -226,27 +226,33 @@ class DashboardController extends Controller
                                     ->whereNull('archived_at')
                                     ->count();
                                     
-                                // Get basic student info without complex joins
-                                $students = \App\Models\Student::select('student_id', 'first_name', 'last_name', 'email', 'phone')
-                                    ->whereIn('student_id', function($query) use ($room) {
-                                        $query->select('student_id')
-                                            ->from('bookings')
-                                            ->where('room_id', $room->room_id)
-                                            ->whereNull('archived_at');
-                                    })
-                                    ->whereNull('archived_at')
+                                // Get students with their booking information (including semester_count)
+                                $bookingsWithStudents = \App\Models\Booking::select('bookings.student_id', 'bookings.semester_count', 'students.first_name', 'students.last_name', 'students.email', 'students.phone')
+                                    ->join('students', 'bookings.student_id', '=', 'students.student_id')
+                                    ->where('bookings.room_id', $room->room_id)
+                                    ->whereNull('bookings.archived_at')
+                                    ->whereNull('students.archived_at')
                                     ->get();
                                     
-                                $currentStudents = $students->map(function ($student) {
+                                $currentStudents = $bookingsWithStudents->map(function ($booking) {
                                     return [
-                                        'student_id' => $student->student_id,
-                                        'first_name' => $student->first_name,
-                                        'last_name' => $student->last_name,
-                                        'email' => $student->email,
-                                        'phone' => $student->phone,
-                                        'semester_count' => 0, // Default fallback
+                                        'student_id' => $booking->student_id,
+                                        'first_name' => $booking->first_name,
+                                        'last_name' => $booking->last_name,
+                                        'email' => $booking->email,
+                                        'phone' => $booking->phone,
+                                        'semester_count' => $booking->semester_count ?? 1, // Actual semester count from booking
+                                        'duration' => $booking->semester_count ?? 1, // Add duration field for clarity
                                     ];
                                 })->toArray();
+                                
+                                // Debug logging to verify data
+                                \Log::info('Dashboard room students loaded', [
+                                    'room_id' => $room->room_id,
+                                    'room_number' => $room->room_number,
+                                    'students_count' => count($currentStudents),
+                                    'first_student_duration' => isset($currentStudents[0]) ? $currentStudents[0]['semester_count'] : 'none'
+                                ]);
                                 
                             } catch (\Exception $e) {
                                 \Log::error('Error loading room students: ' . $e->getMessage(), ['room_id' => $room->room_id]);
