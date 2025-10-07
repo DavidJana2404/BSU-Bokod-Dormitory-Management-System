@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DormitoryController;
@@ -199,7 +200,60 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::post('/users/{id}/toggle-active', [AssignManagerController::class, 'toggleActive'])->name('users.toggleActive');
     Route::resource('rooms', RoomController::class)->except(['create', 'edit']);
     Route::resource('students', StudentController::class)->except(['create', 'edit']);
-    Route::resource('/bookings', BookingController::class)->except(['create', 'edit']);
+    // Booking routes with error handling
+    Route::post('/bookings', function(Request $request) {
+        try {
+            $controller = new BookingController();
+            return $controller->store($request);
+        } catch (\Exception $e) {
+            \Log::emergency('Booking creation crashed with 502 error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Server error occurred while creating booking.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            
+            return back()->withErrors(['error' => 'Server error: ' . $e->getMessage()])->withInput();
+        }
+    })->name('bookings.store');
+    
+    Route::delete('/bookings/{booking}', function(Request $request, $booking) {
+        try {
+            $controller = new BookingController();
+            return $controller->destroy($request, $booking);
+        } catch (\Exception $e) {
+            \Log::emergency('Booking deletion crashed with 502 error', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'booking_id' => $booking
+            ]);
+            
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Server error occurred while deleting booking.',
+                    'error' => $e->getMessage()
+                ], 500);
+            }
+            
+            return back()->withErrors(['error' => 'Server error: ' . $e->getMessage()]);
+        }
+    })->name('bookings.destroy');
+    
+    // Other booking routes
+    Route::get('/bookings', [BookingController::class, 'index'])->name('bookings.index');
+    Route::get('/bookings/{booking}', [BookingController::class, 'show'])->name('bookings.show');
+    Route::put('/bookings/{booking}', [BookingController::class, 'update'])->name('bookings.update');
+    Route::patch('/bookings/{booking}', [BookingController::class, 'update']);
+    Route::post('/bookings/{booking}/restore', [BookingController::class, 'restore'])->name('bookings.restore');
+    Route::delete('/bookings/{booking}/force', [BookingController::class, 'forceDelete'])->name('bookings.force-delete');
     
     // Application management routes
     Route::get('/applications', [ApplicationController::class, 'index'])->name('applications.index');

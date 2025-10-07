@@ -344,7 +344,17 @@ class BookingController extends Controller
                     'errors' => $e->errors(),
                     'request_data' => $request->all()
                 ]);
-                return back()->withErrors($e->errors());
+                
+                // For AJAX requests, return JSON validation errors
+                if ($request->expectsJson() || $request->wantsJson() || $request->header('Accept') === 'application/json') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Validation failed',
+                        'errors' => $e->errors()
+                    ], 422);
+                }
+                
+                return back()->withErrors($e->errors())->withInput();
             }
             
             // Check room capacity with error handling
@@ -443,20 +453,23 @@ class BookingController extends Controller
                         'existing_booking_id' => $existingBooking->booking_id
                     ]);
                     
-                    // For AJAX requests, return JSON response with 409 status
-                    if ($request->expectsJson() || $request->wantsJson()) {
+                    // Always return a proper response (don't rely on AJAX detection)
+                    // Check if this is likely an AJAX/API request
+                    if ($request->expectsJson() || $request->wantsJson() || $request->header('Accept') === 'application/json') {
+                        \Log::info('Returning JSON conflict response for duplicate booking');
                         return response()->json([
                             'success' => false,
                             'message' => 'This student already has an active booking.',
                             'errors' => [
                                 'student_id' => ['This student already has an active booking.']
                             ]
-                        ], 409);
+                        ], 422); // Use 422 instead of 409 for better compatibility
                     }
                     
+                    \Log::info('Returning redirect response for duplicate booking');
                     return back()->withErrors([
                         'student_id' => 'This student already has an active booking.'
-                    ]);
+                    ])->withInput();
                 }
                 
                 \Log::info('Step 6 SUCCESS: No duplicate booking found');
@@ -547,8 +560,18 @@ class BookingController extends Controller
                 'line' => $e->getLine()
             ]);
             
-            // Show detailed error for debugging (change back to generic message after fixing)
-            return back()->withErrors(['error' => 'BOOKING DEBUG ERROR: ' . $e->getMessage() . ' (File: ' . basename($e->getFile()) . ':' . $e->getLine() . ')']);
+            // For AJAX requests, return JSON error
+            if ($request->expectsJson() || $request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unable to create booking. Please try again.',
+                    'error' => $e->getMessage(),
+                    'debug' => 'File: ' . basename($e->getFile()) . ':' . $e->getLine()
+                ], 500);
+            }
+            
+            // For regular requests, return with error
+            return back()->withErrors(['error' => 'Unable to create booking: ' . $e->getMessage()])->withInput();
         }
     }
 
