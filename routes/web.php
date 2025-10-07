@@ -33,7 +33,20 @@ Route::post('/setup/promote-first-user', [AdminSetupController::class, 'promoteF
 Route::post('/setup/promote-user', [AdminSetupController::class, 'promoteUserByEmail'])->name('setup.promote-user');
 
 // Emergency database fix endpoint (remove after fixing production)
-// Deployment trigger: 2025-01-05 12:57:35 - Retry after timeout
+// Deployment trigger: 2025-01-07 02:09:35 - Fix routing issues
+
+// Simple health check for debugging 502 issues
+Route::get('/health-check', function () {
+    return response()->json([
+        'status' => 'OK',
+        'timestamp' => now()->toISOString(),
+        'method' => request()->method(),
+        'path' => request()->path(),
+        'url' => request()->url(),
+        'laravel_version' => app()->version(),
+        'php_version' => PHP_VERSION
+    ]);
+});
 Route::get('/fix-booking-schema', function () {
     try {
         // Log the fix attempt

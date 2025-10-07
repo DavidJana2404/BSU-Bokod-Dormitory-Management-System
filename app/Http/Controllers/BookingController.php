@@ -442,6 +442,18 @@ class BookingController extends Controller
                         'student_id' => $data['student_id'],
                         'existing_booking_id' => $existingBooking->booking_id
                     ]);
+                    
+                    // For AJAX requests, return JSON response with 409 status
+                    if ($request->expectsJson() || $request->wantsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'This student already has an active booking.',
+                            'errors' => [
+                                'student_id' => ['This student already has an active booking.']
+                            ]
+                        ], 409);
+                    }
+                    
                     return back()->withErrors([
                         'student_id' => 'This student already has an active booking.'
                     ]);
@@ -503,6 +515,16 @@ class BookingController extends Controller
                 ]);
                 
                 \Log::info('=== BOOKING CREATION SUCCESS ===');
+                
+                // For AJAX requests, return JSON response
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Booking created successfully',
+                        'booking_id' => $booking ? $booking->booking_id : null,
+                        'redirect' => '/bookings'
+                    ], 201);
+                }
                 
                 // Use Inertia location redirect to force full page reload with fresh data
                 return Inertia::location('/bookings');
@@ -648,7 +670,16 @@ class BookingController extends Controller
                 'tenant_id' => $user->tenant_id
             ]);
             
-            // Use Inertia location redirect to force full page reload with fresh data
+            // For AJAX requests, return JSON response
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Booking archived successfully',
+                    'booking_id' => $id
+                ]);
+            }
+            
+            // For regular requests, use Inertia location redirect
             return Inertia::location('/bookings');
             
         } catch (\Exception $e) {
