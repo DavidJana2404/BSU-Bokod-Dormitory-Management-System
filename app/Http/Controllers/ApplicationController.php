@@ -23,6 +23,14 @@ class ApplicationController extends Controller
         // Set timeout to prevent 502 errors
         set_time_limit(30);
         
+        // Log the request attempt for debugging
+        \Log::info('Applications index route accessed', [
+            'url' => request()->fullUrl(),
+            'method' => request()->method(),
+            'user_agent' => request()->userAgent(),
+            'is_inertia' => request()->header('X-Inertia') ? 'yes' : 'no'
+        ]);
+        
         try {
             $user = Auth::user();
             
@@ -30,6 +38,12 @@ class ApplicationController extends Controller
                 \Log::warning('Unauthenticated user attempting to access applications');
                 return redirect()->route('login');
             }
+            
+            \Log::info('Authenticated user accessing applications', [
+                'user_id' => $user->id,
+                'user_role' => $user->role ?? 'no_role',
+                'tenant_id' => $user->tenant_id ?? 'no_tenant'
+            ]);
             
             // Initialize empty applications array as fallback
             $applications = collect([]);
@@ -43,10 +57,18 @@ class ApplicationController extends Controller
                     'user_id' => $user->id
                 ]);
                 
-                return Inertia::render('applications/index', [
+                $response = Inertia::render('applications/index', [
                     'applications' => [],
                     'error' => 'Unable to connect to database. Please try again later.'
                 ]);
+                
+                $response->withHeaders([
+                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                    'Pragma' => 'no-cache',
+                    'Expires' => '0'
+                ]);
+                
+                return $response;
             }
             
             try {
@@ -164,37 +186,44 @@ class ApplicationController extends Controller
                 $applications = collect([]);
             }
             
-            // Add cache headers to prevent browser caching issues
+            \Log::info('Applications loaded successfully', [
+                'applications_count' => $applications->count(),
+                'user_id' => $user->id
+            ]);
+            
+            // Create Inertia response
             $response = Inertia::render('applications/index', [
                 'applications' => $applications->values()->all(),
             ]);
             
             // Add no-cache headers for this route to prevent 502 on refresh
-            if ($response instanceof \Illuminate\Http\Response) {
-                $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-                $response->headers->set('Pragma', 'no-cache');
-                $response->headers->set('Expires', '0');
-            }
+            $response->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0'
+            ]);
             
             return $response;
             
         } catch (\Exception $e) {
             \Log::error('Fatal error in applications index: ' . $e->getMessage(), [
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'user_id' => Auth::id() ?? 'guest',
+                'url' => request()->fullUrl()
             ]);
             
-            // Return safe fallback with no-cache headers
+            // Always return proper Inertia response to prevent blank pages
             $response = Inertia::render('applications/index', [
                 'applications' => [],
                 'error' => 'Unable to load applications at this time. Please try again later.'
             ]);
             
             // Add no-cache headers to prevent caching of error state
-            if ($response instanceof \Illuminate\Http\Response) {
-                $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
-                $response->headers->set('Pragma', 'no-cache');
-                $response->headers->set('Expires', '0');
-            }
+            $response->withHeaders([
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma' => 'no-cache',
+                'Expires' => '0'
+            ]);
             
             return $response;
         }

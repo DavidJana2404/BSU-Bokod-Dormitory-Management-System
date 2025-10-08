@@ -171,6 +171,26 @@ Route::get('/debug-info', function () {
 Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
 Route::get('/api/dormitories', [ApplicationController::class, 'getDormitories'])->name('api.dormitories');
 
+// Emergency fallback route for applications (only if user is authenticated but main route fails)
+Route::get('/applications/emergency', function() {
+    if (!auth()->check()) {
+        return redirect()->route('login');
+    }
+    
+    return \Inertia\Inertia::render('applications/index', [
+        'applications' => [],
+        'error' => 'Emergency mode: Please contact system administrator if this persists.'
+    ]);
+})->middleware(['auth', 'verified'])->name('applications.emergency');
+
+// Debug route to test Inertia rendering (REMOVE IN PRODUCTION)
+Route::get('/debug-inertia', function() {
+    return \Inertia\Inertia::render('applications/index', [
+        'applications' => [],
+        'error' => 'Debug mode - testing Inertia rendering'
+    ]);
+})->middleware(['web'])->name('debug.inertia');
+
 // Student initial password setup - public routes for students without passwords
 Route::get('/student/setup-password', [App\Http\Controllers\Student\InitialPasswordController::class, 'create'])->name('student.setup-password');
 Route::post('/student/setup-password', [App\Http\Controllers\Student\InitialPasswordController::class, 'store'])->name('student.setup-password.store');
