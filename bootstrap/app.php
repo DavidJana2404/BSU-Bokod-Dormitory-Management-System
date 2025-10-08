@@ -6,10 +6,10 @@ use App\Http\Middleware\EnsureUserRole;
 use App\Http\Middleware\EnsureStudentGuard;
 use App\Http\Middleware\RenderOptimizationMiddleware;
 use App\Http\Middleware\DebugErrorMiddleware;
+use App\Http\Middleware\OptimizedAssetPreloading;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
-use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Middleware\TrustProxies;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -29,7 +29,7 @@ return Application::configure(basePath: dirname(__DIR__))
             RenderOptimizationMiddleware::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
-            AddLinkHeadersForPreloadedAssets::class,
+            OptimizedAssetPreloading::class, // Intelligent asset preloading
         ]);
         
         $middleware->alias([
