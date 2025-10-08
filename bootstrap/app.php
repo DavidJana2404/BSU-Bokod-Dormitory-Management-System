@@ -5,6 +5,7 @@ use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\EnsureUserRole;
 use App\Http\Middleware\EnsureStudentGuard;
 use App\Http\Middleware\RenderOptimizationMiddleware;
+use App\Http\Middleware\DebugErrorMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
+            DebugErrorMiddleware::class, // Must be first to catch all errors
             RenderOptimizationMiddleware::class,
             HandleAppearance::class,
             HandleInertiaRequests::class,
@@ -36,5 +38,21 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Custom exception handling to prevent 502 errors
+        $exceptions->render(function (\Throwable $e, $request) {
+            \Log::error('Exception caught in global handler', [
+                'exception_type' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => $request->fullUrl(),
+                'method' => $request->method(),
+                'user_id' => $request->user()?->id ?? 'guest'
+            ]);
+            
+            // Let the DebugErrorMiddleware handle it if it's a web request
+            if ($request->is('*') && !$request->is('api/*')) {
+                return null; // Let the normal handling continue
+            }
+        });
     })->create();
