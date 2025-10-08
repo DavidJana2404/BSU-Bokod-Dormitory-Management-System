@@ -173,6 +173,13 @@ class RenderOptimizationMiddleware
             $response->headers->set('Pragma', 'no-cache');
             $response->headers->set('Expires', '0');
         }
+        
+        // Special handling for applications route to prevent caching issues
+        if ($request->is('applications') || $request->is('applications/*')) {
+            $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+            $response->headers->set('Pragma', 'no-cache');
+            $response->headers->set('Expires', '0');
+        }
     }
 
     /**

@@ -57,18 +57,10 @@ class ApplicationController extends Controller
                     'user_id' => $user->id
                 ]);
                 
-                $response = Inertia::render('applications/index', [
+                return Inertia::render('applications/index', [
                     'applications' => [],
                     'error' => 'Unable to connect to database. Please try again later.'
                 ]);
-                
-                $response->withHeaders([
-                    'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                    'Pragma' => 'no-cache',
-                    'Expires' => '0'
-                ]);
-                
-                return $response;
             }
             
             try {
@@ -191,19 +183,10 @@ class ApplicationController extends Controller
                 'user_id' => $user->id
             ]);
             
-            // Create Inertia response
-            $response = Inertia::render('applications/index', [
+            // Return Inertia response - let middleware handle headers
+            return Inertia::render('applications/index', [
                 'applications' => $applications->values()->all(),
             ]);
-            
-            // Add no-cache headers for this route to prevent 502 on refresh
-            $response->withHeaders([
-                'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                'Pragma' => 'no-cache',
-                'Expires' => '0'
-            ]);
-            
-            return $response;
             
         } catch (\Exception $e) {
             \Log::error('Fatal error in applications index: ' . $e->getMessage(), [
@@ -213,19 +196,10 @@ class ApplicationController extends Controller
             ]);
             
             // Always return proper Inertia response to prevent blank pages
-            $response = Inertia::render('applications/index', [
+            return Inertia::render('applications/index', [
                 'applications' => [],
                 'error' => 'Unable to load applications at this time. Please try again later.'
             ]);
-            
-            // Add no-cache headers to prevent caching of error state
-            $response->withHeaders([
-                'Cache-Control' => 'no-cache, no-store, must-revalidate',
-                'Pragma' => 'no-cache',
-                'Expires' => '0'
-            ]);
-            
-            return $response;
         }
     }
     
