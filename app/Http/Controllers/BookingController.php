@@ -24,10 +24,14 @@ class BookingController extends Controller
                     'error' => $dbException->getMessage()
                 ]);
                 
-                return response()->json([
-                    'error' => 'Database connection failed',
-                    'message' => 'Unable to connect to database. Please try again later.'
-                ], 503);
+                return Inertia::render('bookings/index', [
+                    'bookings' => [],
+                    'students' => [],
+                    'rooms' => [],
+                    'tenant_id' => null,
+                    'hasAnyStudents' => false,
+                    'error' => 'Unable to connect to database. Please try again later.'
+                ]);
             }
             
             $user = $request->user();
@@ -303,18 +307,32 @@ class BookingController extends Controller
             // Test database connection first
             \DB::connection()->getPdo();
             
-            $booking = Booking::findOrFail($id);
-            return response()->json($booking);
+            $booking = Booking::with(['student', 'room'])->findOrFail($id);
+            
+            // For AJAX requests, return JSON
+            if (request()->expectsJson()) {
+                return response()->json($booking);
+            }
+            
+            // For direct browser requests, redirect to bookings index
+            return redirect()->route('bookings.index');
+            
         } catch (\Exception $e) {
             \Log::error('Error loading booking details', [
                 'booking_id' => $id,
                 'error' => $e->getMessage()
             ]);
             
-            return response()->json([
-                'error' => 'Failed to load booking details',
-                'message' => $e->getMessage()
-            ], 500);
+            // For AJAX requests, return JSON error
+            if (request()->expectsJson()) {
+                return response()->json([
+                    'error' => 'Failed to load booking details',
+                    'message' => $e->getMessage()
+                ], 500);
+            }
+            
+            // For direct browser requests, redirect with error
+            return redirect()->route('bookings.index')->with('error', 'Booking not found.');
         }
     }
 

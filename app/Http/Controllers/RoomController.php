@@ -19,10 +19,11 @@ class RoomController extends Controller
                     'error' => $dbException->getMessage()
                 ]);
                 
-                return response()->json([
-                    'error' => 'Database connection failed',
-                    'message' => 'Unable to connect to database. Please try again later.'
-                ], 503);
+                return Inertia::render('rooms/index', [
+                    'rooms' => [],
+                    'tenant_id' => null,
+                    'error' => 'Unable to connect to database. Please try again later.'
+                ]);
             }
             
             $user = $request->user();
@@ -56,11 +57,12 @@ class RoomController extends Controller
                     'trace' => $e->getTraceAsString()
                 ]);
                 
-                // Return error response instead of empty data
-                return response()->json([
-                    'error' => 'Database error',
-                    'message' => 'Unable to load rooms: ' . $e->getMessage()
-                ], 500);
+                // Return Inertia response with error message
+                return Inertia::render('rooms/index', [
+                    'rooms' => [],
+                    'tenant_id' => $user->tenant_id ?? null,
+                    'error' => 'Unable to load rooms: ' . $e->getMessage()
+                ]);
             }
             
             return Inertia::render('rooms/index', [
@@ -74,10 +76,11 @@ class RoomController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return response()->json([
-                'error' => 'Server error',
-                'message' => 'Fatal error occurred: ' . $e->getMessage()
-            ], 500);
+            return Inertia::render('rooms/index', [
+                'rooms' => [],
+                'tenant_id' => null,
+                'error' => 'Server error occurred. Please try again later.'
+            ]);
         }
     }
 
@@ -114,17 +117,31 @@ class RoomController extends Controller
             \DB::connection()->getPdo();
             
             $room = Room::findOrFail($id);
-            return response()->json($room);
+            
+            // For AJAX requests, return JSON
+            if (request()->expectsJson()) {
+                return response()->json($room);
+            }
+            
+            // For direct browser requests, redirect to rooms index
+            return redirect()->route('rooms.index');
+            
         } catch (\Exception $e) {
             \Log::error('Error loading room details', [
                 'room_id' => $id,
                 'error' => $e->getMessage()
             ]);
             
-            return response()->json([
-                'error' => 'Failed to load room details',
-                'message' => $e->getMessage()
-            ], 500);
+            // For AJAX requests, return JSON error
+            if (request()->expectsJson()) {
+                return response()->json([
+                    'error' => 'Failed to load room details',
+                    'message' => $e->getMessage()
+                ], 500);
+            }
+            
+            // For direct browser requests, redirect with error
+            return redirect()->route('rooms.index')->with('error', 'Room not found.');
         }
     }
 

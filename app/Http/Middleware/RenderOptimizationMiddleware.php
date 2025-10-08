@@ -180,6 +180,23 @@ class RenderOptimizationMiddleware
             $response->headers->set('Pragma', 'no-cache');
             $response->headers->set('Expires', '0');
         }
+        
+        // Fix for 502 errors: If a GET request to a page route returns JSON, convert to redirect
+        if ($request->isMethod('GET') && 
+            !$request->expectsJson() && 
+            !$request->header('X-Inertia') &&
+            $response->headers->get('Content-Type') && 
+            str_contains($response->headers->get('Content-Type'), 'application/json')) {
+            
+            // This is a GET request expecting HTML but got JSON - likely causing 502 error
+            \Log::warning('GET request received JSON response - redirecting to prevent 502', [
+                'url' => $request->fullUrl(),
+                'user_id' => $request->user()?->id ?? 'guest'
+            ]);
+            
+            // Create redirect response to dashboard with error message
+            $response = redirect()->route('dashboard')->with('error', 'Page temporarily unavailable. Please try again.');
+        }
     }
 
     /**
