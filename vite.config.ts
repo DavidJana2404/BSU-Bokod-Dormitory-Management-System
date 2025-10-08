@@ -41,13 +41,12 @@ export default defineConfig({
                 entryFileNames: 'js/[name]-[hash].js'
             }
         },
-        // Improve build performance
-        minify: 'terser',
-        terserOptions: {
-            compress: {
-                drop_console: true,
-                drop_debugger: true
-            }
+        // Improve build performance - use default esbuild minification
+        minify: 'esbuild',
+        // Alternative: remove console logs in production
+        define: {
+            'console.log': '(() => {})',
+            'console.debug': '(() => {})'
         }
     },
     // Optimize development server
