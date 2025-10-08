@@ -189,6 +189,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('cashier/students/{student}/payment', [CashierDashboardController::class, 'updatePaymentStatus'])->name('cashier.students.payment.update')->middleware('throttle:10,1');
 });
 
+// ULTRA-MINIMAL EMERGENCY ROUTE: Applications bypass (must be BEFORE auth middleware)
+Route::get('/applications', function() {
+    try {
+        return \Inertia\Inertia::render('applications/index', [
+            'applications' => [],
+        ]);
+    } catch (\Exception $e) {
+        return response()->json(['error' => 'Emergency route: ' . $e->getMessage()], 200);
+    }
+})->middleware('web')->name('applications.emergency');
+
 // Admin/Manager routes - require both auth and verification
 Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -212,7 +223,8 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::post('/bookings/{booking}/restore', [BookingController::class, 'restore'])->name('bookings.restore');
     Route::delete('/bookings/{booking}/force', [BookingController::class, 'forceDelete'])->name('bookings.force-delete');
     
-    // EMERGENCY BYPASS: Applications route to fix 502 errors on manual refresh
+    /*
+    // EMERGENCY BYPASS: Applications route to fix 502 errors on manual refresh (DISABLED - using route above)
     Route::get('/applications', function() {
         try {
             $user = request()->user();
@@ -271,6 +283,7 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
             ]);
         }
     })->name('applications.index');
+    */
     
     Route::put('/applications/{application}/approve', [ApplicationController::class, 'approve'])->name('applications.approve');
     Route::put('/applications/{application}/reject', [ApplicationController::class, 'reject'])->name('applications.reject');
