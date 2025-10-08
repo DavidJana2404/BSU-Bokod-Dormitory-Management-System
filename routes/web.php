@@ -189,16 +189,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('cashier/students/{student}/payment', [CashierDashboardController::class, 'updatePaymentStatus'])->name('cashier.students.payment.update')->middleware('throttle:10,1');
 });
 
-// ULTRA-MINIMAL EMERGENCY ROUTE: Applications bypass (must be BEFORE auth middleware)
-Route::get('/applications', function() {
-    try {
-        return \Inertia\Inertia::render('applications/index', [
-            'applications' => [],
-        ]);
-    } catch (\Exception $e) {
-        return response()->json(['error' => 'Emergency route: ' . $e->getMessage()], 200);
-    }
-})->middleware('web')->name('applications.emergency');
 
 // Admin/Manager routes - require both auth and verification
 Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
@@ -211,6 +201,12 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::post('/users/{id}/toggle-active', [AssignManagerController::class, 'toggleActive'])->name('users.toggleActive');
     Route::resource('rooms', RoomController::class)->except(['create', 'edit']);
     Route::resource('students', StudentController::class)->except(['create', 'edit']);
+    
+    // Applications routes - for managers to view and process applications
+    Route::get('/applications', [ApplicationController::class, 'index'])
+        ->name('applications.index')
+        ->middleware(['throttle:120,1']); // Higher rate limit to prevent 502 errors
+    
     // Simplified booking routes - direct controller calls
     Route::post('/bookings', [BookingController::class, 'store'])->name('bookings.store');
     Route::delete('/bookings/{booking}', [BookingController::class, 'destroy'])->name('bookings.destroy');

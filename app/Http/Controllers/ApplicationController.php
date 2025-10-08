@@ -20,15 +20,34 @@ class ApplicationController extends Controller
      */
     public function index()
     {
+        // Set timeout to prevent 502 errors
+        set_time_limit(30);
+        
         try {
             $user = Auth::user();
             
             if (!$user) {
+                \Log::warning('Unauthenticated user attempting to access applications');
                 return redirect()->route('login');
             }
             
             // Initialize empty applications array as fallback
             $applications = collect([]);
+            
+            // Quick database connection test to prevent 502 errors
+            try {
+                \DB::connection()->getPdo();
+            } catch (\Exception $dbError) {
+                \Log::error('Database connection failed in applications index', [
+                    'error' => $dbError->getMessage(),
+                    'user_id' => $user->id
+                ]);
+                
+                return Inertia::render('applications/index', [
+                    'applications' => [],
+                    'error' => 'Unable to connect to database. Please try again later.'
+                ]);
+            }
             
             try {
                 // Get applications based on user role with optimized query
@@ -145,20 +164,39 @@ class ApplicationController extends Controller
                 $applications = collect([]);
             }
             
-            return Inertia::render('applications/index', [
+            // Add cache headers to prevent browser caching issues
+            $response = Inertia::render('applications/index', [
                 'applications' => $applications->values()->all(),
             ]);
+            
+            // Add no-cache headers for this route to prevent 502 on refresh
+            if ($response instanceof \Illuminate\Http\Response) {
+                $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+                $response->headers->set('Pragma', 'no-cache');
+                $response->headers->set('Expires', '0');
+            }
+            
+            return $response;
             
         } catch (\Exception $e) {
             \Log::error('Fatal error in applications index: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
             
-            // Return safe fallback
-            return Inertia::render('applications/index', [
+            // Return safe fallback with no-cache headers
+            $response = Inertia::render('applications/index', [
                 'applications' => [],
                 'error' => 'Unable to load applications at this time. Please try again later.'
             ]);
+            
+            // Add no-cache headers to prevent caching of error state
+            if ($response instanceof \Illuminate\Http\Response) {
+                $response->headers->set('Cache-Control', 'no-cache, no-store, must-revalidate');
+                $response->headers->set('Pragma', 'no-cache');
+                $response->headers->set('Expires', '0');
+            }
+            
+            return $response;
         }
     }
     
