@@ -14,34 +14,21 @@ class AdminUsersController extends Controller
 {
     public function index()
     {
-        // Get all managers
-        $managers = User::where('role', 'manager')
+        // Get all staff users (managers and cashiers)
+        $staffUsers = User::whereIn('role', ['manager', 'cashier'])
             ->with('tenant')
             ->get()
-            ->map(function ($manager) {
+            ->map(function ($user) {
                 return [
-                    'id' => $manager->id,
-                    'name' => $manager->name,
-                    'email' => $manager->email,
-                    'is_active' => $manager->is_active,
-                    'role' => $manager->role,
-                    'tenant' => $manager->tenant ? [
-                        'tenant_id' => $manager->tenant->tenant_id,
-                        'dormitory_name' => $manager->tenant->dormitory_name,
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'is_active' => $user->is_active,
+                    'role' => $user->role,
+                    'tenant' => $user->tenant ? [
+                        'tenant_id' => $user->tenant->tenant_id,
+                        'dormitory_name' => $user->tenant->dormitory_name,
                     ] : null,
-                ];
-            });
-
-        // Get all cashiers
-        $cashiers = User::where('role', 'cashier')
-            ->get()
-            ->map(function ($cashier) {
-                return [
-                    'id' => $cashier->id,
-                    'name' => $cashier->name,
-                    'email' => $cashier->email,
-                    'is_active' => $cashier->is_active,
-                    'role' => $cashier->role,
                 ];
             });
 
@@ -65,6 +52,25 @@ class AdminUsersController extends Controller
                         ]);
                     }
                     
+                    // Get dormitory information
+                    $dormitory = null;
+                    try {
+                        if ($student->tenant_id) {
+                            $tenant = $student->tenant;
+                            if ($tenant) {
+                                $dormitory = [
+                                    'tenant_id' => $tenant->tenant_id,
+                                    'dormitory_name' => $tenant->dormitory_name,
+                                ];
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        \Log::warning('Error loading student dormitory in AdminUsersController', [
+                            'student_id' => $student->student_id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                    
                     return [
                         'student_id' => $student->student_id,
                         'first_name' => $student->first_name,
@@ -76,6 +82,7 @@ class AdminUsersController extends Controller
                         'leave_reason' => $student->leave_reason,
                         'payment_status' => $student->payment_status ?? 'unpaid',
                         'is_currently_booked' => $isCurrentlyBooked,
+                        'dormitory' => $dormitory,
                         'current_booking' => $currentBooking ? [
                             'room_number' => $currentBooking->room ? $currentBooking->room->room_number : 'Unknown',
                             'semester_count' => $currentBooking->semester_count ?? 0,
@@ -100,80 +107,34 @@ class AdminUsersController extends Controller
                         'leave_reason' => $student->leave_reason,
                         'payment_status' => $student->payment_status ?? 'unpaid',
                         'is_currently_booked' => false,
+                        'dormitory' => null,
                         'current_booking' => null,
                     ];
                 }
             });
 
         return Inertia::render('admin/users/index', [
-            'managers' => $managers,
-            'cashiers' => $cashiers,
+            'staffUsers' => $staffUsers,
             'students' => $students,
         ]);
     }
 
-    public function updateManager(Request $request, $id)
+    public function updateUserRole(Request $request, $id)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $id,
+            'role' => 'required|in:manager,cashier',
         ]);
 
-        $manager = User::where('role', 'manager')->findOrFail($id);
+        $user = User::whereIn('role', ['manager', 'cashier'])->findOrFail($id);
+        $oldRole = $user->role;
         
-        $manager->update([
-            'name' => $request->name,
-            'email' => $request->email,
+        $user->update([
+            'role' => $request->role,
         ]);
 
-        return redirect()->back()->with('success', 'Manager updated successfully');
+        return redirect()->back()->with('success', ucfirst($oldRole) . ' role updated to ' . ucfirst($request->role) . ' successfully');
     }
 
-    public function updateCashier(Request $request, $id)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $id,
-        ]);
-
-        $cashier = User::where('role', 'cashier')->findOrFail($id);
-        
-        $cashier->update([
-            'name' => $request->name,
-            'email' => $request->email,
-        ]);
-
-        return redirect()->back()->with('success', 'Cashier updated successfully');
-    }
-
-    public function updateStudent(Request $request, $studentId)
-    {
-        $request->validate([
-            'first_name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:students,email,' . $studentId . ',student_id',
-            'phone' => 'required|string|max:255',
-            'password' => 'nullable|confirmed|' . Rules\Password::defaults(),
-        ]);
-
-        $student = Student::where('student_id', $studentId)->firstOrFail();
-        
-        $updateData = [
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-        ];
-
-        // Only update password if provided
-        if ($request->filled('password')) {
-            $updateData['password'] = Hash::make($request->password);
-        }
-
-        $student->update($updateData);
-
-        return redirect()->back()->with('success', 'Student updated successfully');
-    }
 
     public function toggleUserActive($id)
     {

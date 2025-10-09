@@ -14,21 +14,13 @@ import {
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
 
-interface Manager {
+interface StaffUser {
     id: number;
     name: string;
     email: string;
     is_active: boolean;
     role: string;
     tenant: { tenant_id: number; dormitory_name: string } | null;
-}
-
-interface Cashier {
-    id: number;
-    name: string;
-    email: string;
-    is_active: boolean;
-    role: string;
 }
 
 interface Student {
@@ -42,6 +34,7 @@ interface Student {
     leave_reason: string | null;
     payment_status: string;
     is_currently_booked: boolean;
+    dormitory: { tenant_id: number; dormitory_name: string } | null;
     current_booking: {
         room_number: string;
         semester_count: number;
@@ -49,54 +42,45 @@ interface Student {
     } | null;
 }
 
-const emptyManagerForm = { name: '', email: '' };
-const emptyCashierForm = { name: '', email: '' };
-const emptyStudentForm = { first_name: '', last_name: '', email: '', phone: '', password: '', password_confirmation: '' };
+const emptyRoleForm = { role: 'manager' };
 
 export default function AdminUsers() {
-    const { managers = [], cashiers = [], students = [], errors = {} } = usePage().props as unknown as {
-        managers: Manager[];
-        cashiers: Cashier[];
+    const { staffUsers = [], students = [], errors = {} } = usePage().props as unknown as {
+        staffUsers: StaffUser[];
         students: Student[];
         errors: any;
     };
     
     // Dialog states
-    const [managerDialogOpen, setManagerDialogOpen] = useState(false);
-    const [cashierDialogOpen, setCashierDialogOpen] = useState(false);
-    const [studentDialogOpen, setStudentDialogOpen] = useState(false);
+    const [roleDialogOpen, setRoleDialogOpen] = useState(false);
     
     // Form states
-    const [managerForm, setManagerForm] = useState(emptyManagerForm);
-    const [cashierForm, setCashierForm] = useState(emptyCashierForm);
-    const [studentForm, setStudentForm] = useState(emptyStudentForm);
+    const [roleForm, setRoleForm] = useState(emptyRoleForm);
     
     // Edit states
-    const [editingManagerId, setEditingManagerId] = useState<number | null>(null);
-    const [editingCashierId, setEditingCashierId] = useState<number | null>(null);
-    const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+    const [editingUserId, setEditingUserId] = useState<number | null>(null);
     
     const [processing, setProcessing] = useState(false);
     const [expandedLeaveReasons, setExpandedLeaveReasons] = useState<Record<string, boolean>>({});
     const [warningDialogOpen, setWarningDialogOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{type: string, id: string | number, user?: any} | null>(null);
 
-    // Manager functions
-    const handleOpenManagerEdit = (manager: Manager) => {
-        setManagerForm({ name: manager.name, email: manager.email });
-        setEditingManagerId(manager.id);
-        setManagerDialogOpen(true);
+    // Role edit functions
+    const handleOpenRoleEdit = (user: StaffUser) => {
+        setRoleForm({ role: user.role });
+        setEditingUserId(user.id);
+        setRoleDialogOpen(true);
     };
 
-    const handleManagerSubmit = (e: any) => {
+    const handleRoleSubmit = (e: any) => {
         e.preventDefault();
         setProcessing(true);
         
-        router.put(`/admin/users/managers/${editingManagerId}`, managerForm, {
+        router.put(`/admin/users/${editingUserId}/role`, roleForm, {
             onSuccess: () => {
-                setManagerDialogOpen(false);
-                setManagerForm(emptyManagerForm);
-                setEditingManagerId(null);
+                setRoleDialogOpen(false);
+                setRoleForm(emptyRoleForm);
+                setEditingUserId(null);
                 setProcessing(false);
             },
             onError: () => {
@@ -105,60 +89,6 @@ export default function AdminUsers() {
         });
     };
 
-    // Cashier functions
-    const handleOpenCashierEdit = (cashier: Cashier) => {
-        setCashierForm({ name: cashier.name, email: cashier.email });
-        setEditingCashierId(cashier.id);
-        setCashierDialogOpen(true);
-    };
-
-    const handleCashierSubmit = (e: any) => {
-        e.preventDefault();
-        setProcessing(true);
-        
-        router.put(`/admin/users/cashiers/${editingCashierId}`, cashierForm, {
-            onSuccess: () => {
-                setCashierDialogOpen(false);
-                setCashierForm(emptyCashierForm);
-                setEditingCashierId(null);
-                setProcessing(false);
-            },
-            onError: () => {
-                setProcessing(false);
-            },
-        });
-    };
-
-    // Student functions
-    const handleOpenStudentEdit = (student: Student) => {
-        setStudentForm({
-            first_name: student.first_name,
-            last_name: student.last_name,
-            email: student.email,
-            phone: student.phone,
-            password: '',
-            password_confirmation: '',
-        });
-        setEditingStudentId(student.student_id);
-        setStudentDialogOpen(true);
-    };
-
-    const handleStudentSubmit = (e: any) => {
-        e.preventDefault();
-        setProcessing(true);
-        
-        router.put(`/admin/users/students/${editingStudentId}`, studentForm, {
-            onSuccess: () => {
-                setStudentDialogOpen(false);
-                setStudentForm(emptyStudentForm);
-                setEditingStudentId(null);
-                setProcessing(false);
-            },
-            onError: () => {
-                setProcessing(false);
-            },
-        });
-    };
 
     const toggleLeaveReason = (studentId: string) => {
         setExpandedLeaveReasons(prev => ({
@@ -193,7 +123,7 @@ export default function AdminUsers() {
         if (!pendingAction || !pendingAction.user) return '';
         
         const user = pendingAction.user;
-        const userName = user.name || `${user.first_name} ${user.last_name}`;
+        const userName = user.name;
         const userType = user.userType;
         
         if (pendingAction.type === 'toggle_status') {
@@ -206,8 +136,9 @@ export default function AdminUsers() {
     };
 
     const studentList = Array.isArray(students) ? students : [];
-    const managerList = Array.isArray(managers) ? managers : [];
-    const cashierList = Array.isArray(cashiers) ? cashiers : [];
+    const staffUserList = Array.isArray(staffUsers) ? staffUsers : [];
+    const managerList = staffUserList.filter(user => user.role === 'manager');
+    const cashierList = staffUserList.filter(user => user.role === 'cashier');
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Users', href: '/admin/users' }]}>
@@ -234,8 +165,8 @@ export default function AdminUsers() {
                                 <Shield size={20} />
                             </div>
                             <div>
-                                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{managerList.length}</div>
-                                <div className="text-sm text-purple-600 dark:text-purple-400">Managers</div>
+                                <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{staffUserList.length}</div>
+                                <div className="text-sm text-purple-600 dark:text-purple-400">Staff Users</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -243,8 +174,8 @@ export default function AdminUsers() {
                                 <Settings size={20} />
                             </div>
                             <div>
-                                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{cashierList.length}</div>
-                                <div className="text-sm text-green-600 dark:text-green-400">Cashiers</div>
+                                <div className="text-2xl font-bold text-green-600 dark:text-green-400">{managerList.length}/{cashierList.length}</div>
+                                <div className="text-sm text-green-600 dark:text-green-400">Mgr/Cashier</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -262,7 +193,7 @@ export default function AdminUsers() {
                             </div>
                             <div>
                                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                                    {managerList.filter(m => m.is_active).length + cashierList.filter(c => c.is_active).length}
+                                    {staffUserList.filter(u => u.is_active).length}
                                 </div>
                                 <div className="text-sm text-emerald-600 dark:text-emerald-400">Active Staff</div>
                             </div>
@@ -292,46 +223,63 @@ export default function AdminUsers() {
                     </div>
                 </div>
 
-                {/* Managers Section */}
+                {/* Staff Users Section */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                             <Shield className="text-purple-600 dark:text-purple-400" size={24} />
-                            Managers ({managerList.length})
+                            Staff Users ({staffUserList.length})
                         </h2>
                     </div>
                     
-                    {managerList.length > 0 ? (
+                    {staffUserList.length > 0 ? (
                         <div className="space-y-3">
-                            {managerList.map((manager) => (
-                                <Card key={manager.id} className="border border-gray-200 dark:border-gray-700">
+                            {staffUserList.map((user) => (
+                                <Card key={user.id} className="border border-gray-200 dark:border-gray-700">
                                     <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2">
-                                                    <Shield className="text-purple-600 dark:text-purple-400" size={18} />
+                                                <div className={`rounded-lg p-2 ${
+                                                    user.role === 'manager' 
+                                                        ? 'bg-purple-50 dark:bg-purple-900/20'
+                                                        : 'bg-green-50 dark:bg-green-900/20'
+                                                }`}>
+                                                    {user.role === 'manager' ? (
+                                                        <Shield className="text-purple-600 dark:text-purple-400" size={18} />
+                                                    ) : (
+                                                        <Settings className="text-green-600 dark:text-green-400" size={18} />
+                                                    )}
                                                 </div>
                                                 <div>
-                                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{manager.name}</h3>
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">{user.name}</h3>
+                                                        <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                                            user.role === 'manager'
+                                                                ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/20 dark:text-purple-400'
+                                                                : 'bg-green-100 text-green-700 dark:bg-green-950/20 dark:text-green-400'
+                                                        }`}>
+                                                            {user.role.charAt(0).toUpperCase() + user.role.slice(1)}
+                                                        </div>
+                                                    </div>
                                                     <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                                                         <Mail size={12} className="text-blue-500" />
-                                                        {manager.email}
+                                                        {user.email}
                                                     </div>
-                                                    {manager.tenant && (
+                                                    {user.tenant && (
                                                         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-1">
                                                             <Building2 size={12} className="text-green-500" />
-                                                            {manager.tenant.dormitory_name}
+                                                            {user.tenant.dormitory_name}
                                                         </div>
                                                     )}
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                                    manager.is_active 
+                                                    user.is_active 
                                                         ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800'
                                                         : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800'
                                                 }`}>
-                                                    {manager.is_active ? (
+                                                    {user.is_active ? (
                                                         <>
                                                             <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
                                                             Active
@@ -346,19 +294,19 @@ export default function AdminUsers() {
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    onClick={() => handleOpenManagerEdit(manager)}
+                                                    onClick={() => handleOpenRoleEdit(user)}
                                                     className="text-xs"
                                                 >
                                                     <Edit3 size={12} className="mr-1" />
-                                                    Edit
+                                                    Role
                                                 </Button>
                                                 <Button
                                                     size="sm"
-                                                    variant={manager.is_active ? "destructive" : "default"}
-                                                    onClick={() => handleUserStatusToggle(manager.id, manager, 'manager')}
+                                                    variant={user.is_active ? "destructive" : "default"}
+                                                    onClick={() => handleUserStatusToggle(user.id, user, user.role)}
                                                     className="text-xs"
                                                 >
-                                                    {manager.is_active ? (
+                                                    {user.is_active ? (
                                                         <><UserX size={12} className="mr-1" />Deactivate</>
                                                     ) : (
                                                         <><UserCheck size={12} className="mr-1" />Activate</>
@@ -375,92 +323,11 @@ export default function AdminUsers() {
                             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-12 h-12 flex items-center justify-center mx-auto mb-3">
                                 <Shield className="text-gray-400" size={24} />
                             </div>
-                            <p className="text-gray-500 dark:text-gray-500">No managers found</p>
+                            <p className="text-gray-500 dark:text-gray-500">No staff users found</p>
                         </Card>
                     )}
                 </div>
 
-                {/* Cashiers Section */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <Settings className="text-green-600 dark:text-green-400" size={24} />
-                            Cashiers ({cashierList.length})
-                        </h2>
-                    </div>
-                    
-                    {cashierList.length > 0 ? (
-                        <div className="space-y-3">
-                            {cashierList.map((cashier) => (
-                                <Card key={cashier.id} className="border border-gray-200 dark:border-gray-700">
-                                    <CardContent className="p-4">
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
-                                                    <Settings className="text-green-600 dark:text-green-400" size={18} />
-                                                </div>
-                                                <div>
-                                                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">{cashier.name}</h3>
-                                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                                                        <Mail size={12} className="text-blue-500" />
-                                                        {cashier.email}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
-                                                    cashier.is_active 
-                                                        ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800'
-                                                        : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800'
-                                                }`}>
-                                                    {cashier.is_active ? (
-                                                        <>
-                                                            <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
-                                                            Active
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div>
-                                                            Inactive
-                                                        </>
-                                                    )}
-                                                </div>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleOpenCashierEdit(cashier)}
-                                                    className="text-xs"
-                                                >
-                                                    <Edit3 size={12} className="mr-1" />
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant={cashier.is_active ? "destructive" : "default"}
-                                                    onClick={() => handleUserStatusToggle(cashier.id, cashier, 'cashier')}
-                                                    className="text-xs"
-                                                >
-                                                    {cashier.is_active ? (
-                                                        <><UserX size={12} className="mr-1" />Deactivate</>
-                                                    ) : (
-                                                        <><UserCheck size={12} className="mr-1" />Activate</>
-                                                    )}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <Card className="p-8 text-center">
-                            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                                <Settings className="text-gray-400" size={24} />
-                            </div>
-                            <p className="text-gray-500 dark:text-gray-500">No cashiers found</p>
-                        </Card>
-                    )}
-                </div>
 
                 {/* Students Section - Dropdown Table Format */}
                 <div className="space-y-4">
@@ -487,10 +354,16 @@ export default function AdminUsers() {
                                                     <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-base">
                                                         {student.first_name} {student.last_name}
                                                     </h3>
-                                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
                                                         <Mail size={12} className="text-blue-500" />
                                                         <span className="truncate">{student.email}</span>
                                                     </div>
+                                                    {student.dormitory && (
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
+                                                            <Building2 size={12} className="text-green-500" />
+                                                            <span className="truncate">{student.dormitory.dormitory_name}</span>
+                                                        </div>
+                                                    )}
                                                     
                                                     {/* Status Badges in Grid Layout */}
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -585,18 +458,6 @@ export default function AdminUsers() {
                                                     </div>
                                                 </div>
                                                 
-                                                {/* Action Buttons - Moved to right side */}
-                                                <div className="flex flex-col gap-2 flex-shrink-0">
-                                                    <Button 
-                                                        size="sm" 
-                                                        variant="outline" 
-                                                        onClick={() => handleOpenStudentEdit(student)}
-                                                        className="h-8 px-3 text-xs"
-                                                    >
-                                                        <Edit3 size={12} className="mr-1" />
-                                                        Edit
-                                                    </Button>
-                                                </div>
                                             </div>
 
                                             {/* Additional Details Section */}
@@ -644,6 +505,12 @@ export default function AdminUsers() {
                                                                 <Mail size={12} className="text-blue-500" />
                                                                 <span className="truncate">{student.email}</span>
                                                             </div>
+                                                            {student.dormitory && (
+                                                                <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 text-xs xl:text-sm">
+                                                                    <Building2 size={12} className="text-green-500" />
+                                                                    <span className="truncate">{student.dormitory.dormitory_name}</span>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -771,20 +638,6 @@ export default function AdminUsers() {
                                                     </div>
                                                 </div>
 
-                                                {/* Actions - 2 columns on lg, 4 on xl */}
-                                                <div className="col-span-2 xl:col-span-4">
-                                                    <div className="flex gap-2 justify-end">
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline" 
-                                                            onClick={() => handleOpenStudentEdit(student)}
-                                                            className="h-8 px-3 text-xs"
-                                                        >
-                                                            <Edit3 size={12} className="mr-1" />
-                                                            Edit
-                                                        </Button>
-                                                    </div>
-                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -802,41 +655,29 @@ export default function AdminUsers() {
                     )}
                 </div>
 
-                {/* Manager Edit Dialog */}
-                <Dialog open={managerDialogOpen} onOpenChange={setManagerDialogOpen}>
+                {/* Role Edit Dialog */}
+                <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
                     <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
-                            <DialogTitle>Edit Manager</DialogTitle>
+                            <DialogTitle>Edit User Role</DialogTitle>
                         </DialogHeader>
-                        <form onSubmit={handleManagerSubmit} className="space-y-4">
+                        <form onSubmit={handleRoleSubmit} className="space-y-4">
                             <div>
-                                <Label htmlFor="manager_name">Name</Label>
-                                <Input 
-                                    id="manager_name" 
-                                    value={managerForm.name} 
-                                    onChange={(e) => setManagerForm({...managerForm, name: e.target.value})} 
-                                    required 
-                                />
-                                {(errors as any)?.name && (
+                                <Label htmlFor="user_role">Role</Label>
+                                <select
+                                    id="user_role"
+                                    value={roleForm.role}
+                                    onChange={(e) => setRoleForm({ ...roleForm, role: e.target.value })}
+                                    className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="manager">Manager</option>
+                                    <option value="cashier">Cashier</option>
+                                </select>
+                                {(errors as any)?.role && (
                                     <p className="text-red-500 text-sm mt-1 flex items-center">
                                         <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).name}
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <Label htmlFor="manager_email">Email</Label>
-                                <Input 
-                                    id="manager_email" 
-                                    type="email" 
-                                    value={managerForm.email} 
-                                    onChange={(e) => setManagerForm({...managerForm, email: e.target.value})} 
-                                    required 
-                                />
-                                {(errors as any)?.email && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).email}
+                                        {(errors as any).role}
                                     </p>
                                 )}
                             </div>
@@ -845,206 +686,22 @@ export default function AdminUsers() {
                                     type="button" 
                                     variant="outline" 
                                     onClick={() => {
-                                        setManagerDialogOpen(false);
-                                        setManagerForm(emptyManagerForm);
-                                        setEditingManagerId(null);
+                                        setRoleDialogOpen(false);
+                                        setRoleForm(emptyRoleForm);
+                                        setEditingUserId(null);
                                     }} 
                                     disabled={processing}
                                 >
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={processing}>
-                                    {processing ? 'Updating...' : 'Update Manager'}
+                                    {processing ? 'Updating...' : 'Update Role'}
                                 </Button>
                             </div>
                         </form>
                     </DialogContent>
                 </Dialog>
 
-                {/* Cashier Edit Dialog */}
-                <Dialog open={cashierDialogOpen} onOpenChange={setCashierDialogOpen}>
-                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle>Edit Cashier</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleCashierSubmit} className="space-y-4">
-                            <div>
-                                <Label htmlFor="cashier_name">Name</Label>
-                                <Input 
-                                    id="cashier_name" 
-                                    value={cashierForm.name} 
-                                    onChange={(e) => setCashierForm({...cashierForm, name: e.target.value})} 
-                                    required 
-                                />
-                                {(errors as any)?.name && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).name}
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <Label htmlFor="cashier_email">Email</Label>
-                                <Input 
-                                    id="cashier_email" 
-                                    type="email" 
-                                    value={cashierForm.email} 
-                                    onChange={(e) => setCashierForm({...cashierForm, email: e.target.value})} 
-                                    required 
-                                />
-                                {(errors as any)?.email && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).email}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    onClick={() => {
-                                        setCashierDialogOpen(false);
-                                        setCashierForm(emptyCashierForm);
-                                        setEditingCashierId(null);
-                                    }} 
-                                    disabled={processing}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button type="submit" disabled={processing}>
-                                    {processing ? 'Updating...' : 'Update Cashier'}
-                                </Button>
-                            </div>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-
-                {/* Student Edit Dialog */}
-                <Dialog open={studentDialogOpen} onOpenChange={setStudentDialogOpen}>
-                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
-                        <DialogHeader>
-                            <DialogTitle>Edit Student</DialogTitle>
-                        </DialogHeader>
-                        <form onSubmit={handleStudentSubmit} className="space-y-4">
-                            <div>
-                                <Label htmlFor="student_first_name">First Name</Label>
-                                <Input 
-                                    id="student_first_name" 
-                                    value={studentForm.first_name} 
-                                    onChange={(e) => setStudentForm({...studentForm, first_name: e.target.value})} 
-                                    required 
-                                />
-                                {(errors as any)?.first_name && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).first_name}
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <Label htmlFor="student_last_name">Last Name</Label>
-                                <Input 
-                                    id="student_last_name" 
-                                    value={studentForm.last_name} 
-                                    onChange={(e) => setStudentForm({...studentForm, last_name: e.target.value})} 
-                                    required 
-                                />
-                                {(errors as any)?.last_name && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).last_name}
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <Label htmlFor="student_email">Email</Label>
-                                <Input 
-                                    id="student_email" 
-                                    type="email" 
-                                    value={studentForm.email} 
-                                    onChange={(e) => setStudentForm({...studentForm, email: e.target.value})} 
-                                    required 
-                                />
-                                {(errors as any)?.email && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).email}
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <Label htmlFor="student_phone">Phone</Label>
-                                <Input 
-                                    id="student_phone" 
-                                    value={studentForm.phone} 
-                                    onChange={(e) => setStudentForm({...studentForm, phone: e.target.value})} 
-                                    required 
-                                />
-                                {(errors as any)?.phone && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).phone}
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <Label htmlFor="student_password">
-                                    Password (Leave blank to keep current password)
-                                </Label>
-                                <Input 
-                                    id="student_password" 
-                                    type="password" 
-                                    value={studentForm.password} 
-                                    onChange={(e) => setStudentForm({...studentForm, password: e.target.value})} 
-                                    placeholder="Leave blank to keep current password"
-                                />
-                                {(errors as any)?.password && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).password}
-                                    </p>
-                                )}
-                            </div>
-                            <div>
-                                <Label htmlFor="student_password_confirmation">
-                                    Confirm Password {studentForm.password && '(Required when setting password)'}
-                                </Label>
-                                <Input 
-                                    id="student_password_confirmation" 
-                                    type="password" 
-                                    value={studentForm.password_confirmation} 
-                                    onChange={(e) => setStudentForm({...studentForm, password_confirmation: e.target.value})} 
-                                    placeholder={studentForm.password ? 'Must match password above' : 'Only required if password is set'} 
-                                    disabled={!studentForm.password}
-                                />
-                                {(errors as any)?.password_confirmation && (
-                                    <p className="text-red-500 text-sm mt-1 flex items-center">
-                                        <AlertCircle className="h-4 w-4 mr-1" />
-                                        {(errors as any).password_confirmation}
-                                    </p>
-                                )}
-                            </div>
-                            <div className="flex justify-end gap-2">
-                                <Button 
-                                    type="button" 
-                                    variant="outline" 
-                                    onClick={() => {
-                                        setStudentDialogOpen(false);
-                                        setStudentForm(emptyStudentForm);
-                                        setEditingStudentId(null);
-                                    }} 
-                                    disabled={processing}
-                                >
-                                    Cancel
-                                </Button>
-                                <Button type="submit" disabled={processing}>
-                                    {processing ? 'Updating...' : 'Update Student'}
-                                </Button>
-                            </div>
-                        </form>
-                    </DialogContent>
-                </Dialog>
                 
                 {/* Warning Dialog */}
                 <WarningDialog

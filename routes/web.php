@@ -317,9 +317,7 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     
     // Admin Users Management routes
     Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users.index');
-    Route::put('/admin/users/managers/{id}', [AdminUsersController::class, 'updateManager'])->name('admin.users.managers.update');
-    Route::put('/admin/users/cashiers/{id}', [AdminUsersController::class, 'updateCashier'])->name('admin.users.cashiers.update');
-    Route::put('/admin/users/students/{studentId}', [AdminUsersController::class, 'updateStudent'])->name('admin.users.students.update');
+    Route::put('/admin/users/{id}/role', [AdminUsersController::class, 'updateUserRole'])->name('admin.users.role.update');
     Route::post('/admin/users/{id}/toggle-active', [AdminUsersController::class, 'toggleUserActive'])->name('admin.users.toggleActive');
 });
 
