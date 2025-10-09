@@ -49,6 +49,11 @@ const adminNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
+        title: 'Users',
+        href: '/admin/users',
+        icon: Users,
+    },
+    {
         title: 'Assign Manager',
         href: '/assign-manager',
         icon: Users,

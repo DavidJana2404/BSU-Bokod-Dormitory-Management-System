@@ -15,6 +15,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\CleaningScheduleController;
 use App\Http\Controllers\AdminSetupController;
+use App\Http\Controllers\AdminUsersController;
 
 Route::get('/', function () {
     return Inertia::render('welcome');
@@ -313,6 +314,13 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     
     // Cleaning schedules routes
     Route::resource('/cleaning-schedules', CleaningScheduleController::class)->except(['create', 'edit', 'show']);
+    
+    // Admin Users Management routes
+    Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users.index');
+    Route::put('/admin/users/managers/{id}', [AdminUsersController::class, 'updateManager'])->name('admin.users.managers.update');
+    Route::put('/admin/users/cashiers/{id}', [AdminUsersController::class, 'updateCashier'])->name('admin.users.cashiers.update');
+    Route::put('/admin/users/students/{studentId}', [AdminUsersController::class, 'updateStudent'])->name('admin.users.students.update');
+    Route::post('/admin/users/{id}/toggle-active', [AdminUsersController::class, 'toggleUserActive'])->name('admin.users.toggleActive');
 });
 
 require __DIR__.'/settings.php';
