@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+// Deployment trigger: 2025-01-09 06:27:46 - Force redeploy after timeout
 use App\Models\Student;
 use App\Models\Tenant;
 use Inertia\Inertia;
