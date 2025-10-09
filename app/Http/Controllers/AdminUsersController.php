@@ -46,26 +46,63 @@ class AdminUsersController extends Controller
             });
 
         // Get all students with their related data
-        $students = Student::with(['current_booking.room', 'current_booking.tenant'])
+        $students = Student::whereNull('archived_at')
             ->get()
             ->map(function ($student) {
-                return [
-                    'student_id' => $student->student_id,
-                    'first_name' => $student->first_name,
-                    'last_name' => $student->last_name,
-                    'email' => $student->email,
-                    'phone' => $student->phone,
-                    'password' => $student->password ? true : false, // Only return boolean for security
-                    'status' => $student->status,
-                    'leave_reason' => $student->leave_reason,
-                    'payment_status' => $student->payment_status,
-                    'is_currently_booked' => $student->is_currently_booked,
-                    'current_booking' => $student->current_booking ? [
-                        'room_number' => $student->current_booking->room->room_number ?? null,
-                        'semester_count' => $student->current_booking->semester_count,
-                        'total_fee' => $student->current_booking->total_fee,
-                    ] : null,
-                ];
+                try {
+                    // Get current active booking with error handling
+                    $currentBooking = null;
+                    $isCurrentlyBooked = false;
+                    
+                    try {
+                        $bookings = $student->bookings()->whereNull('archived_at')->get();
+                        $currentBooking = $bookings->first();
+                        $isCurrentlyBooked = $currentBooking !== null;
+                    } catch (\Exception $e) {
+                        \Log::warning('Error loading student bookings in AdminUsersController', [
+                            'student_id' => $student->student_id,
+                            'error' => $e->getMessage()
+                        ]);
+                    }
+                    
+                    return [
+                        'student_id' => $student->student_id,
+                        'first_name' => $student->first_name,
+                        'last_name' => $student->last_name,
+                        'email' => $student->email,
+                        'phone' => $student->phone,
+                        'password' => $student->password ? true : false, // Only return boolean for security
+                        'status' => $student->status ?? 'in',
+                        'leave_reason' => $student->leave_reason,
+                        'payment_status' => $student->payment_status ?? 'unpaid',
+                        'is_currently_booked' => $isCurrentlyBooked,
+                        'current_booking' => $currentBooking ? [
+                            'room_number' => $currentBooking->room ? $currentBooking->room->room_number : 'Unknown',
+                            'semester_count' => $currentBooking->semester_count ?? 0,
+                            'total_fee' => ($currentBooking->semester_count ?? 0) * 2000,
+                        ] : null,
+                    ];
+                } catch (\Exception $e) {
+                    \Log::error('Error mapping student data in AdminUsersController', [
+                        'student_id' => $student->student_id ?? 'unknown',
+                        'error' => $e->getMessage()
+                    ]);
+                    
+                    // Return basic student data as fallback
+                    return [
+                        'student_id' => $student->student_id,
+                        'first_name' => $student->first_name,
+                        'last_name' => $student->last_name,
+                        'email' => $student->email,
+                        'phone' => $student->phone,
+                        'password' => $student->password ? true : false,
+                        'status' => $student->status ?? 'in',
+                        'leave_reason' => $student->leave_reason,
+                        'payment_status' => $student->payment_status ?? 'unpaid',
+                        'is_currently_booked' => false,
+                        'current_booking' => null,
+                    ];
+                }
             });
 
         return Inertia::render('admin/users/index', [
