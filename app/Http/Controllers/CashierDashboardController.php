@@ -37,7 +37,7 @@ class CashierDashboardController extends Controller
                 'rooms.price_per_semester',
                 'bookings.semester_count',
                 'bookings.booking_id',
-                DB::raw('CONCAT(students.first_name, " ", students.last_name) as full_name')
+                DB::raw("CONCAT(students.first_name, ' ', students.last_name) as full_name")
             )
             ->orderBy('students.payment_status')
             ->orderBy('students.first_name')
