@@ -21,20 +21,13 @@ return new class extends Migration
             $table->timestamps();
         });
         
-        // Insert default settings
+        // Insert default setting
         $now = Carbon::now();
         DB::table('registration_settings')->insert([
             [
-                'setting_key' => 'manager_registration',
+                'setting_key' => 'registration_enabled',
                 'enabled' => true,
-                'description' => 'Allow manager account registration',
-                'created_at' => $now,
-                'updated_at' => $now,
-            ],
-            [
-                'setting_key' => 'cashier_registration',
-                'enabled' => true,
-                'description' => 'Allow cashier account registration', 
+                'description' => 'Allow new account registration',
                 'created_at' => $now,
                 'updated_at' => $now,
             ],

@@ -37,18 +37,18 @@ class RegistrationSettings extends Model
     }
 
     /**
-     * Check if manager registration is enabled
+     * Check if registration is enabled
      */
-    public static function isManagerRegistrationEnabled(): bool
+    public static function isRegistrationEnabled(): bool
     {
-        return self::getSetting('manager_registration') ?? true;
+        return self::getSetting('registration_enabled') ?? true;
     }
 
     /**
-     * Check if cashier registration is enabled
+     * Enable or disable registration
      */
-    public static function isCashierRegistrationEnabled(): bool
+    public static function setRegistrationEnabled(bool $enabled): bool
     {
-        return self::getSetting('cashier_registration') ?? true;
+        return self::setSetting('registration_enabled', $enabled);
     }
 }

@@ -28,29 +28,19 @@ class RegisteredUserController extends Controller
         if (!$isFirstUser) {
             // Check if registration is enabled with fallback to true if error
             try {
-                $managerEnabled = RegistrationSettings::isManagerRegistrationEnabled();
-                $cashierEnabled = RegistrationSettings::isCashierRegistrationEnabled();
+                $registrationEnabled = RegistrationSettings::isRegistrationEnabled();
                 
-                // If both are disabled, redirect with error
-                if (!$managerEnabled && !$cashierEnabled) {
+                if (!$registrationEnabled) {
                     return redirect()->route('login')->with('error', 'Account registration is currently disabled. Please contact an administrator.');
                 }
             } catch (\Exception $e) {
                 // If there's an error loading settings, default to allowing registration
                 Log::warning('Failed to check registration settings: ' . $e->getMessage());
-                $managerEnabled = true;
-                $cashierEnabled = true;
             }
-        } else {
-            // First user, allow everything
-            $managerEnabled = true;
-            $cashierEnabled = true;
         }
         
         return Inertia::render('auth/register', [
             'isFirstUser' => $isFirstUser,
-            'managerRegistrationEnabled' => $managerEnabled,
-            'cashierRegistrationEnabled' => $cashierEnabled,
         ]);
     }
 
@@ -75,26 +65,17 @@ class RegisteredUserController extends Controller
             'email.email' => 'The email must be a valid email address.',
         ];
         
-        // Only require role selection if not first user
-        if (!$isFirstUser) {
-            $validationRules['role'] = ['required', 'in:manager,cashier'];
-            $validationMessages['role.required'] = 'Please select a role.';
-            $validationMessages['role.in'] = 'Invalid role selected.';
-        }
+        // No role selection needed - default to manager for non-first users
         
         $request->validate($validationRules, $validationMessages);
         
-        $role = $isFirstUser ? 'admin' : $request->role;
+        $role = $isFirstUser ? 'admin' : 'manager';
         
-        // If not first user, check if the selected role registration is enabled
+        // Simple registration check - already done in create method, but double-check here
         if (!$isFirstUser) {
             try {
-                if ($role === 'manager' && !RegistrationSettings::isManagerRegistrationEnabled()) {
-                    return redirect()->back()->withErrors(['role' => 'Manager registration is currently disabled.'])->withInput();
-                }
-                
-                if ($role === 'cashier' && !RegistrationSettings::isCashierRegistrationEnabled()) {
-                    return redirect()->back()->withErrors(['role' => 'Cashier registration is currently disabled.'])->withInput();
+                if (!RegistrationSettings::isRegistrationEnabled()) {
+                    return redirect()->back()->withErrors(['general' => 'Registration is currently disabled.'])->withInput();
                 }
             } catch (\Exception $e) {
                 // If there's an error checking settings, log it but allow registration to proceed
