@@ -65,6 +65,7 @@ export default function AdminUsers() {
     const [expandedLeaveReasons, setExpandedLeaveReasons] = useState<Record<string, boolean>>({});
     const [warningDialogOpen, setWarningDialogOpen] = useState(false);
     const [pendingAction, setPendingAction] = useState<{type: string, id: string | number, user?: any} | null>(null);
+    const [toggleProcessing, setToggleProcessing] = useState(false);
 
     // Role edit functions
     const handleOpenRoleEdit = (user: StaffUser) => {
@@ -121,12 +122,23 @@ export default function AdminUsers() {
     };
 
     const toggleRegistration = () => {
+        if (toggleProcessing) return; // Prevent multiple clicks
+        
+        setToggleProcessing(true);
+        
         router.post('/admin/users/toggle-registration', {}, {
-            onSuccess: () => {
+            onSuccess: (page) => {
+                setToggleProcessing(false);
+                console.log('Registration toggle success', page);
                 // Success message will be shown by the backend
             },
-            onError: () => {
+            onError: (errors) => {
+                setToggleProcessing(false);
+                console.error('Registration toggle error:', errors);
                 // Error handling if needed
+            },
+            onFinish: () => {
+                setToggleProcessing(false);
             }
         });
     };
@@ -288,9 +300,15 @@ export default function AdminUsers() {
                                         size="sm"
                                         variant={registrationEnabled ? "destructive" : "default"}
                                         onClick={toggleRegistration}
+                                        disabled={toggleProcessing}
                                         className="text-sm"
                                     >
-                                        {registrationEnabled ? (
+                                        {toggleProcessing ? (
+                                            <>
+                                                <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin mr-1"></div>
+                                                {registrationEnabled ? 'Disabling...' : 'Enabling...'}
+                                            </>
+                                        ) : registrationEnabled ? (
                                             <>Disable Registration</>
                                         ) : (
                                             <>Enable Registration</>

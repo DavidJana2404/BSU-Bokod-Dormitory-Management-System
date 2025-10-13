@@ -9,6 +9,8 @@ use App\Models\Tenant;
 use App\Models\RegistrationSettings;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules;
 
 class AdminUsersController extends Controller
@@ -160,14 +162,62 @@ class AdminUsersController extends Controller
     public function toggleRegistration()
     {
         try {
-            $currentSetting = RegistrationSettings::isRegistrationEnabled();
-            RegistrationSettings::setRegistrationEnabled(!$currentSetting);
+            // Check if table exists, if not create the setting
+            $currentSetting = true; // default
+            
+            try {
+                $currentSetting = RegistrationSettings::isRegistrationEnabled();
+            } catch (\Exception $e) {
+                \Log::info('Registration settings table may not exist, attempting to create default setting');
+                // Table might not exist, try to create it
+                try {
+                    // Create the table manually if migration hasn't run
+                    if (!\Schema::hasTable('registration_settings')) {
+                        \Schema::create('registration_settings', function ($table) {
+                            $table->id();
+                            $table->string('setting_key')->unique();
+                            $table->boolean('enabled')->default(true);
+                            $table->string('description')->nullable();
+                            $table->timestamps();
+                        });
+                        
+                        // Insert default setting
+                        \DB::table('registration_settings')->insert([
+                            'setting_key' => 'registration_enabled',
+                            'enabled' => true,
+                            'description' => 'Allow new account registration',
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        
+                        \Log::info('Created registration_settings table with default values');
+                    }
+                    
+                    $currentSetting = RegistrationSettings::isRegistrationEnabled();
+                } catch (\Exception $createException) {
+                    \Log::error('Failed to create registration_settings table: ' . $createException->getMessage());
+                    return redirect()->back()->with('error', 'Database error: Could not create registration settings. Please contact administrator.');
+                }
+            }
+            
+            // Toggle the setting
+            $newSetting = !$currentSetting;
+            $result = RegistrationSettings::setRegistrationEnabled($newSetting);
+            
+            if (!$result) {
+                throw new \Exception('Failed to update database setting');
+            }
             
             $status = $currentSetting ? 'disabled' : 'enabled';
+            \Log::info("Registration toggled from {$currentSetting} to {$newSetting}");
+            
             return redirect()->back()->with('success', "Account registration has been {$status}");
+            
         } catch (\Exception $e) {
-            \Log::error('Failed to toggle registration: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Failed to update registration setting. Please try again.');
+            \Log::error('Failed to toggle registration: ' . $e->getMessage(), [
+                'exception' => $e->getTraceAsString()
+            ]);
+            return redirect()->back()->with('error', 'Failed to update registration setting: ' . $e->getMessage());
         }
     }
 }

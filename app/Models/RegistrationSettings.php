@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
 
 class RegistrationSettings extends Model
 {
@@ -21,8 +22,13 @@ class RegistrationSettings extends Model
      */
     public static function getSetting(string $key): ?bool
     {
-        $setting = self::where('setting_key', $key)->first();
-        return $setting ? $setting->enabled : null;
+        try {
+            $setting = self::where('setting_key', $key)->first();
+            return $setting ? $setting->enabled : null;
+        } catch (\Exception $e) {
+            \Log::warning('Failed to get setting: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -30,10 +36,17 @@ class RegistrationSettings extends Model
      */
     public static function setSetting(string $key, bool $enabled): bool
     {
-        return self::updateOrCreate(
-            ['setting_key' => $key],
-            ['enabled' => $enabled]
-        ) ? true : false;
+        try {
+            $result = self::updateOrCreate(
+                ['setting_key' => $key],
+                ['enabled' => $enabled, 'description' => $key === 'registration_enabled' ? 'Allow new account registration' : '']
+            );
+            \Log::info("Setting {$key} updated to {$enabled}", ['result' => $result->toArray()]);
+            return $result ? true : false;
+        } catch (\Exception $e) {
+            \Log::error('Failed to set setting: ' . $e->getMessage());
+            return false;
+        }
     }
 
     /**
