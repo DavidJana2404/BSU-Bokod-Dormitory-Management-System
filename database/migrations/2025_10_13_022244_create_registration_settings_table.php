@@ -4,6 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 return new class extends Migration
 {
@@ -21,20 +22,21 @@ return new class extends Migration
         });
         
         // Insert default settings
+        $now = Carbon::now();
         DB::table('registration_settings')->insert([
             [
                 'setting_key' => 'manager_registration',
                 'enabled' => true,
                 'description' => 'Allow manager account registration',
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $now,
+                'updated_at' => $now,
             ],
             [
                 'setting_key' => 'cashier_registration',
                 'enabled' => true,
                 'description' => 'Allow cashier account registration', 
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $now,
+                'updated_at' => $now,
             ],
         ]);
     }

@@ -114,11 +114,21 @@ class AdminUsersController extends Controller
                 }
             });
 
-        // Get registration settings
+        // Get registration settings with fallback
         $registrationSettings = [
-            'manager_registration_enabled' => RegistrationSettings::isManagerRegistrationEnabled(),
-            'cashier_registration_enabled' => RegistrationSettings::isCashierRegistrationEnabled(),
+            'manager_registration_enabled' => true,
+            'cashier_registration_enabled' => true,
         ];
+        
+        try {
+            $registrationSettings = [
+                'manager_registration_enabled' => RegistrationSettings::isManagerRegistrationEnabled(),
+                'cashier_registration_enabled' => RegistrationSettings::isCashierRegistrationEnabled(),
+            ];
+        } catch (\Exception $e) {
+            // Log the error but continue with defaults
+            \Log::warning('Failed to load registration settings: ' . $e->getMessage());
+        }
 
         return Inertia::render('admin/users/index', [
             'staffUsers' => $staffUsers,
@@ -155,19 +165,29 @@ class AdminUsersController extends Controller
 
     public function toggleManagerRegistration()
     {
-        $currentSetting = RegistrationSettings::isManagerRegistrationEnabled();
-        RegistrationSettings::setSetting('manager_registration', !$currentSetting);
-        
-        $status = $currentSetting ? 'disabled' : 'enabled';
-        return redirect()->back()->with('success', "Manager registration has been {$status}");
+        try {
+            $currentSetting = RegistrationSettings::isManagerRegistrationEnabled();
+            RegistrationSettings::setSetting('manager_registration', !$currentSetting);
+            
+            $status = $currentSetting ? 'disabled' : 'enabled';
+            return redirect()->back()->with('success', "Manager registration has been {$status}");
+        } catch (\Exception $e) {
+            \Log::error('Failed to toggle manager registration: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update manager registration setting. Please try again.');
+        }
     }
 
     public function toggleCashierRegistration()
     {
-        $currentSetting = RegistrationSettings::isCashierRegistrationEnabled();
-        RegistrationSettings::setSetting('cashier_registration', !$currentSetting);
-        
-        $status = $currentSetting ? 'disabled' : 'enabled';
-        return redirect()->back()->with('success', "Cashier registration has been {$status}");
+        try {
+            $currentSetting = RegistrationSettings::isCashierRegistrationEnabled();
+            RegistrationSettings::setSetting('cashier_registration', !$currentSetting);
+            
+            $status = $currentSetting ? 'disabled' : 'enabled';
+            return redirect()->back()->with('success', "Cashier registration has been {$status}");
+        } catch (\Exception $e) {
+            \Log::error('Failed to toggle cashier registration: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update cashier registration setting. Please try again.');
+        }
     }
 }

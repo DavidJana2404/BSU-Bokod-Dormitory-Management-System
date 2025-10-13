@@ -26,20 +26,31 @@ class RegisteredUserController extends Controller
         $isFirstUser = User::count() === 0;
         
         if (!$isFirstUser) {
-            // Check if registration is enabled
-            $managerEnabled = RegistrationSettings::isManagerRegistrationEnabled();
-            $cashierEnabled = RegistrationSettings::isCashierRegistrationEnabled();
-            
-            // If both are disabled, redirect with error
-            if (!$managerEnabled && !$cashierEnabled) {
-                return redirect()->route('login')->with('error', 'Account registration is currently disabled. Please contact an administrator.');
+            // Check if registration is enabled with fallback to true if error
+            try {
+                $managerEnabled = RegistrationSettings::isManagerRegistrationEnabled();
+                $cashierEnabled = RegistrationSettings::isCashierRegistrationEnabled();
+                
+                // If both are disabled, redirect with error
+                if (!$managerEnabled && !$cashierEnabled) {
+                    return redirect()->route('login')->with('error', 'Account registration is currently disabled. Please contact an administrator.');
+                }
+            } catch (\Exception $e) {
+                // If there's an error loading settings, default to allowing registration
+                Log::warning('Failed to check registration settings: ' . $e->getMessage());
+                $managerEnabled = true;
+                $cashierEnabled = true;
             }
+        } else {
+            // First user, allow everything
+            $managerEnabled = true;
+            $cashierEnabled = true;
         }
         
         return Inertia::render('auth/register', [
             'isFirstUser' => $isFirstUser,
-            'managerRegistrationEnabled' => $isFirstUser ? true : RegistrationSettings::isManagerRegistrationEnabled(),
-            'cashierRegistrationEnabled' => $isFirstUser ? true : RegistrationSettings::isCashierRegistrationEnabled(),
+            'managerRegistrationEnabled' => $managerEnabled,
+            'cashierRegistrationEnabled' => $cashierEnabled,
         ]);
     }
 
@@ -77,12 +88,17 @@ class RegisteredUserController extends Controller
         
         // If not first user, check if the selected role registration is enabled
         if (!$isFirstUser) {
-            if ($role === 'manager' && !RegistrationSettings::isManagerRegistrationEnabled()) {
-                return redirect()->back()->withErrors(['role' => 'Manager registration is currently disabled.'])->withInput();
-            }
-            
-            if ($role === 'cashier' && !RegistrationSettings::isCashierRegistrationEnabled()) {
-                return redirect()->back()->withErrors(['role' => 'Cashier registration is currently disabled.'])->withInput();
+            try {
+                if ($role === 'manager' && !RegistrationSettings::isManagerRegistrationEnabled()) {
+                    return redirect()->back()->withErrors(['role' => 'Manager registration is currently disabled.'])->withInput();
+                }
+                
+                if ($role === 'cashier' && !RegistrationSettings::isCashierRegistrationEnabled()) {
+                    return redirect()->back()->withErrors(['role' => 'Cashier registration is currently disabled.'])->withInput();
+                }
+            } catch (\Exception $e) {
+                // If there's an error checking settings, log it but allow registration to proceed
+                Log::warning('Failed to check registration settings during user creation: ' . $e->getMessage());
             }
         }
         

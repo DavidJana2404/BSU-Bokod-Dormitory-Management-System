@@ -101,13 +101,11 @@ export default function Register() {
                                         <option value="">Select account type</option>
                                         {managerRegistrationEnabled && (
                                             <option value="manager">
-                                                <Shield className="inline-block mr-2" size={16} />
                                                 Manager - Full system access
                                             </option>
                                         )}
                                         {cashierRegistrationEnabled && (
                                             <option value="cashier">
-                                                <Settings className="inline-block mr-2" size={16} />
                                                 Cashier - Payment management access
                                             </option>
                                         )}
