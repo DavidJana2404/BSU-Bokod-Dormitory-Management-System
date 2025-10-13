@@ -20,7 +20,7 @@ class RegisteredUserController extends Controller
     /**
      * Show the registration page.
      */
-    public function create(): Response
+    public function create(): Response|RedirectResponse
     {
         // Check if this is the first user in the system (always allow first user)
         $isFirstUser = User::count() === 0;
