@@ -116,14 +116,23 @@ class AdminUsersController extends Controller
                 }
             });
 
-        // Get registration setting with fallback
-        $registrationEnabled = true;
+        // Get registration setting with fallback (cache-based)
+        $registrationEnabled = cache('registration_enabled', true); // default enabled
         
+        // Try to get from database as backup
         try {
-            $registrationEnabled = RegistrationSettings::isRegistrationEnabled();
+            if (\Schema::hasTable('registration_settings')) {
+                $dbSetting = \DB::table('registration_settings')
+                    ->where('setting_key', 'registration_enabled')
+                    ->value('enabled');
+                if ($dbSetting !== null) {
+                    $registrationEnabled = (bool) $dbSetting;
+                    // Update cache with database value
+                    cache(['registration_enabled' => $registrationEnabled], now()->addYear());
+                }
+            }
         } catch (\Exception $e) {
-            // Log the error but continue with default
-            \Log::warning('Failed to load registration setting: ' . $e->getMessage());
+            \Log::warning('Could not load registration setting from database, using cache: ' . $e->getMessage());
         }
 
         return Inertia::render('admin/users/index', [
@@ -161,62 +170,58 @@ class AdminUsersController extends Controller
 
     public function toggleRegistration()
     {
+        \Log::info('Toggle registration method called');
+        
         try {
-            // Check if table exists, if not create the setting
-            $currentSetting = true; // default
+            // Use a simple cache-based approach first
+            $cacheKey = 'registration_enabled';
+            $currentSetting = cache($cacheKey, true); // default enabled
             
-            try {
-                $currentSetting = RegistrationSettings::isRegistrationEnabled();
-            } catch (\Exception $e) {
-                \Log::info('Registration settings table may not exist, attempting to create default setting');
-                // Table might not exist, try to create it
-                try {
-                    // Create the table manually if migration hasn't run
-                    if (!\Schema::hasTable('registration_settings')) {
-                        \Schema::create('registration_settings', function ($table) {
-                            $table->id();
-                            $table->string('setting_key')->unique();
-                            $table->boolean('enabled')->default(true);
-                            $table->string('description')->nullable();
-                            $table->timestamps();
-                        });
-                        
-                        // Insert default setting
-                        \DB::table('registration_settings')->insert([
-                            'setting_key' => 'registration_enabled',
-                            'enabled' => true,
-                            'description' => 'Allow new account registration',
-                            'created_at' => now(),
-                            'updated_at' => now(),
-                        ]);
-                        
-                        \Log::info('Created registration_settings table with default values');
-                    }
-                    
-                    $currentSetting = RegistrationSettings::isRegistrationEnabled();
-                } catch (\Exception $createException) {
-                    \Log::error('Failed to create registration_settings table: ' . $createException->getMessage());
-                    return redirect()->back()->with('error', 'Database error: Could not create registration settings. Please contact administrator.');
-                }
-            }
+            \Log::info('Current registration setting from cache: ' . ($currentSetting ? 'enabled' : 'disabled'));
             
             // Toggle the setting
             $newSetting = !$currentSetting;
-            $result = RegistrationSettings::setRegistrationEnabled($newSetting);
             
-            if (!$result) {
-                throw new \Exception('Failed to update database setting');
+            // Store in cache (expires in 1 year)
+            cache([$cacheKey => $newSetting], now()->addYear());
+            
+            \Log::info('New registration setting stored in cache: ' . ($newSetting ? 'enabled' : 'disabled'));
+            
+            // Try to also store in database if possible
+            try {
+                if (!\Schema::hasTable('registration_settings')) {
+                    \Log::info('Creating registration_settings table');
+                    \Schema::create('registration_settings', function ($table) {
+                        $table->id();
+                        $table->string('setting_key')->unique();
+                        $table->boolean('enabled')->default(true);
+                        $table->string('description')->nullable();
+                        $table->timestamps();
+                    });
+                }
+                
+                // Insert or update the setting
+                \DB::table('registration_settings')->updateOrInsert(
+                    ['setting_key' => 'registration_enabled'],
+                    [
+                        'enabled' => $newSetting,
+                        'description' => 'Allow new account registration',
+                        'updated_at' => now()
+                    ]
+                );
+                
+                \Log::info('Registration setting updated in database');
+            } catch (\Exception $dbError) {
+                \Log::warning('Could not update database, using cache only: ' . $dbError->getMessage());
             }
             
             $status = $currentSetting ? 'disabled' : 'enabled';
-            \Log::info("Registration toggled from {$currentSetting} to {$newSetting}");
+            \Log::info("Registration successfully toggled to: {$status}");
             
-            return redirect()->back()->with('success', "Account registration has been {$status}");
+            return redirect()->back()->with('success', "Account registration has been {$status}!");
             
         } catch (\Exception $e) {
-            \Log::error('Failed to toggle registration: ' . $e->getMessage(), [
-                'exception' => $e->getTraceAsString()
-            ]);
+            \Log::error('Failed to toggle registration: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update registration setting: ' . $e->getMessage());
         }
     }

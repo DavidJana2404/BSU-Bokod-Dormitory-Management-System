@@ -26,16 +26,11 @@ class RegisteredUserController extends Controller
         $isFirstUser = User::count() === 0;
         
         if (!$isFirstUser) {
-            // Check if registration is enabled with fallback to true if error
-            try {
-                $registrationEnabled = RegistrationSettings::isRegistrationEnabled();
-                
-                if (!$registrationEnabled) {
-                    return redirect()->route('login')->with('error', 'Account registration is currently disabled. Please contact an administrator.');
-                }
-            } catch (\Exception $e) {
-                // If there's an error loading settings, default to allowing registration
-                Log::warning('Failed to check registration settings: ' . $e->getMessage());
+            // Check if registration is enabled (cache-based with fallback)
+            $registrationEnabled = cache('registration_enabled', true); // default enabled
+            
+            if (!$registrationEnabled) {
+                return redirect()->route('login')->with('error', 'Account registration is currently disabled. Please contact an administrator.');
             }
         }
         
@@ -73,13 +68,9 @@ class RegisteredUserController extends Controller
         
         // Simple registration check - already done in create method, but double-check here
         if (!$isFirstUser) {
-            try {
-                if (!RegistrationSettings::isRegistrationEnabled()) {
-                    return redirect()->back()->withErrors(['general' => 'Registration is currently disabled.'])->withInput();
-                }
-            } catch (\Exception $e) {
-                // If there's an error checking settings, log it but allow registration to proceed
-                Log::warning('Failed to check registration settings during user creation: ' . $e->getMessage());
+            $registrationEnabled = cache('registration_enabled', true); // default enabled
+            if (!$registrationEnabled) {
+                return redirect()->back()->withErrors(['general' => 'Registration is currently disabled.'])->withInput();
             }
         }
         

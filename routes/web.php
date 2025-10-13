@@ -320,6 +320,29 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::put('/admin/users/{id}/role', [AdminUsersController::class, 'updateUserRole'])->name('admin.users.role.update');
     Route::post('/admin/users/{id}/toggle-active', [AdminUsersController::class, 'toggleUserActive'])->name('admin.users.toggleActive');
     Route::post('/admin/users/toggle-registration', [AdminUsersController::class, 'toggleRegistration'])->name('admin.users.toggleRegistration');
+    
+    // Debug route for registration status
+    Route::get('/debug/registration', function() {
+        $cacheValue = cache('registration_enabled', 'not set');
+        $dbValue = 'no table';
+        
+        try {
+            if (\Schema::hasTable('registration_settings')) {
+                $dbValue = \DB::table('registration_settings')
+                    ->where('setting_key', 'registration_enabled')
+                    ->value('enabled');
+                $dbValue = $dbValue !== null ? ($dbValue ? 'enabled' : 'disabled') : 'no record';
+            }
+        } catch (\Exception $e) {
+            $dbValue = 'error: ' . $e->getMessage();
+        }
+        
+        return response()->json([
+            'cache' => $cacheValue,
+            'database' => $dbValue,
+            'timestamp' => now()
+        ]);
+    });
 });
 
 require __DIR__.'/settings.php';
