@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Student;
 use App\Models\Tenant;
+use App\Models\RegistrationSettings;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
@@ -113,9 +114,16 @@ class AdminUsersController extends Controller
                 }
             });
 
+        // Get registration settings
+        $registrationSettings = [
+            'manager_registration_enabled' => RegistrationSettings::isManagerRegistrationEnabled(),
+            'cashier_registration_enabled' => RegistrationSettings::isCashierRegistrationEnabled(),
+        ];
+
         return Inertia::render('admin/users/index', [
             'staffUsers' => $staffUsers,
             'students' => $students,
+            'registrationSettings' => $registrationSettings,
         ]);
     }
 
@@ -143,5 +151,23 @@ class AdminUsersController extends Controller
         $user->save();
 
         return redirect()->back()->with('success', 'User status updated successfully');
+    }
+
+    public function toggleManagerRegistration()
+    {
+        $currentSetting = RegistrationSettings::isManagerRegistrationEnabled();
+        RegistrationSettings::setSetting('manager_registration', !$currentSetting);
+        
+        $status = $currentSetting ? 'disabled' : 'enabled';
+        return redirect()->back()->with('success', "Manager registration has been {$status}");
+    }
+
+    public function toggleCashierRegistration()
+    {
+        $currentSetting = RegistrationSettings::isCashierRegistrationEnabled();
+        RegistrationSettings::setSetting('cashier_registration', !$currentSetting);
+        
+        $status = $currentSetting ? 'disabled' : 'enabled';
+        return redirect()->back()->with('success', "Cashier registration has been {$status}");
     }
 }

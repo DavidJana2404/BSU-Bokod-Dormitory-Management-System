@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\RegistrationSettings;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,25 @@ class RegisteredUserController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('auth/register');
+        // Check if this is the first user in the system (always allow first user)
+        $isFirstUser = User::count() === 0;
+        
+        if (!$isFirstUser) {
+            // Check if registration is enabled
+            $managerEnabled = RegistrationSettings::isManagerRegistrationEnabled();
+            $cashierEnabled = RegistrationSettings::isCashierRegistrationEnabled();
+            
+            // If both are disabled, redirect with error
+            if (!$managerEnabled && !$cashierEnabled) {
+                return redirect()->route('login')->with('error', 'Account registration is currently disabled. Please contact an administrator.');
+            }
+        }
+        
+        return Inertia::render('auth/register', [
+            'isFirstUser' => $isFirstUser,
+            'managerRegistrationEnabled' => $isFirstUser ? true : RegistrationSettings::isManagerRegistrationEnabled(),
+            'cashierRegistrationEnabled' => $isFirstUser ? true : RegistrationSettings::isCashierRegistrationEnabled(),
+        ]);
     }
 
     /**
@@ -31,28 +50,59 @@ class RegisteredUserController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        // Check if this is the first user in the system
+        $isFirstUser = User::count() === 0;
+        
+        $validationRules = [
             'name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
             'email' => ['required', 'string', 'lowercase', 'email:rfc,dns', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
-        ], [
+        ];
+        
+        $validationMessages = [
             'name.regex' => 'The name may only contain letters, spaces, hyphens, and apostrophes.',
             'email.email' => 'The email must be a valid email address.',
-        ]);
-
-        // Check if this is the first user in the system
-        $isFirstUser = User::count() === 0;
+        ];
+        
+        // Only require role selection if not first user
+        if (!$isFirstUser) {
+            $validationRules['role'] = ['required', 'in:manager,cashier'];
+            $validationMessages['role.required'] = 'Please select a role.';
+            $validationMessages['role.in'] = 'Invalid role selected.';
+        }
+        
+        $request->validate($validationRules, $validationMessages);
+        
+        $role = $isFirstUser ? 'admin' : $request->role;
+        
+        // If not first user, check if the selected role registration is enabled
+        if (!$isFirstUser) {
+            if ($role === 'manager' && !RegistrationSettings::isManagerRegistrationEnabled()) {
+                return redirect()->back()->withErrors(['role' => 'Manager registration is currently disabled.'])->withInput();
+            }
+            
+            if ($role === 'cashier' && !RegistrationSettings::isCashierRegistrationEnabled()) {
+                return redirect()->back()->withErrors(['role' => 'Cashier registration is currently disabled.'])->withInput();
+            }
+        }
         
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
-            'role' => $isFirstUser ? 'admin' : 'manager', // First user becomes admin
+            'role' => $role,
         ]);
         
         // Log the user creation for admin tracking
         if ($isFirstUser) {
             Log::info('First user registered and automatically promoted to admin', [
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role
+            ]);
+        } else {
+            Log::info('New user registered', [
                 'user_id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,

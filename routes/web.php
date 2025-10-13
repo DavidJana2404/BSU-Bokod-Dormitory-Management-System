@@ -319,6 +319,8 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users.index');
     Route::put('/admin/users/{id}/role', [AdminUsersController::class, 'updateUserRole'])->name('admin.users.role.update');
     Route::post('/admin/users/{id}/toggle-active', [AdminUsersController::class, 'toggleUserActive'])->name('admin.users.toggleActive');
+    Route::post('/admin/users/toggle-manager-registration', [AdminUsersController::class, 'toggleManagerRegistration'])->name('admin.users.toggleManagerRegistration');
+    Route::post('/admin/users/toggle-cashier-registration', [AdminUsersController::class, 'toggleCashierRegistration'])->name('admin.users.toggleCashierRegistration');
 });
 
 require __DIR__.'/settings.php';

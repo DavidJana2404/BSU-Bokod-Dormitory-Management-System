@@ -45,10 +45,14 @@ interface Student {
 const emptyRoleForm = { role: 'manager' };
 
 export default function AdminUsers() {
-    const { staffUsers = [], students = [], errors = {} } = usePage().props as unknown as {
+    const { staffUsers = [], students = [], errors = {}, registrationSettings = {} } = usePage().props as unknown as {
         staffUsers: StaffUser[];
         students: Student[];
         errors: any;
+        registrationSettings: {
+            manager_registration_enabled: boolean;
+            cashier_registration_enabled: boolean;
+        };
     };
     
     // Dialog states
@@ -117,6 +121,28 @@ export default function AdminUsers() {
                 }
             });
         }
+    };
+
+    const toggleManagerRegistration = () => {
+        router.post('/admin/users/toggle-manager-registration', {}, {
+            onSuccess: () => {
+                // Success message will be shown by the backend
+            },
+            onError: () => {
+                // Error handling if needed
+            }
+        });
+    };
+
+    const toggleCashierRegistration = () => {
+        router.post('/admin/users/toggle-cashier-registration', {}, {
+            onSuccess: () => {
+                // Success message will be shown by the backend
+            },
+            onError: () => {
+                // Error handling if needed
+            }
+        });
     };
 
     const getWarningMessage = () => {
@@ -220,6 +246,118 @@ export default function AdminUsers() {
                                 <div className="text-sm text-cyan-600 dark:text-cyan-400">Paid Students</div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Registration Controls Section */}
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                            <Settings className="text-orange-600 dark:text-orange-400" size={24} />
+                            Registration Controls
+                        </h2>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Manager Registration Control */}
+                        <Card className="border border-gray-200 dark:border-gray-700">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2">
+                                            <Shield className="text-purple-600 dark:text-purple-400" size={18} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Manager Registration</h3>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                Allow new manager accounts to be created
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                            registrationSettings.manager_registration_enabled 
+                                                ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800'
+                                                : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800'
+                                        }`}>
+                                            {registrationSettings.manager_registration_enabled ? (
+                                                <>
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
+                                                    Enabled
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div>
+                                                    Disabled
+                                                </>
+                                            )}
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant={registrationSettings.manager_registration_enabled ? "destructive" : "default"}
+                                            onClick={toggleManagerRegistration}
+                                            className="text-xs"
+                                        >
+                                            {registrationSettings.manager_registration_enabled ? (
+                                                <>Disable</>
+                                            ) : (
+                                                <>Enable</>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Cashier Registration Control */}
+                        <Card className="border border-gray-200 dark:border-gray-700">
+                            <CardContent className="p-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2">
+                                            <Settings className="text-green-600 dark:text-green-400" size={18} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-gray-900 dark:text-gray-100">Cashier Registration</h3>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                Allow new cashier accounts to be created
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium border ${
+                                            registrationSettings.cashier_registration_enabled 
+                                                ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800'
+                                                : 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800'
+                                        }`}>
+                                            {registrationSettings.cashier_registration_enabled ? (
+                                                <>
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full mr-1.5 animate-pulse"></div>
+                                                    Enabled
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="w-2 h-2 bg-red-500 rounded-full mr-1.5"></div>
+                                                    Disabled
+                                                </>
+                                            )}
+                                        </div>
+                                        <Button
+                                            size="sm"
+                                            variant={registrationSettings.cashier_registration_enabled ? "destructive" : "default"}
+                                            onClick={toggleCashierRegistration}
+                                            className="text-xs"
+                                        >
+                                            {registrationSettings.cashier_registration_enabled ? (
+                                                <>Disable</>
+                                            ) : (
+                                                <>Enable</>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
 
