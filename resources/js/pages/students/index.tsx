@@ -15,7 +15,7 @@ import WarningDialog from '@/components/warning-dialog';
 const emptyForm = { first_name: '', last_name: '', email: '', phone: '', password: '', password_confirmation: '' };
 
 export default function Students() {
-    const { students = [], errors = {} } = usePage().props;
+    const { students = [], errors = {}, error = null, show_assignment_notice = false } = usePage().props;
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [isEdit, setIsEdit] = useState(false);
@@ -144,9 +144,11 @@ export default function Students() {
                         </div>
                     </div>
                     
-                    <Button onClick={handleOpenAdd} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                        <Plus size={18} /> Add New Student
-                    </Button>
+                    {!error && (
+                        <Button onClick={handleOpenAdd} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                            <Plus size={18} /> Add New Student
+                        </Button>
+                    )}
                 </div>
 
                 {/* Students Stats */}
@@ -208,8 +210,39 @@ export default function Students() {
                     </div>
                 </div>
 
+                {/* Error Message */}
+                {error && (
+                    <Card className={`border ${show_assignment_notice ? 'border-yellow-300 bg-yellow-50 dark:bg-yellow-900/10' : 'border-red-300 bg-red-50 dark:bg-red-900/10'}`}>
+                        <CardContent className="p-6">
+                            <div className="flex items-start gap-4">
+                                <div className={`rounded-lg p-3 ${show_assignment_notice ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-red-100 dark:bg-red-900/30'}`}>
+                                    <AlertCircle className={`${show_assignment_notice ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`} size={24} />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className={`font-semibold mb-2 ${show_assignment_notice ? 'text-yellow-800 dark:text-yellow-200' : 'text-red-800 dark:text-red-200'}`}>
+                                        {show_assignment_notice ? 'Dormitory Assignment Required' : 'Unable to Load Students'}
+                                    </h3>
+                                    <p className={`text-sm ${show_assignment_notice ? 'text-yellow-700 dark:text-yellow-300' : 'text-red-700 dark:text-red-300'}`}>
+                                        {error}
+                                    </p>
+                                    {show_assignment_notice && (
+                                        <div className="mt-4">
+                                            <Link href="/assign-manager">
+                                                <Button variant="outline" className="border-yellow-400 text-yellow-700 hover:bg-yellow-100 dark:border-yellow-600 dark:text-yellow-300 dark:hover:bg-yellow-900/20">
+                                                    <Users size={16} className="mr-2" />
+                                                    Go to Manager Assignment
+                                                </Button>
+                                            </Link>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Students List */}
-                {studentList.length > 0 ? (
+                {!error && studentList.length > 0 ? (
                     <div className="space-y-3">
                         {studentList.map((student: any) => (
                             <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
@@ -572,16 +605,18 @@ export default function Students() {
                         ))}
                     </div>
                 ) : (
-                    <Card className="p-12 text-center">
-                        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                            <Users className="text-gray-400" size={32} />
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
-                        <p className="text-gray-500 dark:text-gray-500 mb-6">Start by adding your first student to manage dormitory residents.</p>
-                        <Button onClick={handleOpenAdd} className="gap-2">
-                            <Plus size={16} /> Create Your First Student
-                        </Button>
-                    </Card>
+                    !error && (
+                        <Card className="p-12 text-center">
+                            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                <Users className="text-gray-400" size={32} />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
+                            <p className="text-gray-500 dark:text-gray-500 mb-6">Start by adding your first student to manage dormitory residents.</p>
+                            <Button onClick={handleOpenAdd} className="gap-2">
+                                <Plus size={16} /> Create Your First Student
+                            </Button>
+                        </Card>
+                    )
                 )}
 
                 {/* Add/Edit Student Dialog */}

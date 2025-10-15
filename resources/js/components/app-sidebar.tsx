@@ -42,6 +42,20 @@ const managerNavItems: NavItem[] = [
     },
 ];
 
+// Navigation for managers without tenant assignment
+const unassignedManagerNavItems: NavItem[] = [
+    {
+        title: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutGrid,
+    },
+    {
+        title: 'Students',
+        href: '/students',
+        icon: Users,
+    },
+];
+
 const adminNavItems: NavItem[] = [
     {
         title: 'Dashboard',
@@ -105,7 +119,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={[{title: 'Dashboard',href:'/dashboard',icon: LayoutGrid}]} />
+                <NavMain items={unassignedManagerNavItems} />
             </SidebarContent>
 
             <SidebarFooter>

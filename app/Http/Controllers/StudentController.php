@@ -16,16 +16,31 @@ class StudentController extends Controller
         try {
             $user = $request->user();
             
-            if (!$user || !$user->tenant_id) {
-                \Log::error('StudentController index accessed without proper user/tenant', [
-                    'user_id' => $user ? $user->id : 'null',
-                    'tenant_id' => $user ? $user->tenant_id : 'null'
+            if (!$user) {
+                return Inertia::render('students/index', [
+                    'students' => [],
+                    'tenant_id' => null,
+                    'error' => 'Authentication required.'
+                ]);
+            }
+            
+            // Handle managers without tenant assignment
+            if (!$user->tenant_id) {
+                $errorMessage = $user->role === 'manager' 
+                    ? 'You have not been assigned to a dormitory yet. Please contact your administrator to assign you to a dormitory so you can manage students.'
+                    : 'Unable to load students. Please contact your administrator.';
+                
+                \Log::info('StudentController accessed by user without tenant assignment', [
+                    'user_id' => $user->id,
+                    'role' => $user->role,
+                    'email' => $user->email
                 ]);
                 
                 return Inertia::render('students/index', [
                     'students' => [],
                     'tenant_id' => null,
-                    'error' => 'Unable to load students. Please try again later.'
+                    'error' => $errorMessage,
+                    'show_assignment_notice' => $user->role === 'manager'
                 ]);
             }
             
