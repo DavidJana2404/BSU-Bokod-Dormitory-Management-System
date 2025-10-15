@@ -4,7 +4,7 @@ import AppLayout from '@/layouts/app-layout';
 import { usePage, router, Link } from '@inertiajs/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
@@ -30,6 +30,8 @@ export default function Students() {
     const [expandedLeaveReasons, setExpandedLeaveReasons] = useState<Record<string, boolean>>({});
     const [warningDialogOpen, setWarningDialogOpen] = useState(false);
     const [pendingArchiveStudent, setPendingArchiveStudent] = useState<any>(null);
+    const [viewModalOpen, setViewModalOpen] = useState(false);
+    const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
     const handleOpenAdd = () => {
         setForm(emptyForm);
@@ -130,6 +132,11 @@ export default function Students() {
             ...prev,
             [studentId]: !prev[studentId]
         }));
+    };
+
+    const handleViewStudent = (student: any) => {
+        setSelectedStudent(student);
+        setViewModalOpen(true);
     };
 
     const studentList = Array.isArray(students) ? students : [];
@@ -366,11 +373,15 @@ export default function Students() {
                                             
                                             {/* Action Buttons - Moved to right side */}
                                             <div className="flex flex-col gap-2 flex-shrink-0">
-                                                <a href={`/students/${student.student_id}`} 
-                                                   className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium border border-green-300 text-green-700 bg-white hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 dark:bg-gray-950 rounded-md transition-colors w-full">
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
+                                                    onClick={() => handleViewStudent(student)}
+                                                    className="h-8 px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 w-full"
+                                                >
                                                     <Eye size={12} className="mr-1" />
                                                     View
-                                                </a>
+                                                </Button>
                                                 <Button 
                                                     size="sm" 
                                                     variant="outline" 
@@ -569,11 +580,15 @@ export default function Students() {
                                             {/* Actions - 2 columns on lg, 4 on xl */}
                                             <div className="col-span-2 xl:col-span-4">
                                                 <div className="flex gap-2 justify-end">
-                                                    <a href={`/students/${student.student_id}`} 
-                                                       className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium border border-green-300 text-green-700 bg-white hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 dark:bg-gray-950 rounded-md transition-colors">
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => handleViewStudent(student)}
+                                                        className="h-8 px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20"
+                                                    >
                                                         <Eye size={12} className="mr-1" />
                                                         View
-                                                    </a>
+                                                    </Button>
                                                     <Button 
                                                         size="sm" 
                                                         variant="outline" 
@@ -711,6 +726,148 @@ export default function Students() {
                 </DialogContent>
                 </Dialog>
                 
+                {/* View Student Modal */}
+                <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
+                    <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>Student Details</DialogTitle>
+                            <DialogDescription>
+                                View detailed information about this student.
+                            </DialogDescription>
+                        </DialogHeader>
+                        {selectedStudent && (
+                            <div className="space-y-6">
+                                {/* Student Information */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">First Name</Label>
+                                        <p className="text-base font-semibold">{selectedStudent.first_name}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Name</Label>
+                                        <p className="text-base font-semibold">{selectedStudent.last_name}</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</Label>
+                                        <p className="text-base">{selectedStudent.email}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</Label>
+                                        <p className="text-base">{selectedStudent.phone}</p>
+                                    </div>
+                                </div>
+
+                                {/* Status Information */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Student Status</Label>
+                                        <div className="mt-1">
+                                            {selectedStudent.status === 'on_leave' ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800">
+                                                    <Plane size={12} className="mr-1" />On Leave
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800">
+                                                    <CheckCircle2 size={12} className="mr-1" />Present
+                                                </span>
+                                            )}
+                                        </div>
+                                        {selectedStudent.leave_reason && (
+                                            <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs">
+                                                <p className="font-medium text-yellow-700 dark:text-yellow-400 mb-1">Leave Reason:</p>
+                                                <p className="text-yellow-800 dark:text-yellow-300">{selectedStudent.leave_reason}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Login Access</Label>
+                                        <div className="mt-1">
+                                            {selectedStudent.password ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800">
+                                                    <CheckCircle size={12} className="mr-1" />Enabled
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-800">
+                                                    <XCircle size={12} className="mr-1" />Disabled
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Room and Payment Information */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Room Status</Label>
+                                        <div className="mt-1">
+                                            {selectedStudent.is_currently_booked ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800">
+                                                    <Bed size={12} className="mr-1" />Room {selectedStudent.current_booking?.room_number}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-800">
+                                                    <XCircle size={12} className="mr-1" />No Room
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Status</Label>
+                                        <div className="mt-1">
+                                            {selectedStudent.payment_status === 'paid' ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800">
+                                                    <CheckCircle size={12} className="mr-1" />Paid
+                                                </span>
+                                            ) : selectedStudent.payment_status === 'partial' ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800">
+                                                    <AlertCircle size={12} className="mr-1" />Partial
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800">
+                                                    <XCircle size={12} className="mr-1" />Unpaid
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Booking Details */}
+                                {selectedStudent.is_currently_booked && selectedStudent.current_booking && (
+                                    <div className="pt-4 border-t">
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Booking Details</Label>
+                                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <p className="font-medium text-blue-700 dark:text-blue-400">Duration</p>
+                                                    <p className="text-blue-600 dark:text-blue-300">
+                                                        {selectedStudent.current_booking.semester_count} semester{selectedStudent.current_booking.semester_count !== 1 ? 's' : ''}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-blue-700 dark:text-blue-400">Total Fee</p>
+                                                    <p className="text-blue-600 dark:text-blue-300">
+                                                        ₱{(selectedStudent.current_booking.total_fee || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Student ID */}
+                                <div className="pt-4 border-t">
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        Student ID: {selectedStudent.student_id}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
                 {/* Archive Warning Dialog */}
                 <WarningDialog
                     open={warningDialogOpen}
