@@ -360,16 +360,11 @@ export default function Students() {
                                             
                                             {/* Action Buttons - Moved to right side */}
                                             <div className="flex flex-col gap-2 flex-shrink-0">
-                                                <Link href={`/students/${student.student_id}`}>
-                                                    <Button 
-                                                        size="sm" 
-                                                        variant="outline" 
-                                                        className="h-8 px-3 text-xs w-full border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20"
-                                                    >
-                                                        <Eye size={12} className="mr-1" />
-                                                        View
-                                                    </Button>
-                                                </Link>
+                                                <a href={`/students/${student.student_id}`} 
+                                                   className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium border border-green-300 text-green-700 bg-white hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 dark:bg-gray-950 rounded-md transition-colors w-full">
+                                                    <Eye size={12} className="mr-1" />
+                                                    View
+                                                </a>
                                                 <Button 
                                                     size="sm" 
                                                     variant="outline" 
@@ -568,16 +563,11 @@ export default function Students() {
                                             {/* Actions - 2 columns on lg, 4 on xl */}
                                             <div className="col-span-2 xl:col-span-4">
                                                 <div className="flex gap-2 justify-end">
-                                                    <Link href={`/students/${student.student_id}`}>
-                                                        <Button 
-                                                            size="sm" 
-                                                            variant="outline" 
-                                                            className="h-8 px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20"
-                                                        >
-                                                            <Eye size={12} className="mr-1" />
-                                                            View
-                                                        </Button>
-                                                    </Link>
+                                                    <a href={`/students/${student.student_id}`} 
+                                                       className="inline-flex items-center justify-center h-8 px-3 text-xs font-medium border border-green-300 text-green-700 bg-white hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 dark:bg-gray-950 rounded-md transition-colors">
+                                                        <Eye size={12} className="mr-1" />
+                                                        View
+                                                    </a>
                                                     <Button 
                                                         size="sm" 
                                                         variant="outline" 
