@@ -47,7 +47,7 @@ class StudentController extends Controller
             $students = collect([]);
             
             try {
-                // Get students with optimized query
+                // Simplified query with basic error handling
                 $studentsData = Student::select([
                     'student_id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone',
                     'payment_status', 'payment_date', 'amount_paid', 'payment_notes',
@@ -55,31 +55,13 @@ class StudentController extends Controller
                 ])
                 ->where('tenant_id', $user->tenant_id)
                 ->whereNull('archived_at')
+                ->orderBy('first_name')
                 ->limit(100) // Prevent memory issues
                 ->get();
                 
                 $students = $studentsData->map(function($student) {
-                    try {
-                        return $this->mapStudentDataSafe($student);
-                    } catch (\Exception $e) {
-                        \Log::error('Error mapping student data', [
-                            'student_id' => $student->student_id,
-                            'error' => $e->getMessage()
-                        ]);
-                        
-                        // Return basic student data as fallback
-                        return [
-                            'student_id' => $student->student_id,
-                            'first_name' => $student->first_name,
-                            'last_name' => $student->last_name,
-                            'email' => $student->email,
-                            'phone' => $student->phone,
-                            'payment_status' => 'unpaid',
-                            'status' => 'in',
-                            'has_booking' => false,
-                            'current_booking' => null,
-                        ];
-                    }
+                    // Simplified data mapping to prevent errors
+                    return $this->mapStudentDataSimple($student);
                 });
                 
             } catch (\Exception $e) {
@@ -88,6 +70,9 @@ class StudentController extends Controller
                     'tenant_id' => $user->tenant_id,
                     'error' => $e->getMessage()
                 ]);
+                
+                // Return empty array if database fails
+                $students = collect([]);
             }
             
             return Inertia::render('students/index', [
@@ -141,26 +126,17 @@ class StudentController extends Controller
                     ->with('error', 'Unauthorized access.');
             }
             
-            // Load student with error handling
-            $student = null;
-            try {
-                $student = Student::select([
-                    'student_id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone',
-                    'payment_status', 'payment_date', 'amount_paid', 'payment_notes',
-                    'status', 'leave_reason', 'status_updated_at', 'password', 'archived_at',
-                    'created_at', 'updated_at'
-                ])
-                ->where('student_id', $id)
-                ->where('tenant_id', $user->tenant_id)
-                ->whereNull('archived_at')
-                ->first();
-            } catch (\Exception $e) {
-                \Log::error('Error loading student for show', [
-                    'student_id' => $id,
-                    'user_id' => $user->id,
-                    'error' => $e->getMessage()
-                ]);
-            }
+            // Load student with simplified query
+            $student = Student::select([
+                'student_id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone',
+                'payment_status', 'payment_date', 'amount_paid', 'payment_notes',
+                'status', 'leave_reason', 'status_updated_at', 'password', 'archived_at',
+                'created_at', 'updated_at'
+            ])
+            ->where('student_id', $id)
+            ->where('tenant_id', $user->tenant_id)
+            ->whereNull('archived_at')
+            ->first();
             
             // Check if student exists and belongs to the current tenant
             if (!$student) {
@@ -168,56 +144,38 @@ class StudentController extends Controller
                     ->with('error', 'Student not found or you do not have permission to view this student.');
             }
             
-            // Map student data safely
-            $studentData = $this->mapStudentDataSafe($student);
+            // Use simplified data mapping
+            $studentData = $this->mapStudentDataSimple($student);
             
             // Add additional detailed information for the show page
             $studentData['created_at'] = $student->created_at;
             $studentData['updated_at'] = $student->updated_at;
             
-            // Load all bookings with error handling
+            // Load all bookings with simplified error handling
             $allBookings = [];
             try {
-                $bookings = $student->bookings()->whereNull('archived_at')->get();
+                $bookings = $student->bookings()->whereNull('archived_at')->orderBy('created_at', 'desc')->get();
                 
                 $allBookings = $bookings->map(function($booking) {
-                    try {
-                        return [
-                            'booking_id' => $booking->booking_id,
-                            'room_id' => $booking->room_id,
-                            'room_number' => $booking->room ? $booking->room->room_number : 'Unknown',
-                            'room_type' => $booking->room ? $booking->room->type : 'Unknown',
-                            'dormitory_name' => 'Current Dormitory', // Safe fallback
-                            'semester_count' => $booking->semester_count ?? 0,
-                            'total_fee' => ($booking->semester_count ?? 0) * 2000,
-                            'is_current' => !is_null($booking->semester_count),
-                            'created_at' => $booking->created_at,
-                        ];
-                    } catch (\Exception $e) {
-                        \Log::warning('Error mapping booking data', [
-                            'booking_id' => $booking->booking_id ?? 'unknown',
-                            'error' => $e->getMessage()
-                        ]);
-                        
-                        return [
-                            'booking_id' => $booking->booking_id ?? 0,
-                            'room_id' => $booking->room_id ?? 0,
-                            'room_number' => 'Unknown',
-                            'room_type' => 'Unknown',
-                            'dormitory_name' => 'Unknown',
-                            'semester_count' => 0,
-                            'total_fee' => 0,
-                            'is_current' => false,
-                            'created_at' => now(),
-                        ];
-                    }
-                })->sortByDesc('created_at')->values()->all();
+                    return [
+                        'booking_id' => $booking->booking_id,
+                        'room_id' => $booking->room_id,
+                        'room_number' => $booking->room ? $booking->room->room_number : 'Unknown',
+                        'room_type' => $booking->room ? $booking->room->type : 'Unknown',
+                        'dormitory_name' => 'Current Dormitory',
+                        'semester_count' => $booking->semester_count ?? 1,
+                        'total_fee' => ($booking->semester_count ?? 1) * 2000,
+                        'is_current' => true,
+                        'created_at' => $booking->created_at,
+                    ];
+                })->values()->all();
                 
             } catch (\Exception $e) {
-                \Log::error('Error loading student bookings', [
+                \Log::warning('Error loading student bookings for show', [
                     'student_id' => $student->student_id,
                     'error' => $e->getMessage()
                 ]);
+                $allBookings = [];
             }
             
             $studentData['all_bookings'] = $allBookings;
@@ -230,8 +188,7 @@ class StudentController extends Controller
         } catch (\Exception $e) {
             \Log::error('Fatal error in student show', [
                 'student_id' => $id ?? 'unknown',
-                'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'error' => $e->getMessage()
             ]);
             
             return redirect()->route('students.index')
@@ -387,6 +344,60 @@ class StudentController extends Controller
                 'tenant_id' => $student->tenant_id ?? null,
             ];
         }
+    }
+    
+    /**
+     * Simplified student data mapping to prevent errors
+     */
+    private function mapStudentDataSimple($student)
+    {
+        // Basic data mapping without complex relationships
+        $hasPassword = !empty($student->password);
+        
+        // Simple booking check without complex queries
+        $isCurrentlyBooked = false;
+        $currentBooking = null;
+        
+        try {
+            // Simple booking check
+            $booking = $student->bookings()->whereNull('archived_at')->first();
+            if ($booking) {
+                $isCurrentlyBooked = true;
+                $currentBooking = [
+                    'booking_id' => $booking->booking_id,
+                    'room_id' => $booking->room_id,
+                    'room_number' => $booking->room ? $booking->room->room_number : 'Unknown',
+                    'room_type' => $booking->room ? $booking->room->type : 'Unknown',
+                    'semester_count' => $booking->semester_count ?? 1,
+                    'total_fee' => ($booking->semester_count ?? 1) * 2000,
+                ];
+            }
+        } catch (\Exception $e) {
+            // If booking query fails, just continue without it
+            \Log::warning('Failed to load booking for student', [
+                'student_id' => $student->student_id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
+        return [
+            'student_id' => $student->student_id,
+            'first_name' => $student->first_name,
+            'last_name' => $student->last_name,
+            'email' => $student->email,
+            'phone' => $student->phone,
+            'payment_status' => $student->payment_status ?? 'unpaid',
+            'payment_date' => $student->payment_date,
+            'amount_paid' => $student->amount_paid,
+            'payment_notes' => $student->payment_notes,
+            'status' => $student->status ?? 'in',
+            'leave_reason' => $student->leave_reason,
+            'status_updated_at' => $student->status_updated_at,
+            'password' => $hasPassword,
+            'tenant_id' => $student->tenant_id,
+            'current_booking' => $currentBooking,
+            'is_currently_booked' => $isCurrentlyBooked,
+        ];
     }
     
     /**
