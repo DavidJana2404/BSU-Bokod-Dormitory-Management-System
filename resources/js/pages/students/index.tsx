@@ -10,12 +10,18 @@ import { Label } from '@/components/ui/label';
 import { useState } from 'react';
 import { CheckCircle, XCircle, AlertCircle, Users, Plus, Edit3, Archive, Mail, Phone, Shield, DollarSign, Plane, CheckCircle2, ChevronDown, Bed, Calendar, Eye } from 'lucide-react';
 import { Head } from '@inertiajs/react';
+import { ReactNode } from 'react';
 import WarningDialog from '@/components/warning-dialog';
 
 const emptyForm = { first_name: '', last_name: '', email: '', phone: '', password: '', password_confirmation: '' };
 
 export default function Students() {
-    const { students = [], errors = {}, error = null, show_assignment_notice = false } = usePage().props;
+    const { students = [], errors = {}, error = null, show_assignment_notice = false } = usePage().props as {
+        students?: any[];
+        errors?: Record<string, any>;
+        error?: string | null;
+        show_assignment_notice?: boolean;
+    };
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [isEdit, setIsEdit] = useState(false);
@@ -223,7 +229,7 @@ export default function Students() {
                                         {show_assignment_notice ? 'Dormitory Assignment Required' : 'Unable to Load Students'}
                                     </h3>
                                     <p className={`text-sm ${show_assignment_notice ? 'text-yellow-700 dark:text-yellow-300' : 'text-red-700 dark:text-red-300'}`}>
-                                        {error}
+                                        {error as ReactNode}
                                     </p>
                                     {show_assignment_notice && (
                                         <div className="mt-4">
@@ -234,7 +240,7 @@ export default function Students() {
                                                 </Button>
                                             </Link>
                                         </div>
-                                    )}
+                                    ) as ReactNode}
                                 </div>
                             </div>
                         </CardContent>
