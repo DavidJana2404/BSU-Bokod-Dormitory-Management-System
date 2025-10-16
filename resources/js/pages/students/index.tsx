@@ -281,30 +281,35 @@ export default function Students() {
 
                 {/* Students List */}
                 {(!error && studentList.length > 0) ? (
-                    <div className="bg-black dark:bg-black rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <div className="p-6 border-b border-gray-600">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h2 className="text-xl font-semibold text-white">Students List</h2>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Search students..."
-                                        value={searchTerm}
-                                        onChange={(e) => {
-                                            setSearchTerm(e.target.value);
-                                            setStudentsPage(1); // Reset pagination when searching
-                                        }}
-                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    />
-                                </div>
+                    <Card className="border border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-6">
+                            {/* Search Bar */}
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <Users className="text-blue-600 dark:text-blue-400" size={24} />
+                                    Students ({filteredStudents.length})
+                                </h2>
                             </div>
-                        </div>
-                        
-                        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
-                            <div className="space-y-3">
+                            <div className="relative mb-4">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                                <Input
+                                    placeholder="Search students by name, email, or room number..."
+                                    value={searchTerm}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        setStudentsPage(1); // Reset pagination when searching
+                                    }}
+                                    className="pl-10"
+                                />
+                            </div>
+                            {searchTerm && (
+                                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                                    Found {filteredStudents.length} of {studentList.length} students
+                                </div>
+                            )}
+                            
+                            {/* Students List - Scrollable */}
+                            <div className="max-h-[600px] overflow-y-auto space-y-3">
                                 {displayedStudents.map((student: any) => (
                                     <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
                                 <CardContent className="p-4">
@@ -661,22 +666,33 @@ export default function Students() {
                                     </div>
                                 </CardContent>
                             </Card>
-                                        ))}
-                                
+                                ))}
+                                        
                                 {/* Load More Button */}
                                 {hasMoreStudents && (
                                     <div className="pt-4 text-center">
-                                        <button
+                                        <Button
+                                            variant="outline"
                                             onClick={loadMoreStudents}
-                                            className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-600 dark:border-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                            className="text-sm"
                                         >
                                             Load More Students
-                                        </button>
+                                        </Button>
                                     </div>
                                 )}
                             </div>
-                        </div>
-                    </div>
+                            
+                            {filteredStudents.length === 0 && searchTerm && (
+                                <div className="text-center py-8">
+                                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                        <Users className="text-gray-400" size={32} />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
+                                    <p className="text-gray-500 dark:text-gray-500">No students match your search criteria.</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 ) : (
                     !error && (
                         <Card className="p-12 text-center">

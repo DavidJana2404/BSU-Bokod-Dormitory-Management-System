@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -328,33 +329,35 @@ export default function Applications() {
 
                 {/* Pending Applications Section */}
                 {pendingApplications.length > 0 && (
-                    <div className="bg-black dark:bg-black rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <div className="p-6 border-b border-gray-600">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Card className="border border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-6">
+                            {/* Search Bar */}
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                     <Clock className="text-yellow-500" size={20} />
                                     Pending Applications ({filteredPendingApplications.length})
                                 </h2>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Search pending applications..."
-                                        value={pendingSearchTerm}
-                                        onChange={(e) => {
-                                            setPendingSearchTerm(e.target.value);
-                                            setPendingPage(1); // Reset pagination when searching
-                                        }}
-                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    />
-                                </div>
                             </div>
-                        </div>
-                        
-                        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
-                            <div className="space-y-3">
+                            <div className="relative mb-4">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                                <Input
+                                    placeholder="Search pending applications..."
+                                    value={pendingSearchTerm}
+                                    onChange={(e) => {
+                                        setPendingSearchTerm(e.target.value);
+                                        setPendingPage(1); // Reset pagination when searching
+                                    }}
+                                    className="pl-10"
+                                />
+                            </div>
+                            {pendingSearchTerm && (
+                                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                                    Found {filteredPendingApplications.length} of {pendingApplications.length} pending applications
+                                </div>
+                            )}
+                            
+                            {/* Applications List - Scrollable */}
+                            <div className="max-h-[600px] overflow-y-auto space-y-3">
                                 {displayedPendingApplications.map((application) => (
                                 <Card key={application.id} className="border border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-950/10">
                                     <CardContent className="p-4">
@@ -443,48 +446,51 @@ export default function Applications() {
                             {/* Load More Button */}
                             {hasMorePendingApplications && (
                                 <div className="pt-4 text-center">
-                                    <button
+                                    <Button
+                                        variant="outline"
                                         onClick={loadMorePendingApplications}
-                                        className="px-4 py-2 text-sm font-medium text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 border border-yellow-600 dark:border-yellow-400 rounded-md hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+                                        className="text-sm border-yellow-600 text-yellow-600 hover:bg-yellow-50"
                                     >
                                         Load More Pending Applications
-                                    </button>
+                                    </Button>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                </div>
-            )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Processed Applications Section */}
                 {processedApplications.length > 0 && (
-                    <div className="bg-black dark:bg-black rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <div className="p-6 border-b border-gray-600">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Card className="border border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-6">
+                            {/* Search Bar */}
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                     <CheckCircle className="text-gray-500" size={20} />
                                     Processed Applications ({filteredProcessedApplications.length})
                                 </h2>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Search processed applications..."
-                                        value={processedSearchTerm}
-                                        onChange={(e) => {
-                                            setProcessedSearchTerm(e.target.value);
-                                            setProcessedPage(1); // Reset pagination when searching
-                                        }}
-                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    />
-                                </div>
                             </div>
-                        </div>
-                        
-                        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
-                            <div className="space-y-3">
+                            <div className="relative mb-4">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                                <Input
+                                    placeholder="Search processed applications..."
+                                    value={processedSearchTerm}
+                                    onChange={(e) => {
+                                        setProcessedSearchTerm(e.target.value);
+                                        setProcessedPage(1); // Reset pagination when searching
+                                    }}
+                                    className="pl-10"
+                                />
+                            </div>
+                            {processedSearchTerm && (
+                                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                                    Found {filteredProcessedApplications.length} of {processedApplications.length} processed applications
+                                </div>
+                            )}
+                            
+                            {/* Applications List - Scrollable */}
+                            <div className="max-h-[600px] overflow-y-auto space-y-3">
                                 {displayedProcessedApplications.map((application) => (
                                 <Card key={application.id} className="border border-gray-200 dark:border-gray-700">
                                     <CardContent className="p-4">
@@ -553,18 +559,19 @@ export default function Applications() {
                             {/* Load More Button */}
                             {hasMoreProcessedApplications && (
                                 <div className="pt-4 text-center">
-                                    <button
+                                    <Button
+                                        variant="outline"
                                         onClick={loadMoreProcessedApplications}
-                                        className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 border border-gray-600 dark:border-gray-400 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-colors"
+                                        className="text-sm"
                                     >
                                         Load More Processed Applications
-                                    </button>
+                                    </Button>
                                 </div>
                             )}
-                        </div>
-                    </div>
-                </div>
-            )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Empty State */}
                 {applications.length === 0 && (

@@ -372,10 +372,13 @@ export default function Bookings() {
 
                 {/* Bookings List */}
                 {bookingList.length > 0 ? (
-                    <div className="bg-black dark:bg-black rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <div className="p-6 border-b border-gray-600">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h2 className="text-xl font-semibold text-white">Bookings List</h2>
+                    <Card className="border border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-6">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <Calendar className="text-blue-600 dark:text-blue-400" size={24} />
+                                    Bookings List
+                                </h2>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                         <Search className="h-5 w-5 text-gray-400" />
@@ -392,11 +395,11 @@ export default function Bookings() {
                                     />
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
-                            <div className="space-y-3">
-                                {displayedBookings.map((booking: any) => {
+                            
+                            <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+                                <div className="p-6">
+                                <div className="space-y-3">
+                                    {displayedBookings.map((booking: any) => {
                             // Use student and room data directly from booking relationships
                             const student = booking.student || null;
                             const room = booking.room || null;
@@ -590,7 +593,9 @@ export default function Bookings() {
                     </div>
                 </div>
             </div>
-        ) : (
+                        </CardContent>
+                    </Card>
+                ) : (
                     <Card className="p-12 text-center">
                         <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
                             <Calendar className="text-gray-400" size={32} />
