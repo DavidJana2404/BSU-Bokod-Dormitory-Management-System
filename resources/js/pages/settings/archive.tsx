@@ -169,7 +169,7 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
             return `Are you sure you want to permanently delete "${pendingItem.title}"?\n\nThis action cannot be undone and the item will be completely removed from the database.`;
         } else if (warningAction === 'clearAll') {
             const totalItems = stats.total;
-            const itemText = isAdmin ? 'dormitories' : 'rooms, students, and bookings';
+            const itemText = isAdmin ? 'dormitories, students, and bookings' : 'rooms, students, and bookings';
             return `Are you sure you want to permanently delete ALL ${totalItems} archived ${itemText}?\n\nThis action cannot be undone and all archived items will be completely removed from the database.`;
         }
         
@@ -184,11 +184,11 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                 <div className="space-y-6">
                     <HeadingSmall 
                         title="Archive" 
-                        description="Manage archived rooms, students, and bookings" 
+                        description={isAdmin ? "Manage archived dormitories, students, and bookings" : "Manage archived rooms, students, and bookings"} 
                     />
 
                     {/* Stats Cards */}
-                    <div className={`grid grid-cols-2 sm:grid-cols-2 ${isAdmin ? 'lg:grid-cols-2' : 'lg:grid-cols-4'} gap-3 sm:gap-4`}>
+                    <div className={`grid grid-cols-2 sm:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-4'} gap-3 sm:gap-4`}>
                     {isAdmin && (
                         <Card className="text-center bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
                             <CardContent className="p-4 sm:p-6">
@@ -200,39 +200,40 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                             </CardContent>
                         </Card>
                     )}
+                    
+                    {/* Students Card - Show for both admin and manager */}
+                    <Card className="text-center bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                        <CardContent className="p-4 sm:p-6">
+                            <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                <Users className="text-green-600 dark:text-green-400" size={24} />
+                            </div>
+                            <div className="text-sm sm:text-lg font-semibold mb-2 text-green-800 dark:text-green-200">Archived Students</div>
+                            <div className="text-2xl sm:text-3xl font-bold text-green-900 dark:text-green-100">{stats.students}</div>
+                        </CardContent>
+                    </Card>
+                    
+                    {/* Bookings Card - Show for both admin and manager */}
+                    <Card className="text-center bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                        <CardContent className="p-4 sm:p-6">
+                            <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                <CalendarCheck className="text-purple-600 dark:text-purple-400" size={24} />
+                            </div>
+                            <div className="text-sm sm:text-lg font-semibold mb-2 text-purple-800 dark:text-purple-200">Archived Bookings</div>
+                            <div className="text-2xl sm:text-3xl font-bold text-purple-900 dark:text-purple-100">{stats.bookings}</div>
+                        </CardContent>
+                    </Card>
 
+                    {/* Rooms Card - Show only for managers */}
                     {!isAdmin && (
-                        <>
-                            <Card className="text-center bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-                                <CardContent className="p-4 sm:p-6">
-                                    <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                        <Bed className="text-blue-600 dark:text-blue-400" size={24} />
-                                    </div>
-                                    <div className="text-sm sm:text-lg font-semibold mb-2 text-blue-800 dark:text-blue-200">Archived Rooms</div>
-                                    <div className="text-2xl sm:text-3xl font-bold text-blue-900 dark:text-blue-100">{stats.rooms}</div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="text-center bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-                                <CardContent className="p-4 sm:p-6">
-                                    <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                        <Users className="text-green-600 dark:text-green-400" size={24} />
-                                    </div>
-                                    <div className="text-sm sm:text-lg font-semibold mb-2 text-green-800 dark:text-green-200">Archived Students</div>
-                                    <div className="text-2xl sm:text-3xl font-bold text-green-900 dark:text-green-100">{stats.students}</div>
-                                </CardContent>
-                            </Card>
-
-                            <Card className="text-center bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
-                                <CardContent className="p-4 sm:p-6">
-                                    <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
-                                        <CalendarCheck className="text-purple-600 dark:text-purple-400" size={24} />
-                                    </div>
-                                    <div className="text-sm sm:text-lg font-semibold mb-2 text-purple-800 dark:text-purple-200">Archived Bookings</div>
-                                    <div className="text-2xl sm:text-3xl font-bold text-purple-900 dark:text-purple-100">{stats.bookings}</div>
-                                </CardContent>
-                            </Card>
-                        </>
+                        <Card className="text-center bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                            <CardContent className="p-4 sm:p-6">
+                                <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                    <Bed className="text-blue-600 dark:text-blue-400" size={24} />
+                                </div>
+                                <div className="text-sm sm:text-lg font-semibold mb-2 text-blue-800 dark:text-blue-200">Archived Rooms</div>
+                                <div className="text-2xl sm:text-3xl font-bold text-blue-900 dark:text-blue-100">{stats.rooms}</div>
+                            </CardContent>
+                        </Card>
                     )}
 
                     <Card className="text-center bg-gray-50 dark:bg-gray-950/30 border-gray-200 dark:border-gray-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">

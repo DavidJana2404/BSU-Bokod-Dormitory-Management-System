@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { 
     CheckCircle, XCircle, AlertCircle, Users, Edit3, Mail, Phone, Shield, 
     DollarSign, Plane, CheckCircle2, ChevronDown, Bed, Calendar, Eye, 
-    ShieldCheck, UserCheck, UserX, Building2, Settings, Plus, Archive
+    ShieldCheck, UserCheck, UserX, Building2, Settings, Plus, Archive, Search
 } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
@@ -76,6 +76,9 @@ export default function AdminUsers() {
     
     // Filter states
     const [activeFilter, setActiveFilter] = useState<'all' | 'staff' | 'students'>('all');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [studentsPage, setStudentsPage] = useState(1);
+    const STUDENTS_PER_PAGE = 10;
 
     // Role edit functions
     const handleOpenRoleEdit = (user: StaffUser) => {
@@ -266,6 +269,28 @@ export default function AdminUsers() {
     const staffUserList = Array.isArray(staffUsers) ? staffUsers : [];
     const managerList = staffUserList.filter(user => user.role === 'manager');
     const cashierList = staffUserList.filter(user => user.role === 'cashier');
+    
+    // Filter students based on search term
+    const filteredStudents = studentList.filter(student => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            student.first_name.toLowerCase().includes(searchLower) ||
+            student.last_name.toLowerCase().includes(searchLower) ||
+            student.email.toLowerCase().includes(searchLower) ||
+            (student.dormitory?.dormitory_name || '').toLowerCase().includes(searchLower)
+        );
+    });
+    
+    // Paginate students for infinite scroll
+    const displayedStudents = filteredStudents.slice(0, studentsPage * STUDENTS_PER_PAGE);
+    const hasMoreStudents = filteredStudents.length > displayedStudents.length;
+    
+    const loadMoreStudents = () => {
+        if (hasMoreStudents) {
+            setStudentsPage(prev => prev + 1);
+        }
+    };
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Users', href: '/admin/users' }]}>
@@ -351,36 +376,34 @@ export default function AdminUsers() {
                     
                     {/* Filter Controls */}
                     <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-                        <div className="flex items-center gap-3">
-                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">View:</span>
-                            <div className="flex gap-2">
-                                <Button
-                                    size="sm"
-                                    variant={activeFilter === 'all' ? 'default' : 'outline'}
-                                    onClick={() => setActiveFilter('all')}
-                                    className="text-xs"
-                                >
-                                    All Users
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant={activeFilter === 'staff' ? 'default' : 'outline'}
-                                    onClick={() => setActiveFilter('staff')}
-                                    className="text-xs"
-                                >
-                                    <Shield size={12} className="mr-1" />
-                                    Staff Only
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant={activeFilter === 'students' ? 'default' : 'outline'}
-                                    onClick={() => setActiveFilter('students')}
-                                    className="text-xs"
-                                >
-                                    <Users size={12} className="mr-1" />
-                                    Students Only
-                                </Button>
-                            </div>
+                        <div className="flex items-center gap-3 justify-center">
+                            <Button
+                                size="sm"
+                                variant={activeFilter === 'all' ? 'default' : 'outline'}
+                                onClick={() => setActiveFilter('all')}
+                                className="text-xs"
+                            >
+                                <Users size={12} className="mr-1" />
+                                All Users
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={activeFilter === 'staff' ? 'default' : 'outline'}
+                                onClick={() => setActiveFilter('staff')}
+                                className="text-xs"
+                            >
+                                <Shield size={12} className="mr-1" />
+                                Staff
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={activeFilter === 'students' ? 'default' : 'outline'}
+                                onClick={() => setActiveFilter('students')}
+                                className="text-xs"
+                            >
+                                <Users size={12} className="mr-1" />
+                                Students
+                            </Button>
                         </div>
                     </div>
                 </div>
@@ -565,18 +588,50 @@ export default function AdminUsers() {
                 </div>
                 )}
 
-                {/* Students Section - With Management Buttons */}
+                {/* Students Section - Separate Scrollable Container */}
                 {(activeFilter === 'all' || activeFilter === 'students') && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                             <Users className="text-blue-600 dark:text-blue-400" size={24} />
-                            Students ({studentList.length})
+                            Students ({filteredStudents.length})
                         </h2>
                         <Button onClick={handleOpenAddStudent} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                             <Plus size={18} /> Add New Student
                         </Button>
                     </div>
+                    
+                    {/* Students Container with Search and Scrolling */}
+                    <Card className="border border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-6">
+                            {/* Search Bar */}
+                            <div className="mb-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                                    <Input
+                                        placeholder="Search students by name, email, or dormitory..."
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setStudentsPage(1); // Reset pagination when searching
+                                        }}
+                                        className="pl-10"
+                                    />
+                                </div>
+                                {searchTerm && (
+                                    <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                                        Found {filteredStudents.length} of {studentList.length} students
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Students List - Scrollable */}
+                            <div className="max-h-[600px] overflow-y-auto space-y-3">
+                                {displayedStudents.length > 0 ? (
+                                    <>
+                                        {displayedStudents.map((student: any) => (
+                                            <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
+                                                <CardContent className="p-4">
                     
                     {studentList.length > 0 ? (
                         <div className="space-y-3">
@@ -943,18 +998,50 @@ export default function AdminUsers() {
                                         </div>
                                     </div>
                                 </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <Card className="p-12 text-center">
-                            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                                <Users className="text-gray-400" size={32} />
+                                            </Card>
+                                        ))}
+                                        
+                                        {/* Load More Button */}
+                                        {hasMoreStudents && (
+                                            <div className="text-center pt-4">
+                                                <Button 
+                                                    onClick={loadMoreStudents}
+                                                    variant="outline"
+                                                    className="text-sm"
+                                                >
+                                                    Load More Students ({filteredStudents.length - displayedStudents.length} remaining)
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="p-12 text-center">
+                                        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                            <Users className="text-gray-400" size={32} />
+                                        </div>
+                                        <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                                            {searchTerm ? 'No students found' : 'No students registered'}
+                                        </h3>
+                                        <p className="text-gray-500 dark:text-gray-500">
+                                            {searchTerm 
+                                                ? `No students match "${searchTerm}". Try a different search term.`
+                                                : 'No students are currently registered in the system.'
+                                            }
+                                        </p>
+                                        {searchTerm && (
+                                            <Button 
+                                                onClick={() => setSearchTerm('')}
+                                                variant="outline" 
+                                                className="mt-4 text-sm"
+                                            >
+                                                Clear Search
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
-                            <p className="text-gray-500 dark:text-gray-500 mb-6">No students are currently registered in the system.</p>
-                        </Card>
-                    )}
+                        </CardContent>
+                    </Card>
                 </div>
                 )}
 
