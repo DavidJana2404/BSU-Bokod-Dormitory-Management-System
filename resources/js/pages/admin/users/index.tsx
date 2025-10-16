@@ -632,12 +632,6 @@ export default function AdminUsers() {
                                         {displayedStudents.map((student: any) => (
                                             <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
                                                 <CardContent className="p-4">
-                    
-                    {studentList.length > 0 ? (
-                        <div className="space-y-3">
-                            {studentList.map((student) => (
-                                <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
-                                    <CardContent className="p-4">
                                         {/* Mobile Layout */}
                                         <div className="block lg:hidden space-y-4">
                                             {/* Student Header */}
@@ -997,7 +991,7 @@ export default function AdminUsers() {
                                             </div>
                                         </div>
                                     </div>
-                                </CardContent>
+                                                </CardContent>
                                             </Card>
                                         ))}
                                         
