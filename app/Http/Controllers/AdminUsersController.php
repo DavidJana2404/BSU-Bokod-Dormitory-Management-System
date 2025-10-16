@@ -225,4 +225,84 @@ class AdminUsersController extends Controller
             return redirect()->back()->with('error', 'Failed to update registration setting: ' . $e->getMessage());
         }
     }
+    
+    public function storeStudent(Request $request)
+    {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:students,email',
+            'phone' => 'required|string|max:20',
+            'password' => 'nullable|min:8|confirmed',
+        ]);
+        
+        try {
+            $studentData = [
+                'student_id' => 'STU' . now()->format('YmdHis') . rand(100, 999),
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+                'password' => $validated['password'] ? Hash::make($validated['password']) : null,
+                'status' => 'in',
+                'payment_status' => 'unpaid',
+            ];
+            
+            Student::create($studentData);
+            
+            return redirect()->back()->with('success', 'Student created successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to create student: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to create student: ' . $e->getMessage());
+        }
+    }
+    
+    public function updateStudent(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'email' => 'required|email|unique:students,email,' . $id . ',student_id',
+            'phone' => 'required|string|max:20',
+            'password' => 'nullable|min:8|confirmed',
+        ]);
+        
+        try {
+            $student = Student::where('student_id', $id)->firstOrFail();
+            
+            $updateData = [
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'email' => $validated['email'],
+                'phone' => $validated['phone'],
+            ];
+            
+            // Only update password if provided
+            if (!empty($validated['password'])) {
+                $updateData['password'] = Hash::make($validated['password']);
+            }
+            
+            $student->update($updateData);
+            
+            return redirect()->back()->with('success', 'Student updated successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to update student: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to update student: ' . $e->getMessage());
+        }
+    }
+    
+    public function archiveStudent($id)
+    {
+        try {
+            $student = Student::where('student_id', $id)->firstOrFail();
+            
+            // Soft delete the student (archive)
+            $student->update(['archived_at' => now()]);
+            
+            return redirect()->back()->with('success', 'Student archived successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to archive student: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to archive student: ' . $e->getMessage());
+        }
+    }
 }

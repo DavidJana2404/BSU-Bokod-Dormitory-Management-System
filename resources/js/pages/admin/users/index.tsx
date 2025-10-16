@@ -9,7 +9,7 @@ import { useState } from 'react';
 import { 
     CheckCircle, XCircle, AlertCircle, Users, Edit3, Mail, Phone, Shield, 
     DollarSign, Plane, CheckCircle2, ChevronDown, Bed, Calendar, Eye, 
-    ShieldCheck, UserCheck, UserX, Building2, Settings
+    ShieldCheck, UserCheck, UserX, Building2, Settings, Plus, Archive
 } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
@@ -43,6 +43,7 @@ interface Student {
 }
 
 const emptyRoleForm = { role: 'manager' };
+const emptyStudentForm = { first_name: '', last_name: '', email: '', phone: '', password: '', password_confirmation: '' };
 
 export default function AdminUsers() {
     const { staffUsers = [], students = [], errors = {}, registrationEnabled = true } = usePage().props as unknown as {
@@ -54,18 +55,27 @@ export default function AdminUsers() {
     
     // Dialog states
     const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+    const [studentDialogOpen, setStudentDialogOpen] = useState(false);
+    const [viewStudentModalOpen, setViewStudentModalOpen] = useState(false);
     
     // Form states
     const [roleForm, setRoleForm] = useState(emptyRoleForm);
+    const [studentForm, setStudentForm] = useState(emptyStudentForm);
     
     // Edit states
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
+    const [isEditStudent, setIsEditStudent] = useState(false);
+    const [editingStudentId, setEditingStudentId] = useState<string | null>(null);
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     
     const [processing, setProcessing] = useState(false);
     const [expandedLeaveReasons, setExpandedLeaveReasons] = useState<Record<string, boolean>>({});
     const [warningDialogOpen, setWarningDialogOpen] = useState(false);
-    const [pendingAction, setPendingAction] = useState<{type: string, id: string | number, user?: any} | null>(null);
+    const [pendingAction, setPendingAction] = useState<{type: string, id: string | number, user?: any, student?: any} | null>(null);
     const [toggleProcessing, setToggleProcessing] = useState(false);
+    
+    // Filter states
+    const [activeFilter, setActiveFilter] = useState<'all' | 'staff' | 'students'>('all');
 
     // Role edit functions
     const handleOpenRoleEdit = (user: StaffUser) => {
@@ -103,12 +113,93 @@ export default function AdminUsers() {
         setPendingAction({ type: 'toggle_status', id: userId, user: { ...user, userType } });
         setWarningDialogOpen(true);
     };
+    
+    // Student management functions
+    const handleOpenAddStudent = () => {
+        setStudentForm(emptyStudentForm);
+        setIsEditStudent(false);
+        setEditingStudentId(null);
+        setStudentDialogOpen(true);
+    };
+    
+    const handleOpenEditStudent = (student: Student) => {
+        setStudentForm({
+            first_name: student.first_name,
+            last_name: student.last_name,
+            email: student.email,
+            phone: student.phone,
+            password: '',
+            password_confirmation: '',
+        });
+        setIsEditStudent(true);
+        setEditingStudentId(student.student_id);
+        setStudentDialogOpen(true);
+    };
+    
+    const handleCloseStudentDialog = () => {
+        setStudentDialogOpen(false);
+        setStudentForm(emptyStudentForm);
+        setIsEditStudent(false);
+        setEditingStudentId(null);
+    };
+    
+    const handleStudentFormChange = (e: any) => {
+        setStudentForm({ ...studentForm, [e.target.name]: e.target.value });
+    };
+    
+    const handleStudentSubmit = (e: any) => {
+        e.preventDefault();
+        setProcessing(true);
+        
+        if (isEditStudent && editingStudentId) {
+            router.put(`/admin/students/${editingStudentId}`, studentForm, {
+                onSuccess: () => {
+                    handleCloseStudentDialog();
+                    setProcessing(false);
+                },
+                onError: () => {
+                    setProcessing(false);
+                },
+            });
+        } else {
+            router.post('/admin/students', studentForm, {
+                onSuccess: () => {
+                    handleCloseStudentDialog();
+                    setProcessing(false);
+                },
+                onError: () => {
+                    setProcessing(false);
+                },
+            });
+        }
+    };
+    
+    const handleViewStudent = (student: Student) => {
+        setSelectedStudent(student);
+        setViewStudentModalOpen(true);
+    };
+    
+    const handleArchiveStudent = (student: Student) => {
+        setPendingAction({ type: 'archive_student', id: student.student_id, student });
+        setWarningDialogOpen(true);
+    };
 
     const confirmAction = () => {
         if (!pendingAction) return;
         
         if (pendingAction.type === 'toggle_status') {
             router.post(`/admin/users/${pendingAction.id}/toggle-active`, {}, {
+                onSuccess: () => {
+                    setWarningDialogOpen(false);
+                    setPendingAction(null);
+                },
+                onError: () => {
+                    setWarningDialogOpen(false);
+                    setPendingAction(null);
+                }
+            });
+        } else if (pendingAction.type === 'archive_student') {
+            router.delete(`/admin/students/${pendingAction.id}`, {
                 onSuccess: () => {
                     setWarningDialogOpen(false);
                     setPendingAction(null);
@@ -144,16 +235,28 @@ export default function AdminUsers() {
     };
 
     const getWarningMessage = () => {
-        if (!pendingAction || !pendingAction.user) return '';
+        if (!pendingAction) return '';
         
-        const user = pendingAction.user;
-        const userName = user.name;
-        const userType = user.userType;
-        
-        if (pendingAction.type === 'toggle_status') {
+        if (pendingAction.type === 'toggle_status' && pendingAction.user) {
+            const user = pendingAction.user;
+            const userName = user.name;
+            const userType = user.userType;
+            
             return user.is_active 
                 ? `Are you sure you want to deactivate ${userName}?\\n\\nDeactivating this ${userType} will:\\n• Prevent them from logging in\\n• Restrict access to the system\\n• You can reactivate them later\\n\\nConfirm deactivation?`
                 : `Are you sure you want to activate ${userName}?\\n\\nActivating this ${userType} will:\\n• Allow them to log in\\n• Grant access to the system\\n\\nConfirm activation?`;
+        }
+        
+        if (pendingAction.type === 'archive_student' && pendingAction.student) {
+            const student = pendingAction.student;
+            const studentName = `${student.first_name} ${student.last_name}`;
+            
+            if (student.is_currently_booked && student.current_booking) {
+                const roomNumber = student.current_booking.room_number;
+                return `WARNING: ${studentName} has an active booking in Room ${roomNumber}!\\n\\nArchiving this student will:\\n• Keep their booking record but mark the student as archived\\n• The room assignment will remain until the booking period ends\\n• You can restore the student later from Archive settings\\n\\nAre you sure you want to archive this booked student?`;
+            } else {
+                return `Are you sure you want to archive ${studentName}?\\n\\nYou can restore them later from the Archive settings.`;
+            }
         }
         
         return '';
@@ -184,8 +287,8 @@ export default function AdminUsers() {
                 {/* Stats Cards */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <div className="flex items-center gap-3">
-                            <div className="bg-purple-600 text-white rounded-lg p-2">
+                        <div className="flex items-center gap-3 cursor-pointer hover:bg-white/50 dark:hover:bg-gray-800/50 p-2 rounded-lg transition-colors" onClick={() => setActiveFilter('staff')}>
+                            <div className={`rounded-lg p-2 ${activeFilter === 'staff' ? 'bg-purple-700' : 'bg-purple-600'} text-white`}>
                                 <Shield size={20} />
                             </div>
                             <div>
@@ -202,8 +305,8 @@ export default function AdminUsers() {
                                 <div className="text-sm text-green-600 dark:text-green-400">Mgr/Cashier</div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="bg-blue-600 text-white rounded-lg p-2">
+                        <div className="flex items-center gap-3 cursor-pointer hover:bg-white/50 dark:hover:bg-gray-800/50 p-2 rounded-lg transition-colors" onClick={() => setActiveFilter('students')}>
+                            <div className={`rounded-lg p-2 ${activeFilter === 'students' ? 'bg-blue-700' : 'bg-blue-600'} text-white`}>
                                 <Users size={20} />
                             </div>
                             <div>
@@ -242,6 +345,41 @@ export default function AdminUsers() {
                                     {studentList.filter(s => s.payment_status === 'paid').length}
                                 </div>
                                 <div className="text-sm text-cyan-600 dark:text-cyan-400">Paid Students</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Filter Controls */}
+                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
+                        <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-blue-700 dark:text-blue-300">View:</span>
+                            <div className="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    variant={activeFilter === 'all' ? 'default' : 'outline'}
+                                    onClick={() => setActiveFilter('all')}
+                                    className="text-xs"
+                                >
+                                    All Users
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant={activeFilter === 'staff' ? 'default' : 'outline'}
+                                    onClick={() => setActiveFilter('staff')}
+                                    className="text-xs"
+                                >
+                                    <Shield size={12} className="mr-1" />
+                                    Staff Only
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant={activeFilter === 'students' ? 'default' : 'outline'}
+                                    onClick={() => setActiveFilter('students')}
+                                    className="text-xs"
+                                >
+                                    <Users size={12} className="mr-1" />
+                                    Students Only
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -321,6 +459,7 @@ export default function AdminUsers() {
                 </div>
 
                 {/* Staff Users Section */}
+                {(activeFilter === 'all' || activeFilter === 'staff') && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -424,15 +563,19 @@ export default function AdminUsers() {
                         </Card>
                     )}
                 </div>
+                )}
 
-
-                {/* Students Section - Dropdown Table Format */}
+                {/* Students Section - With Management Buttons */}
+                {(activeFilter === 'all' || activeFilter === 'students') && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                             <Users className="text-blue-600 dark:text-blue-400" size={24} />
                             Students ({studentList.length})
                         </h2>
+                        <Button onClick={handleOpenAddStudent} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                            <Plus size={18} /> Add New Student
+                        </Button>
                     </div>
                     
                     {studentList.length > 0 ? (
@@ -552,12 +695,42 @@ export default function AdminUsers() {
                                                                 )}
                                                             </div>
                                                         </div>
-                                                    </div>
                                                 </div>
-                                                
                                             </div>
+                                            
+                                            {/* Action Buttons - Moved to right side */}
+                                            <div className="flex flex-col gap-2 flex-shrink-0">
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
+                                                    onClick={() => handleViewStudent(student)}
+                                                    className="h-8 px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 w-full"
+                                                >
+                                                    <Eye size={12} className="mr-1" />
+                                                    View
+                                                </Button>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
+                                                    onClick={() => handleOpenEditStudent(student)}
+                                                    className="h-8 px-3 text-xs"
+                                                >
+                                                    <Edit3 size={12} className="mr-1" />
+                                                    Edit
+                                                </Button>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
+                                                    onClick={() => handleArchiveStudent(student)}
+                                                    className="h-8 px-3 text-xs border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/20"
+                                                >
+                                                    <Archive size={12} className="mr-1" />
+                                                    Archive
+                                                </Button>
+                                            </div>
+                                        </div>
 
-                                            {/* Additional Details Section */}
+                                        {/* Additional Details Section */}
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
                                                     <Phone size={16} className="text-green-500 flex-shrink-0" />
@@ -735,9 +908,41 @@ export default function AdminUsers() {
                                                     </div>
                                                 </div>
 
+                                            {/* Actions - 2 columns on lg, 4 on xl */}
+                                            <div className="col-span-2 xl:col-span-4">
+                                                <div className="flex gap-2 justify-end">
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => handleViewStudent(student)}
+                                                        className="h-8 px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20"
+                                                    >
+                                                        <Eye size={12} className="mr-1" />
+                                                        View
+                                                    </Button>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => handleOpenEditStudent(student)}
+                                                        className="h-8 px-3 text-xs"
+                                                    >
+                                                        <Edit3 size={12} className="mr-1" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => handleArchiveStudent(student)}
+                                                        className="h-8 px-3 text-xs border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/20"
+                                                    >
+                                                        <Archive size={12} className="mr-1" />
+                                                        Archive
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </CardContent>
+                                    </div>
+                                </CardContent>
                                 </Card>
                             ))}
                         </div>
@@ -751,6 +956,242 @@ export default function AdminUsers() {
                         </Card>
                     )}
                 </div>
+                )}
+
+                {/* Student Add/Edit Dialog */}
+                <Dialog open={studentDialogOpen} onOpenChange={setStudentDialogOpen}>
+                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>{isEditStudent ? 'Update Student' : 'Add Student'}</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleStudentSubmit} className="space-y-4">
+                            <div>
+                                <Label htmlFor="first_name">First Name</Label>
+                                <Input id="first_name" name="first_name" value={studentForm.first_name} onChange={handleStudentFormChange} required />
+                                {(errors as any)?.first_name && (
+                                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                                        <AlertCircle className="h-4 w-4 mr-1" />
+                                        {(errors as any).first_name}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Label htmlFor="last_name">Last Name</Label>
+                                <Input id="last_name" name="last_name" value={studentForm.last_name} onChange={handleStudentFormChange} required />
+                                {(errors as any)?.last_name && (
+                                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                                        <AlertCircle className="h-4 w-4 mr-1" />
+                                        {(errors as any).last_name}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Label htmlFor="email">Email</Label>
+                                <Input id="email" name="email" type="email" value={studentForm.email} onChange={handleStudentFormChange} required />
+                                {(errors as any)?.email && (
+                                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                                        <AlertCircle className="h-4 w-4 mr-1" />
+                                        {(errors as any).email}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Label htmlFor="phone">Phone</Label>
+                                <Input id="phone" name="phone" value={studentForm.phone} onChange={handleStudentFormChange} required />
+                                {(errors as any)?.phone && (
+                                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                                        <AlertCircle className="h-4 w-4 mr-1" />
+                                        {(errors as any).phone}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Label htmlFor="password">
+                                    Password {!isEditStudent ? '(Optional - Required only for student login access)' : '(Leave blank to keep current password)'}
+                                </Label>
+                                <Input 
+                                    id="password" 
+                                    name="password" 
+                                    type="password" 
+                                    value={studentForm.password} 
+                                    onChange={handleStudentFormChange} 
+                                    placeholder={isEditStudent ? 'Leave blank to keep current password' : 'Min 8 characters if setting up login'} 
+                                />
+                                {(errors as any)?.password && (
+                                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                                        <AlertCircle className="h-4 w-4 mr-1" />
+                                        {(errors as any).password}
+                                    </p>
+                                )}
+                            </div>
+                            <div>
+                                <Label htmlFor="password_confirmation">
+                                    Confirm Password {studentForm.password && '(Required when setting password)'}
+                                </Label>
+                                <Input 
+                                    id="password_confirmation" 
+                                    name="password_confirmation" 
+                                    type="password" 
+                                    value={studentForm.password_confirmation} 
+                                    onChange={handleStudentFormChange} 
+                                    placeholder={studentForm.password ? 'Must match password above' : 'Only required if password is set'} 
+                                    disabled={!studentForm.password}
+                                />
+                                {(errors as any)?.password_confirmation && (
+                                    <p className="text-red-500 text-sm mt-1 flex items-center">
+                                        <AlertCircle className="h-4 w-4 mr-1" />
+                                        {(errors as any).password_confirmation}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <Button type="button" variant="outline" onClick={handleCloseStudentDialog} disabled={processing}>Cancel</Button>
+                                <Button type="submit" disabled={processing}>
+                                    {processing ? 'Processing...' : (isEditStudent ? 'Update' : 'Add Student')}
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+                
+                {/* View Student Modal */}
+                <Dialog open={viewStudentModalOpen} onOpenChange={setViewStudentModalOpen}>
+                    <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>Student Details</DialogTitle>
+                        </DialogHeader>
+                        {selectedStudent && (
+                            <div className="space-y-6">
+                                {/* Student Information */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">First Name</Label>
+                                        <p className="text-base font-semibold">{selectedStudent.first_name}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Name</Label>
+                                        <p className="text-base font-semibold">{selectedStudent.last_name}</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</Label>
+                                        <p className="text-base">{selectedStudent.email}</p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</Label>
+                                        <p className="text-base">{selectedStudent.phone}</p>
+                                    </div>
+                                </div>
+
+                                {/* Status Information */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Student Status</Label>
+                                        <div className="mt-1">
+                                            {selectedStudent.status === 'on_leave' ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800">
+                                                    <Plane size={12} className="mr-1" />On Leave
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800">
+                                                    <CheckCircle2 size={12} className="mr-1" />Present
+                                                </span>
+                                            )}
+                                        </div>
+                                        {selectedStudent.leave_reason && (
+                                            <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded text-xs">
+                                                <p className="font-medium text-yellow-700 dark:text-yellow-400 mb-1">Leave Reason:</p>
+                                                <p className="text-yellow-800 dark:text-yellow-300">{selectedStudent.leave_reason}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Login Access</Label>
+                                        <div className="mt-1">
+                                            {selectedStudent.password ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800">
+                                                    <CheckCircle size={12} className="mr-1" />Enabled
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-800">
+                                                    <XCircle size={12} className="mr-1" />Disabled
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Room and Payment Information */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Room Status</Label>
+                                        <div className="mt-1">
+                                            {selectedStudent.is_currently_booked ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-800">
+                                                    <Bed size={12} className="mr-1" />Room {selectedStudent.current_booking?.room_number}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200 dark:bg-gray-950/20 dark:text-gray-400 dark:border-gray-800">
+                                                    <XCircle size={12} className="mr-1" />No Room
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Status</Label>
+                                        <div className="mt-1">
+                                            {selectedStudent.payment_status === 'paid' ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-800">
+                                                    <CheckCircle size={12} className="mr-1" />Paid
+                                                </span>
+                                            ) : selectedStudent.payment_status === 'partial' ? (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-700 border border-yellow-200 dark:bg-yellow-950/20 dark:text-yellow-400 dark:border-yellow-800">
+                                                    <AlertCircle size={12} className="mr-1" />Partial
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-800">
+                                                    <XCircle size={12} className="mr-1" />Unpaid
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Booking Details */}
+                                {selectedStudent.is_currently_booked && selectedStudent.current_booking && (
+                                    <div className="pt-4 border-t">
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Booking Details</Label>
+                                        <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <p className="font-medium text-blue-700 dark:text-blue-400">Duration</p>
+                                                    <p className="text-blue-600 dark:text-blue-300">
+                                                        {selectedStudent.current_booking.semester_count} semester{selectedStudent.current_booking.semester_count !== 1 ? 's' : ''}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="font-medium text-blue-700 dark:text-blue-400">Total Fee</p>
+                                                    <p className="text-blue-600 dark:text-blue-300">
+                                                        ₱{(selectedStudent.current_booking.total_fee || 0).toLocaleString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Student ID */}
+                                <div className="pt-4 border-t">
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        Student ID: {selectedStudent.student_id}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
 
                 {/* Role Edit Dialog */}
                 <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>

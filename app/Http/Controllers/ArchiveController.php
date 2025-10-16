@@ -60,10 +60,37 @@ class ArchiveController extends Controller
         
         // Handle students and bookings based on user role
         if ($user->role === 'admin') {
-            // Admin sees NO students or bookings in archive
-            // These are managed by individual managers within their dormitories
-            $archivedStudents = collect();
-            $archivedBookings = collect();
+            // Admin can see all archived students (system-wide)
+            $archivedStudents = Student::archived()
+                ->with(['tenant'])
+                ->get()
+                ->map(function ($student) {
+                    return [
+                        'id' => $student->student_id,
+                        'type' => 'student',
+                        'title' => $student->first_name . ' ' . $student->last_name,
+                        'subtitle' => $student->email . ($student->tenant ? ' - ' . $student->tenant->dormitory_name : ''),
+                        'archived_at' => $student->archived_at,
+                        'data' => $student,
+                    ];
+                });
+            
+            // Admin can see all archived bookings (system-wide)
+            $archivedBookings = Booking::archived()
+                ->with(['student', 'room', 'room.tenant'])
+                ->get()
+                ->map(function ($booking) {
+                    $dormitoryName = $booking->room && $booking->room->tenant ? $booking->room->tenant->dormitory_name : 'Unknown Dormitory';
+                    return [
+                        'id' => $booking->booking_id,
+                        'type' => 'booking',
+                        'title' => 'Booking #' . $booking->booking_id,
+                        'subtitle' => ($booking->student ? $booking->student->first_name . ' ' . $booking->student->last_name : 'Unknown Student') . 
+                                     ' - Room ' . ($booking->room ? $booking->room->room_number : 'Unknown') . ' (' . $dormitoryName . ')',
+                        'archived_at' => $booking->archived_at,
+                        'data' => $booking,
+                    ];
+                });
         } else {
             // Manager can only see students and bookings from their own tenant
             $archivedStudents = Student::where('tenant_id', $user->tenant_id)
@@ -149,16 +176,16 @@ class ArchiveController extends Controller
         
         // Check if user has access to this item based on role
         if ($user->role === 'admin') {
-            // Admin can only restore dormitories
-            if ($type !== 'dormitory') {
-                return redirect()->back()->with('error', 'Unauthorized action. Admins can only restore dormitories.');
+            // Admin can restore dormitories and all students (system-wide)
+            if ($type !== 'dormitory' && $type !== 'student' && $type !== 'booking') {
+                return redirect()->back()->with('error', 'Unauthorized action. Admins can only restore dormitories, students, and bookings.');
             }
         } else {
             // Manager can restore rooms, students, bookings from their tenant (but not dormitories)
             if ($type === 'dormitory') {
                 return redirect()->back()->with('error', 'Unauthorized action. Managers cannot manage dormitories.');
             }
-            if ($item->tenant_id !== $user->tenant_id) {
+            if (isset($item->tenant_id) && $item->tenant_id !== $user->tenant_id) {
                 return redirect()->back()->with('error', 'Unauthorized action.');
             }
         }
@@ -199,16 +226,16 @@ class ArchiveController extends Controller
         
         // Check if user has access to this item based on role
         if ($user->role === 'admin') {
-            // Admin can only delete dormitories
-            if ($type !== 'dormitory') {
-                return redirect()->back()->with('error', 'Unauthorized action. Admins can only delete dormitories.');
+            // Admin can delete dormitories and all students (system-wide)
+            if ($type !== 'dormitory' && $type !== 'student' && $type !== 'booking') {
+                return redirect()->back()->with('error', 'Unauthorized action. Admins can only delete dormitories, students, and bookings.');
             }
         } else {
             // Manager can delete rooms, students, bookings from their tenant (but not dormitories)
             if ($type === 'dormitory') {
                 return redirect()->back()->with('error', 'Unauthorized action. Managers cannot manage dormitories.');
             }
-            if ($item->tenant_id !== $user->tenant_id) {
+            if (isset($item->tenant_id) && $item->tenant_id !== $user->tenant_id) {
                 return redirect()->back()->with('error', 'Unauthorized action.');
             }
         }
@@ -230,9 +257,17 @@ class ArchiveController extends Controller
         $deletedCount = 0;
         
         if ($user->role === 'admin') {
-            // Admin can only clear dormitories (system-wide)
-            $deletedCount = Tenant::archived()->count();
+            // Admin can clear dormitories, students, and bookings (system-wide)
+            $dormitoriesCount = Tenant::archived()->count();
+            $studentsCount = Student::archived()->count();
+            $bookingsCount = Booking::archived()->count();
+            
+            $deletedCount = $dormitoriesCount + $studentsCount + $bookingsCount;
+            
+            // Force delete all archived items system-wide
             Tenant::archived()->forceDelete();
+            Student::archived()->forceDelete();
+            Booking::archived()->forceDelete();
         } else {
             // Manager can clear rooms, students, bookings from their tenant
             $roomsCount = Room::where('tenant_id', $user->tenant_id)->archived()->count();

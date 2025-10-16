@@ -17,9 +17,16 @@ use App\Http\Controllers\CleaningScheduleController;
 use App\Http\Controllers\AdminSetupController;
 use App\Http\Controllers\AdminUsersController;
 
-Route::get('/', function () {
-    return Inertia::render('welcome');
-})->name('home');
+
+Route::middleware('guest')->group(function () {
+    Route::get('/', function () {
+        return Inertia::render('welcome');
+    })->name('home');
+
+
+
+
+});
 
 // Health check endpoint for deployment services
 Route::get('/health', function () {
@@ -320,6 +327,11 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::put('/admin/users/{id}/role', [AdminUsersController::class, 'updateUserRole'])->name('admin.users.role.update');
     Route::post('/admin/users/{id}/toggle-active', [AdminUsersController::class, 'toggleUserActive'])->name('admin.users.toggleActive');
     Route::post('/admin/users/toggle-registration', [AdminUsersController::class, 'toggleRegistration'])->name('admin.users.toggleRegistration');
+    
+    // Admin Student Management routes
+    Route::post('/admin/students', [AdminUsersController::class, 'storeStudent'])->name('admin.students.store');
+    Route::put('/admin/students/{id}', [AdminUsersController::class, 'updateStudent'])->name('admin.students.update');
+    Route::delete('/admin/students/{id}', [AdminUsersController::class, 'archiveStudent'])->name('admin.students.archive');
     
     // Debug route for registration status
     Route::get('/debug/registration', function() {
