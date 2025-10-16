@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState } from 'react';
-import { CheckCircle, XCircle, AlertCircle, Users, Plus, Edit3, Archive, Mail, Phone, Shield, DollarSign, Plane, CheckCircle2, ChevronDown, Bed, Calendar, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Users, Plus, Edit3, Archive, Mail, Phone, Shield, DollarSign, Plane, CheckCircle2, ChevronDown, Bed, Calendar, Eye, Search } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import { ReactNode } from 'react';
 import WarningDialog from '@/components/warning-dialog';
@@ -32,6 +32,9 @@ export default function Students() {
     const [pendingArchiveStudent, setPendingArchiveStudent] = useState<any>(null);
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [studentsPage, setStudentsPage] = useState(1);
+    const STUDENTS_PER_PAGE = 10;
 
     const handleOpenAdd = () => {
         setForm(emptyForm);
@@ -140,6 +143,28 @@ export default function Students() {
     };
 
     const studentList = Array.isArray(students) ? students : [];
+    
+    // Filter students based on search term
+    const filteredStudents = studentList.filter(student => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        return (
+            student.first_name.toLowerCase().includes(searchLower) ||
+            student.last_name.toLowerCase().includes(searchLower) ||
+            student.email.toLowerCase().includes(searchLower) ||
+            (student.current_booking?.room_number || '').toString().toLowerCase().includes(searchLower)
+        );
+    });
+    
+    // Paginate students for infinite scroll
+    const displayedStudents = filteredStudents.slice(0, studentsPage * STUDENTS_PER_PAGE);
+    const hasMoreStudents = filteredStudents.length > displayedStudents.length;
+    
+    const loadMoreStudents = () => {
+        if (hasMoreStudents) {
+            setStudentsPage(prev => prev + 1);
+        }
+    };
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Students', href: '/students' }]}>
@@ -172,8 +197,8 @@ export default function Students() {
                                 <Users size={20} />
                             </div>
                             <div>
-                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{studentList.length}</div>
-                                <div className="text-sm text-blue-600 dark:text-blue-400">Total Students</div>
+                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{filteredStudents.length}</div>
+                                <div className="text-sm text-blue-600 dark:text-blue-400">{searchTerm ? 'Filtered' : 'Total'} Students</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -182,7 +207,7 @@ export default function Students() {
                             </div>
                             <div>
                                 <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                                    {studentList.filter((s: any) => s.password).length}
+                                    {filteredStudents.filter((s: any) => s.password).length}
                                 </div>
                                 <div className="text-sm text-green-600 dark:text-green-400">With Login Access</div>
                             </div>
@@ -193,7 +218,7 @@ export default function Students() {
                             </div>
                             <div>
                                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                                    {studentList.filter((s: any) => s.payment_status === 'paid').length}
+                                    {filteredStudents.filter((s: any) => s.payment_status === 'paid').length}
                                 </div>
                                 <div className="text-sm text-emerald-600 dark:text-emerald-400">Payments Complete</div>
                             </div>
@@ -254,10 +279,33 @@ export default function Students() {
                     </Card>
                 )}
 
-                {/* Students List */}
+                {/* Students List */
                 {!error && studentList.length > 0 ? (
-                    <div className="space-y-3">
-                        {studentList.map((student: any) => (
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Students List</h2>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Search students..."
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setStudentsPage(1); // Reset pagination when searching
+                                        }}
+                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
+                            <div className="space-y-3">
+                                {displayedStudents.map((student: any) => (
                             <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
                                 <CardContent className="p-4">
                                     {/* Mobile Layout */}
@@ -613,7 +661,21 @@ export default function Students() {
                                     </div>
                                 </CardContent>
                             </Card>
-                        ))}
+                                        ))}
+                                
+                                {/* Load More Button */}
+                                {hasMoreStudents && (
+                                    <div className="pt-4 text-center">
+                                        <button
+                                            onClick={loadMoreStudents}
+                                            className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-600 dark:border-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                        >
+                                            Load More Students
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 ) : (
                     !error && (

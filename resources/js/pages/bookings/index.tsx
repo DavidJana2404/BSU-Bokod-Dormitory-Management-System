@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Calendar, Plus, Edit3, Archive, Bed, DollarSign, Clock, AlertCircle, User } from 'lucide-react';
+import { Calendar, Plus, Edit3, Archive, Bed, DollarSign, Clock, AlertCircle, User, Search } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
 import { useEffect } from 'react';
@@ -34,6 +34,11 @@ export default function Bookings() {
     const [alertDialogOpen, setAlertDialogOpen] = useState(false);
     const [pendingArchiveId, setPendingArchiveId] = useState<number | null>(null);
     const [alertMessage, setAlertMessage] = useState('');
+    
+    // Search and pagination states
+    const [searchTerm, setSearchTerm] = useState('');
+    const [bookingsPage, setBookingsPage] = useState(1);
+    const BOOKINGS_PER_PAGE = 10;
 
     // Safe array initialization with fallbacks
     const studentList = Array.isArray(students) ? students : [];
@@ -45,6 +50,31 @@ export default function Bookings() {
     
     // Can create booking only if there are available students
     const canCreateBooking = hasAvailableStudents;
+    
+    // Filter bookings based on search term
+    const filteredBookings = bookingList.filter((booking: any) => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        const student = booking.student;
+        const room = booking.room;
+        return (
+            (student && `${student.first_name} ${student.last_name}`.toLowerCase().includes(searchLower)) ||
+            (student && student.email.toLowerCase().includes(searchLower)) ||
+            (room && room.room_number.toString().toLowerCase().includes(searchLower)) ||
+            (room && room.type.toLowerCase().includes(searchLower)) ||
+            booking.booking_id.toString().includes(searchLower)
+        );
+    });
+    
+    // Paginate bookings for infinite scroll
+    const displayedBookings = filteredBookings.slice(0, bookingsPage * BOOKINGS_PER_PAGE);
+    const hasMoreBookings = filteredBookings.length > displayedBookings.length;
+    
+    const loadMoreBookings = () => {
+        if (hasMoreBookings) {
+            setBookingsPage(prev => prev + 1);
+        }
+    };
     
     // Effect to handle state inconsistencies and prevent blank pages
     useEffect(() => {
@@ -311,8 +341,8 @@ export default function Bookings() {
                                 <Calendar size={20} />
                             </div>
                             <div>
-                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{bookingList.length}</div>
-                                <div className="text-sm text-blue-600 dark:text-blue-400">Total Bookings</div>
+                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{filteredBookings.length}</div>
+                                <div className="text-sm text-blue-600 dark:text-blue-400">{searchTerm ? 'Filtered' : 'Total'} Bookings</div>
                             </div>
                         </div>
                         <div className="flex items-center gap-3">
@@ -321,7 +351,7 @@ export default function Bookings() {
                             </div>
                             <div>
                                 <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">
-                                    {new Set(bookingList.map((b: any) => b.room_id)).size}
+                                    {new Set(filteredBookings.map((b: any) => b.room_id)).size}
                                 </div>
                                 <div className="text-sm text-orange-600 dark:text-orange-400">Rooms Booked</div>
                             </div>
@@ -332,7 +362,7 @@ export default function Bookings() {
                             </div>
                             <div>
                                 <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                    ₱{bookingList.reduce((total: number, booking: any) => total + calculateTotal(booking), 0)}
+                                    ₱{filteredBookings.reduce((total: number, booking: any) => total + calculateTotal(booking), 0)}
                                 </div>
                                 <div className="text-sm text-purple-600 dark:text-purple-400">Total Revenue</div>
                             </div>
@@ -342,8 +372,31 @@ export default function Bookings() {
 
                 {/* Bookings List */}
                 {bookingList.length > 0 ? (
-                    <div className="space-y-3">
-                        {bookingList.map((booking: any) => {
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Bookings List</h2>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Search bookings..."
+                                        value={searchTerm}
+                                        onChange={(e) => {
+                                            setSearchTerm(e.target.value);
+                                            setBookingsPage(1); // Reset pagination when searching
+                                        }}
+                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
+                            <div className="space-y-3">
+                                {displayedBookings.map((booking: any) => {
                             // Use student and room data directly from booking relationships
                             const student = booking.student || null;
                             const room = booking.room || null;
@@ -522,8 +575,22 @@ export default function Bookings() {
                                 </Card>
                             );
                         })}
+                        
+                        {/* Load More Button */}
+                        {hasMoreBookings && (
+                            <div className="pt-4 text-center">
+                                <button
+                                    onClick={loadMoreBookings}
+                                    className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-600 dark:border-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                                >
+                                    Load More Bookings
+                                </button>
+                            </div>
+                        )}
                     </div>
-                ) : (
+                </div>
+            </div>
+        ) : (
                     <Card className="p-12 text-center">
                         <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
                             <Calendar className="text-gray-400" size={32} />

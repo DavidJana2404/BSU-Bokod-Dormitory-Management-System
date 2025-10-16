@@ -381,28 +381,28 @@ export default function AdminUsers() {
                                 size="sm"
                                 variant={activeFilter === 'all' ? 'default' : 'outline'}
                                 onClick={() => setActiveFilter('all')}
-                                className="text-xs"
+                                className="text-xs p-2 aspect-square"
+                                title="All Users"
                             >
-                                <Users size={12} className="mr-1" />
-                                All Users
+                                <UserCheck size={16} />
                             </Button>
                             <Button
                                 size="sm"
                                 variant={activeFilter === 'staff' ? 'default' : 'outline'}
                                 onClick={() => setActiveFilter('staff')}
-                                className="text-xs"
+                                className="text-xs p-2 aspect-square"
+                                title="Staff Only"
                             >
-                                <Shield size={12} className="mr-1" />
-                                Staff
+                                <Shield size={16} />
                             </Button>
                             <Button
                                 size="sm"
                                 variant={activeFilter === 'students' ? 'default' : 'outline'}
                                 onClick={() => setActiveFilter('students')}
-                                className="text-xs"
+                                className="text-xs p-2 aspect-square"
+                                title="Students Only"
                             >
-                                <Users size={12} className="mr-1" />
-                                Students
+                                <Users size={16} />
                             </Button>
                         </div>
                     </div>
