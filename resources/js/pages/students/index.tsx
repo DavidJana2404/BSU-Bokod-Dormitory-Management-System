@@ -272,15 +272,15 @@ export default function Students() {
                                                 </Button>
                                             </Link>
                                         </div>
-                                    ) as ReactNode}
+                                    )}
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Students List */
-                {!error && studentList.length > 0 ? (
+                {/* Students List */}
+                {(!error && studentList.length > 0) ? (
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -306,7 +306,7 @@ export default function Students() {
                         <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
                             <div className="space-y-3">
                                 {displayedStudents.map((student: any) => (
-                            <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
+                                    <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
                                 <CardContent className="p-4">
                                     {/* Mobile Layout */}
                                     <div className="block lg:hidden space-y-4">
