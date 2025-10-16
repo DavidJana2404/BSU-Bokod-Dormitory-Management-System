@@ -311,9 +311,29 @@ export default function AdminUsers() {
 
                 {/* Stats Cards */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <div className="flex items-center gap-3 cursor-pointer hover:bg-white/50 dark:hover:bg-gray-800/50 p-2 rounded-lg transition-colors" onClick={() => setActiveFilter('staff')}>
-                            <div className={`rounded-lg p-2 ${activeFilter === 'staff' ? 'bg-purple-700' : 'bg-purple-600'} text-white`}>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                        {/* All Users Filter */}
+                        <div className="flex items-center gap-3">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'all' ? 'bg-gray-700' : 'bg-gray-600'} text-white`}
+                                onClick={() => setActiveFilter('all')}
+                                title="All Users"
+                            >
+                                <UserCheck size={20} />
+                            </div>
+                            <div>
+                                <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">{staffUserList.length + studentList.length}</div>
+                                <div className="text-sm text-gray-600 dark:text-gray-400">All Users</div>
+                            </div>
+                        </div>
+                        
+                        {/* Staff Users Filter */}
+                        <div className="flex items-center gap-3">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'staff' ? 'bg-purple-700' : 'bg-purple-600'} text-white`}
+                                onClick={() => setActiveFilter('staff')}
+                                title="Staff Users Only"
+                            >
                                 <Shield size={20} />
                             </div>
                             <div>
@@ -321,6 +341,8 @@ export default function AdminUsers() {
                                 <div className="text-sm text-purple-600 dark:text-purple-400">Staff Users</div>
                             </div>
                         </div>
+                        
+                        {/* Manager/Cashier Ratio - Non-clickable */}
                         <div className="flex items-center gap-3">
                             <div className="bg-green-600 text-white rounded-lg p-2">
                                 <Settings size={20} />
@@ -330,8 +352,14 @@ export default function AdminUsers() {
                                 <div className="text-sm text-green-600 dark:text-green-400">Mgr/Cashier</div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3 cursor-pointer hover:bg-white/50 dark:hover:bg-gray-800/50 p-2 rounded-lg transition-colors" onClick={() => setActiveFilter('students')}>
-                            <div className={`rounded-lg p-2 ${activeFilter === 'students' ? 'bg-blue-700' : 'bg-blue-600'} text-white`}>
+                        
+                        {/* Students Filter */}
+                        <div className="flex items-center gap-3">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'students' ? 'bg-blue-700' : 'bg-blue-600'} text-white`}
+                                onClick={() => setActiveFilter('students')}
+                                title="Students Only"
+                            >
                                 <Users size={20} />
                             </div>
                             <div>
@@ -339,6 +367,8 @@ export default function AdminUsers() {
                                 <div className="text-sm text-blue-600 dark:text-blue-400">Students</div>
                             </div>
                         </div>
+                        
+                        {/* Active Staff - Non-clickable */}
                         <div className="flex items-center gap-3">
                             <div className="bg-emerald-600 text-white rounded-lg p-2">
                                 <UserCheck size={20} />
@@ -350,6 +380,8 @@ export default function AdminUsers() {
                                 <div className="text-sm text-emerald-600 dark:text-emerald-400">Active Staff</div>
                             </div>
                         </div>
+                        
+                        {/* Booked Students - Non-clickable */}
                         <div className="flex items-center gap-3">
                             <div className="bg-orange-600 text-white rounded-lg p-2">
                                 <Bed size={20} />
@@ -361,6 +393,8 @@ export default function AdminUsers() {
                                 <div className="text-sm text-orange-600 dark:text-orange-400">Booked Students</div>
                             </div>
                         </div>
+                        
+                        {/* Paid Students - Non-clickable */}
                         <div className="flex items-center gap-3">
                             <div className="bg-cyan-600 text-white rounded-lg p-2">
                                 <DollarSign size={20} />
@@ -371,39 +405,6 @@ export default function AdminUsers() {
                                 </div>
                                 <div className="text-sm text-cyan-600 dark:text-cyan-400">Paid Students</div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    {/* Filter Controls */}
-                    <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-700">
-                        <div className="flex items-center gap-3 justify-center">
-                            <Button
-                                size="sm"
-                                variant={activeFilter === 'all' ? 'default' : 'outline'}
-                                onClick={() => setActiveFilter('all')}
-                                className="text-xs p-2 aspect-square"
-                                title="All Users"
-                            >
-                                <UserCheck size={16} />
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={activeFilter === 'staff' ? 'default' : 'outline'}
-                                onClick={() => setActiveFilter('staff')}
-                                className="text-xs p-2 aspect-square"
-                                title="Staff Only"
-                            >
-                                <Shield size={16} />
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={activeFilter === 'students' ? 'default' : 'outline'}
-                                onClick={() => setActiveFilter('students')}
-                                className="text-xs p-2 aspect-square"
-                                title="Students Only"
-                            >
-                                <Users size={16} />
-                            </Button>
                         </div>
                     </div>
                 </div>
