@@ -75,7 +75,7 @@ export default function AdminUsers() {
     const [toggleProcessing, setToggleProcessing] = useState(false);
     
     // Filter states
-    const [activeFilter, setActiveFilter] = useState<'all' | 'staff' | 'students'>('all');
+    const [activeFilter, setActiveFilter] = useState<'all' | 'staff' | 'students' | 'managers' | 'cashiers' | 'active-staff' | 'booked-students' | 'paid-students'>('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [studentsPage, setStudentsPage] = useState(1);
     const STUDENTS_PER_PAGE = 10;
@@ -270,17 +270,32 @@ export default function AdminUsers() {
     const managerList = staffUserList.filter(user => user.role === 'manager');
     const cashierList = staffUserList.filter(user => user.role === 'cashier');
     
-    // Filter students based on search term
-    const filteredStudents = studentList.filter(student => {
-        if (!searchTerm) return true;
-        const searchLower = searchTerm.toLowerCase();
-        return (
-            student.first_name.toLowerCase().includes(searchLower) ||
-            student.last_name.toLowerCase().includes(searchLower) ||
-            student.email.toLowerCase().includes(searchLower) ||
-            (student.dormitory?.dormitory_name || '').toLowerCase().includes(searchLower)
-        );
-    });
+    // Filter students based on search term and active filter
+    const getFilteredStudents = () => {
+        let students = studentList;
+        
+        // Apply specific filters
+        if (activeFilter === 'booked-students') {
+            students = studentList.filter(s => s.is_currently_booked);
+        } else if (activeFilter === 'paid-students') {
+            students = studentList.filter(s => s.payment_status === 'paid');
+        }
+        
+        // Apply search filter
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            students = students.filter(student => (
+                student.first_name.toLowerCase().includes(searchLower) ||
+                student.last_name.toLowerCase().includes(searchLower) ||
+                student.email.toLowerCase().includes(searchLower) ||
+                (student.dormitory?.dormitory_name || '').toLowerCase().includes(searchLower)
+            ));
+        }
+        
+        return students;
+    };
+    
+    const filteredStudents = getFilteredStudents();
     
     // Paginate students for infinite scroll
     const displayedStudents = filteredStudents.slice(0, studentsPage * STUDENTS_PER_PAGE);
@@ -342,9 +357,13 @@ export default function AdminUsers() {
                             </div>
                         </div>
                         
-                        {/* Manager/Cashier Ratio - Non-clickable */}
+                        {/* Manager/Cashier Ratio - Clickable for Managers */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-green-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'managers' ? 'bg-green-700' : 'bg-green-600'} text-white`}
+                                onClick={() => setActiveFilter('managers')}
+                                title="Managers Only"
+                            >
                                 <Settings size={20} />
                             </div>
                             <div>
@@ -368,9 +387,13 @@ export default function AdminUsers() {
                             </div>
                         </div>
                         
-                        {/* Active Staff - Non-clickable */}
+                        {/* Active Staff - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-emerald-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'active-staff' ? 'bg-emerald-700' : 'bg-emerald-600'} text-white`}
+                                onClick={() => setActiveFilter('active-staff')}
+                                title="Active Staff Only"
+                            >
                                 <UserCheck size={20} />
                             </div>
                             <div>
@@ -381,9 +404,13 @@ export default function AdminUsers() {
                             </div>
                         </div>
                         
-                        {/* Booked Students - Non-clickable */}
+                        {/* Booked Students - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-orange-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'booked-students' ? 'bg-orange-700' : 'bg-orange-600'} text-white`}
+                                onClick={() => setActiveFilter('booked-students')}
+                                title="Booked Students Only"
+                            >
                                 <Bed size={20} />
                             </div>
                             <div>
@@ -394,9 +421,13 @@ export default function AdminUsers() {
                             </div>
                         </div>
                         
-                        {/* Paid Students - Non-clickable */}
+                        {/* Paid Students - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-cyan-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'paid-students' ? 'bg-cyan-700' : 'bg-cyan-600'} text-white`}
+                                onClick={() => setActiveFilter('paid-students')}
+                                title="Paid Students Only"
+                            >
                                 <DollarSign size={20} />
                             </div>
                             <div>
@@ -483,18 +514,28 @@ export default function AdminUsers() {
                 </div>
 
                 {/* Staff Users Section */}
-                {(activeFilter === 'all' || activeFilter === 'staff') && (
+                {(activeFilter === 'all' || activeFilter === 'staff' || activeFilter === 'managers' || activeFilter === 'active-staff') && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                             <Shield className="text-purple-600 dark:text-purple-400" size={24} />
-                            Staff Users ({staffUserList.length})
+                            {activeFilter === 'managers' ? `Managers (${managerList.length})` : 
+                             activeFilter === 'active-staff' ? `Active Staff (${staffUserList.filter(u => u.is_active).length})` :
+                             `Staff Users (${staffUserList.length})`}
                         </h2>
                     </div>
                     
-                    {staffUserList.length > 0 ? (
-                        <div className="space-y-3">
-                            {staffUserList.map((user) => (
+                    {(() => {
+                        let filteredStaff = staffUserList;
+                        if (activeFilter === 'managers') {
+                            filteredStaff = managerList;
+                        } else if (activeFilter === 'active-staff') {
+                            filteredStaff = staffUserList.filter(u => u.is_active);
+                        }
+                        
+                        return filteredStaff.length > 0 ? (
+                            <div className="space-y-3">
+                                {filteredStaff.map((user) => (
                                 <Card key={user.id} className="border border-gray-200 dark:border-gray-700">
                                     <CardContent className="p-4">
                                         <div className="flex items-center justify-between">
@@ -576,26 +617,29 @@ export default function AdminUsers() {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            ))}
-                        </div>
-                    ) : (
-                        <Card className="p-8 text-center">
-                            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-12 h-12 flex items-center justify-center mx-auto mb-3">
-                                <Shield className="text-gray-400" size={24} />
+                                ))}
                             </div>
-                            <p className="text-gray-500 dark:text-gray-500">No staff users found</p>
-                        </Card>
-                    )}
+                        ) : (
+                            <Card className="p-8 text-center">
+                                <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-12 h-12 flex items-center justify-center mx-auto mb-3">
+                                    <Shield className="text-gray-400" size={24} />
+                                </div>
+                                <p className="text-gray-500 dark:text-gray-500">No staff users found</p>
+                            </Card>
+                        );
+                    })()}
                 </div>
                 )}
 
                 {/* Students Section - Separate Scrollable Container */}
-                {(activeFilter === 'all' || activeFilter === 'students') && (
+                {(activeFilter === 'all' || activeFilter === 'students' || activeFilter === 'booked-students' || activeFilter === 'paid-students') && (
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                             <Users className="text-blue-600 dark:text-blue-400" size={24} />
-                            Students ({filteredStudents.length})
+                            {activeFilter === 'booked-students' ? `Booked Students (${studentList.filter(s => s.is_currently_booked).length})` :
+                             activeFilter === 'paid-students' ? `Paid Students (${studentList.filter(s => s.payment_status === 'paid').length})` :
+                             `Students (${filteredStudents.length})`}
                         </h2>
                         <Button onClick={handleOpenAddStudent} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                             <Plus size={18} /> Add New Student

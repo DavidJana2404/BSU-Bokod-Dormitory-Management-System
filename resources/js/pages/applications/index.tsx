@@ -77,6 +77,9 @@ export default function Applications() {
     const [processedPage, setProcessedPage] = useState(1);
     const APPLICATIONS_PER_PAGE = 5;
     
+    // Filter states
+    const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+    
     // Auto-dismiss success messages after 5 seconds
     useEffect(() => {
         if (success) {
@@ -198,8 +201,21 @@ export default function Applications() {
         );
     });
     
-    // Filter processed applications based on search term
-    const allProcessedApplications = applications.filter(app => app.status !== 'pending');
+    // Filter processed applications based on search term and active filter
+    const getProcessedApplications = () => {
+        let apps = applications.filter(app => app.status !== 'pending');
+        
+        // Apply specific filter
+        if (activeFilter === 'approved') {
+            apps = applications.filter(app => app.status === 'approved');
+        } else if (activeFilter === 'rejected') {
+            apps = applications.filter(app => app.status === 'rejected');
+        }
+        
+        return apps;
+    };
+    
+    const allProcessedApplications = getProcessedApplications();
     const filteredProcessedApplications = allProcessedApplications.filter(app => {
         if (!processedSearchTerm) return true;
         const searchLower = processedSearchTerm.toLowerCase();
@@ -284,8 +300,13 @@ export default function Applications() {
                 {/* Applications Stats */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        {/* Total Applications - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-blue-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'all' ? 'bg-blue-700' : 'bg-blue-600'} text-white`}
+                                onClick={() => setActiveFilter('all')}
+                                title="All Applications"
+                            >
                                 <FileText size={20} />
                             </div>
                             <div>
@@ -293,8 +314,14 @@ export default function Applications() {
                                 <div className="text-sm text-blue-600 dark:text-blue-400">Total Applications</div>
                             </div>
                         </div>
+                        
+                        {/* Pending Applications - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-yellow-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'pending' ? 'bg-yellow-700' : 'bg-yellow-600'} text-white`}
+                                onClick={() => setActiveFilter('pending')}
+                                title="Pending Applications Only"
+                            >
                                 <Clock size={20} />
                             </div>
                             <div>
@@ -302,8 +329,14 @@ export default function Applications() {
                                 <div className="text-sm text-yellow-600 dark:text-yellow-400">Pending Review</div>
                             </div>
                         </div>
+                        
+                        {/* Approved Applications - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-green-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'approved' ? 'bg-green-700' : 'bg-green-600'} text-white`}
+                                onClick={() => setActiveFilter('approved')}
+                                title="Approved Applications Only"
+                            >
                                 <CheckCircle size={20} />
                             </div>
                             <div>
@@ -313,8 +346,14 @@ export default function Applications() {
                                 <div className="text-sm text-green-600 dark:text-green-400">Approved</div>
                             </div>
                         </div>
+                        
+                        {/* Rejected Applications - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-red-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'rejected' ? 'bg-red-700' : 'bg-red-600'} text-white`}
+                                onClick={() => setActiveFilter('rejected')}
+                                title="Rejected Applications Only"
+                            >
                                 <XCircle size={20} />
                             </div>
                             <div>
@@ -328,7 +367,7 @@ export default function Applications() {
                 </div>
 
                 {/* Pending Applications Section */}
-                {pendingApplications.length > 0 && (
+                {(activeFilter === 'all' || activeFilter === 'pending') && pendingApplications.length > 0 && (
                     <Card className="border border-gray-200 dark:border-gray-700">
                         <CardContent className="p-6">
                             {/* Search Bar */}
@@ -461,14 +500,16 @@ export default function Applications() {
                 )}
 
                 {/* Processed Applications Section */}
-                {processedApplications.length > 0 && (
+                {((activeFilter === 'all') || (activeFilter === 'approved' || activeFilter === 'rejected')) && processedApplications.length > 0 && (
                     <Card className="border border-gray-200 dark:border-gray-700">
                         <CardContent className="p-6">
                             {/* Search Bar */}
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                     <CheckCircle className="text-gray-500" size={20} />
-                                    Processed Applications ({filteredProcessedApplications.length})
+                                    {activeFilter === 'approved' ? `Approved Applications (${applications.filter(app => app.status === 'approved').length})` :
+                                     activeFilter === 'rejected' ? `Rejected Applications (${applications.filter(app => app.status === 'rejected').length})` :
+                                     `Processed Applications (${filteredProcessedApplications.length})`}
                                 </h2>
                             </div>
                             <div className="relative mb-4">

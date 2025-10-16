@@ -35,6 +35,9 @@ export default function Students() {
     const [searchTerm, setSearchTerm] = useState('');
     const [studentsPage, setStudentsPage] = useState(1);
     const STUDENTS_PER_PAGE = 10;
+    
+    // Filter states
+    const [activeFilter, setActiveFilter] = useState<'all' | 'with-login' | 'paid' | 'present' | 'booked'>('all');
 
     const handleOpenAdd = () => {
         setForm(emptyForm);
@@ -144,17 +147,36 @@ export default function Students() {
 
     const studentList = Array.isArray(students) ? students : [];
     
-    // Filter students based on search term
-    const filteredStudents = studentList.filter(student => {
-        if (!searchTerm) return true;
-        const searchLower = searchTerm.toLowerCase();
-        return (
-            student.first_name.toLowerCase().includes(searchLower) ||
-            student.last_name.toLowerCase().includes(searchLower) ||
-            student.email.toLowerCase().includes(searchLower) ||
-            (student.current_booking?.room_number || '').toString().toLowerCase().includes(searchLower)
-        );
-    });
+    // Filter students based on search term and active filter
+    const getFilteredStudents = () => {
+        let students = studentList;
+        
+        // Apply specific filters
+        if (activeFilter === 'with-login') {
+            students = studentList.filter(s => s.password);
+        } else if (activeFilter === 'paid') {
+            students = studentList.filter(s => s.payment_status === 'paid');
+        } else if (activeFilter === 'present') {
+            students = studentList.filter(s => s.status === 'in' || !s.status);
+        } else if (activeFilter === 'booked') {
+            students = studentList.filter(s => s.is_currently_booked);
+        }
+        
+        // Apply search filter
+        if (searchTerm) {
+            const searchLower = searchTerm.toLowerCase();
+            students = students.filter(student => (
+                student.first_name.toLowerCase().includes(searchLower) ||
+                student.last_name.toLowerCase().includes(searchLower) ||
+                student.email.toLowerCase().includes(searchLower) ||
+                (student.current_booking?.room_number || '').toString().toLowerCase().includes(searchLower)
+            ));
+        }
+        
+        return students;
+    };
+    
+    const filteredStudents = getFilteredStudents();
     
     // Paginate students for infinite scroll
     const displayedStudents = filteredStudents.slice(0, studentsPage * STUDENTS_PER_PAGE);
@@ -192,8 +214,13 @@ export default function Students() {
                 {/* Students Stats */}
                 <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {/* Total Students - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-blue-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'all' ? 'bg-blue-700' : 'bg-blue-600'} text-white`}
+                                onClick={() => setActiveFilter('all')}
+                                title="All Students"
+                            >
                                 <Users size={20} />
                             </div>
                             <div>
@@ -201,8 +228,14 @@ export default function Students() {
                                 <div className="text-sm text-blue-600 dark:text-blue-400">{searchTerm ? 'Filtered' : 'Total'} Students</div>
                             </div>
                         </div>
+                        
+                        {/* With Login Access - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-green-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'with-login' ? 'bg-green-700' : 'bg-green-600'} text-white`}
+                                onClick={() => setActiveFilter('with-login')}
+                                title="Students With Login Access"
+                            >
                                 <Shield size={20} />
                             </div>
                             <div>
@@ -212,8 +245,14 @@ export default function Students() {
                                 <div className="text-sm text-green-600 dark:text-green-400">With Login Access</div>
                             </div>
                         </div>
+                        
+                        {/* Paid Students - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-emerald-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'paid' ? 'bg-emerald-700' : 'bg-emerald-600'} text-white`}
+                                onClick={() => setActiveFilter('paid')}
+                                title="Students With Complete Payments"
+                            >
                                 <DollarSign size={20} />
                             </div>
                             <div>
@@ -223,8 +262,14 @@ export default function Students() {
                                 <div className="text-sm text-emerald-600 dark:text-emerald-400">Payments Complete</div>
                             </div>
                         </div>
+                        
+                        {/* Present Students - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-purple-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'present' ? 'bg-purple-700' : 'bg-purple-600'} text-white`}
+                                onClick={() => setActiveFilter('present')}
+                                title="Currently Present Students"
+                            >
                                 <CheckCircle2 size={20} />
                             </div>
                             <div>
@@ -234,8 +279,14 @@ export default function Students() {
                                 <div className="text-sm text-purple-600 dark:text-purple-400">Currently Present</div>
                             </div>
                         </div>
+                        
+                        {/* Booked Students - Clickable */}
                         <div className="flex items-center gap-3">
-                            <div className="bg-orange-600 text-white rounded-lg p-2">
+                            <div 
+                                className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'booked' ? 'bg-orange-700' : 'bg-orange-600'} text-white`}
+                                onClick={() => setActiveFilter('booked')}
+                                title="Currently Booked Students"
+                            >
                                 <Bed size={20} />
                             </div>
                             <div>
