@@ -328,10 +328,10 @@ export default function Applications() {
 
                 {/* Pending Applications Section */}
                 {pendingApplications.length > 0 && (
-                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div className="bg-black dark:bg-black rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <div className="p-6 border-b border-gray-600">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                                     <Clock className="text-yellow-500" size={20} />
                                     Pending Applications ({filteredPendingApplications.length})
                                 </h2>
@@ -458,10 +458,10 @@ export default function Applications() {
 
                 {/* Processed Applications Section */}
                 {processedApplications.length > 0 && (
-                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                    <div className="bg-black dark:bg-black rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <div className="p-6 border-b border-gray-600">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                                     <CheckCircle className="text-gray-500" size={20} />
                                     Processed Applications ({filteredProcessedApplications.length})
                                 </h2>
