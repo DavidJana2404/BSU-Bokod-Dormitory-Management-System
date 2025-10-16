@@ -281,7 +281,7 @@ export default function Students() {
 
                 {/* Students List */}
                 {(!error && studentList.length > 0) ? (
-                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                 <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Students List</h2>

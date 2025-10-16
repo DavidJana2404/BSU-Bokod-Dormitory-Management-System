@@ -21,7 +21,8 @@ import {
     Eye,
     ThumbsUp,
     ThumbsDown,
-    Loader2
+    Loader2,
+    Search
 } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
@@ -67,6 +68,13 @@ export default function Applications() {
     const [pendingRejection, setPendingRejection] = useState<Application | null>(null);
     const [error, setError] = useState<string | null>(serverError || flash?.error || null);
     const [success, setSuccess] = useState<string | null>(flash?.success || null);
+    
+    // Search and pagination states
+    const [pendingSearchTerm, setPendingSearchTerm] = useState('');
+    const [processedSearchTerm, setProcessedSearchTerm] = useState('');
+    const [pendingPage, setPendingPage] = useState(1);
+    const [processedPage, setProcessedPage] = useState(1);
+    const APPLICATIONS_PER_PAGE = 5;
     
     // Auto-dismiss success messages after 5 seconds
     useEffect(() => {
@@ -175,8 +183,56 @@ export default function Applications() {
         }
     };
 
-    const pendingApplications = applications.filter(app => app.status === 'pending');
-    const processedApplications = applications.filter(app => app.status !== 'pending');
+    // Filter pending applications based on search term
+    const allPendingApplications = applications.filter(app => app.status === 'pending');
+    const filteredPendingApplications = allPendingApplications.filter(app => {
+        if (!pendingSearchTerm) return true;
+        const searchLower = pendingSearchTerm.toLowerCase();
+        return (
+            app.first_name.toLowerCase().includes(searchLower) ||
+            app.last_name.toLowerCase().includes(searchLower) ||
+            app.email.toLowerCase().includes(searchLower) ||
+            app.phone.toLowerCase().includes(searchLower) ||
+            app.tenant.dormitory_name.toLowerCase().includes(searchLower)
+        );
+    });
+    
+    // Filter processed applications based on search term
+    const allProcessedApplications = applications.filter(app => app.status !== 'pending');
+    const filteredProcessedApplications = allProcessedApplications.filter(app => {
+        if (!processedSearchTerm) return true;
+        const searchLower = processedSearchTerm.toLowerCase();
+        return (
+            app.first_name.toLowerCase().includes(searchLower) ||
+            app.last_name.toLowerCase().includes(searchLower) ||
+            app.email.toLowerCase().includes(searchLower) ||
+            app.phone.toLowerCase().includes(searchLower) ||
+            app.tenant.dormitory_name.toLowerCase().includes(searchLower) ||
+            app.status.toLowerCase().includes(searchLower)
+        );
+    });
+    
+    // Paginate applications for infinite scroll
+    const displayedPendingApplications = filteredPendingApplications.slice(0, pendingPage * APPLICATIONS_PER_PAGE);
+    const displayedProcessedApplications = filteredProcessedApplications.slice(0, processedPage * APPLICATIONS_PER_PAGE);
+    const hasMorePendingApplications = filteredPendingApplications.length > displayedPendingApplications.length;
+    const hasMoreProcessedApplications = filteredProcessedApplications.length > displayedProcessedApplications.length;
+    
+    const loadMorePendingApplications = () => {
+        if (hasMorePendingApplications) {
+            setPendingPage(prev => prev + 1);
+        }
+    };
+    
+    const loadMoreProcessedApplications = () => {
+        if (hasMoreProcessedApplications) {
+            setProcessedPage(prev => prev + 1);
+        }
+    };
+    
+    // For compatibility, keep these names for stats
+    const pendingApplications = allPendingApplications;
+    const processedApplications = allProcessedApplications;
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Applications', href: '/applications' }]}>
@@ -272,13 +328,34 @@ export default function Applications() {
 
                 {/* Pending Applications Section */}
                 {pendingApplications.length > 0 && (
-                    <div className="space-y-4">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <Clock className="text-yellow-500" size={20} />
-                            Pending Applications ({pendingApplications.length})
-                        </h2>
-                        <div className="space-y-3">
-                            {pendingApplications.map((application) => (
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <Clock className="text-yellow-500" size={20} />
+                                    Pending Applications ({filteredPendingApplications.length})
+                                </h2>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Search pending applications..."
+                                        value={pendingSearchTerm}
+                                        onChange={(e) => {
+                                            setPendingSearchTerm(e.target.value);
+                                            setPendingPage(1); // Reset pagination when searching
+                                        }}
+                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
+                            <div className="space-y-3">
+                                {displayedPendingApplications.map((application) => (
                                 <Card key={application.id} className="border border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-950/10">
                                     <CardContent className="p-4">
                                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
@@ -362,19 +439,53 @@ export default function Applications() {
                                     </CardContent>
                                 </Card>
                             ))}
+                            
+                            {/* Load More Button */}
+                            {hasMorePendingApplications && (
+                                <div className="pt-4 text-center">
+                                    <button
+                                        onClick={loadMorePendingApplications}
+                                        className="px-4 py-2 text-sm font-medium text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300 border border-yellow-600 dark:border-yellow-400 rounded-md hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition-colors"
+                                    >
+                                        Load More Pending Applications
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
-                )}
+                </div>
+            )}
 
                 {/* Processed Applications Section */}
                 {processedApplications.length > 0 && (
-                    <div className="space-y-4">
-                        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                            <CheckCircle className="text-gray-500" size={20} />
-                            Processed Applications ({processedApplications.length})
-                        </h2>
-                        <div className="space-y-3">
-                            {processedApplications.map((application) => (
+                    <div className="bg-gray-50 dark:bg-gray-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <CheckCircle className="text-gray-500" size={20} />
+                                    Processed Applications ({filteredProcessedApplications.length})
+                                </h2>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder="Search processed applications..."
+                                        value={processedSearchTerm}
+                                        onChange={(e) => {
+                                            setProcessedSearchTerm(e.target.value);
+                                            setProcessedPage(1); // Reset pagination when searching
+                                        }}
+                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800 p-6">
+                            <div className="space-y-3">
+                                {displayedProcessedApplications.map((application) => (
                                 <Card key={application.id} className="border border-gray-200 dark:border-gray-700">
                                     <CardContent className="p-4">
                                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
@@ -438,9 +549,22 @@ export default function Applications() {
                                     </CardContent>
                                 </Card>
                             ))}
+                            
+                            {/* Load More Button */}
+                            {hasMoreProcessedApplications && (
+                                <div className="pt-4 text-center">
+                                    <button
+                                        onClick={loadMoreProcessedApplications}
+                                        className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 border border-gray-600 dark:border-gray-400 rounded-md hover:bg-gray-50 dark:hover:bg-gray-900/20 transition-colors"
+                                    >
+                                        Load More Processed Applications
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     </div>
-                )}
+                </div>
+            )}
 
                 {/* Empty State */}
                 {applications.length === 0 && (
