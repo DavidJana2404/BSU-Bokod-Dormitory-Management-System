@@ -22,10 +22,6 @@ Route::middleware('guest')->group(function () {
     Route::get('/', function () {
         return Inertia::render('welcome');
     })->name('home');
-
-
-
-
 });
 
 // Health check endpoint for deployment services
@@ -311,6 +307,7 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     
     Route::put('/applications/{application}/approve', [ApplicationController::class, 'approve'])->name('applications.approve');
     Route::put('/applications/{application}/reject', [ApplicationController::class, 'reject'])->name('applications.reject');
+    Route::put('/applications/{application}/restore', [ApplicationController::class, 'restore'])->name('applications.restore');
     // Redirect GET requests to approval/rejection URLs to applications index
     Route::get('/applications/{application}/approve', function($application) {
         return redirect()->route('applications.index')->with('error', 'Invalid request method. Please use the application interface to approve applications.');
@@ -327,11 +324,6 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::put('/admin/users/{id}/role', [AdminUsersController::class, 'updateUserRole'])->name('admin.users.role.update');
     Route::post('/admin/users/{id}/toggle-active', [AdminUsersController::class, 'toggleUserActive'])->name('admin.users.toggleActive');
     Route::post('/admin/users/toggle-registration', [AdminUsersController::class, 'toggleRegistration'])->name('admin.users.toggleRegistration');
-    
-    // Admin Student Management routes
-    Route::post('/admin/students', [AdminUsersController::class, 'storeStudent'])->name('admin.students.store');
-    Route::put('/admin/students/{id}', [AdminUsersController::class, 'updateStudent'])->name('admin.students.update');
-    Route::delete('/admin/students/{id}', [AdminUsersController::class, 'archiveStudent'])->name('admin.students.archive');
     
     // Debug route for registration status
     Route::get('/debug/registration', function() {

@@ -23,7 +23,8 @@ import {
     ThumbsUp,
     ThumbsDown,
     Loader2,
-    Search
+    Search,
+    RotateCcw
 } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
@@ -61,12 +62,14 @@ export default function Applications() {
     const { applications = [], error: serverError, flash } = usePage<ApplicationsPageProps>().props;
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [rejectModalOpen, setRejectModalOpen] = useState(false);
+    const [restoreModalOpen, setRestoreModalOpen] = useState(false);
     const [selectedApplication, setSelectedApplication] = useState<Application | null>(null);
     const [rejectionReason, setRejectionReason] = useState('');
     const [processing, setProcessing] = useState(false);
     const [warningDialogOpen, setWarningDialogOpen] = useState(false);
     const [pendingApproval, setPendingApproval] = useState<Application | null>(null);
     const [pendingRejection, setPendingRejection] = useState<Application | null>(null);
+    const [pendingRestore, setPendingRestore] = useState<Application | null>(null);
     const [error, setError] = useState<string | null>(serverError || flash?.error || null);
     const [success, setSuccess] = useState<string | null>(flash?.success || null);
     
@@ -172,6 +175,39 @@ export default function Applications() {
                 },
             }
         );
+    };
+
+    const handleRestore = (application: Application) => {
+        setPendingRestore(application);
+        setRestoreModalOpen(true);
+    };
+    
+    const confirmRestore = () => {
+        if (!pendingRestore) return;
+        
+        setProcessing(true);
+        setError(null);
+        setSuccess(null);
+        
+        router.put(`/applications/${pendingRestore.id}/restore`, {}, {
+            onSuccess: (page) => {
+                console.log('Restore success response:', page);
+                setSuccess('Application restored to pending status successfully!');
+                setRestoreModalOpen(false);
+                setPendingRestore(null);
+            },
+            onError: (errors) => {
+                console.error('Error restoring application:', errors);
+                console.error('Full error object:', JSON.stringify(errors, null, 2));
+                setError(errors?.message || Object.values(errors || {}).flat().join(', ') || 'Failed to restore application. Please try again.');
+                setRestoreModalOpen(false);
+                setPendingRestore(null);
+            },
+            onFinish: () => {
+                setProcessing(false);
+                console.log('Restore request finished');
+            },
+        });
     };
 
     const getStatusBadge = (status: string) => {
@@ -591,6 +627,20 @@ export default function Applications() {
                                                     <Eye size={12} className="mr-1" />
                                                     View
                                                 </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleRestore(application)}
+                                                    className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
+                                                    disabled={processing}
+                                                >
+                                                    {processing && pendingRestore?.id === application.id ? (
+                                                        <Loader2 size={12} className="mr-1 animate-spin" />
+                                                    ) : (
+                                                        <RotateCcw size={12} className="mr-1" />
+                                                    )}
+                                                    {processing && pendingRestore?.id === application.id ? 'Restoring...' : 'Restore'}
+                                                </Button>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -781,6 +831,21 @@ export default function Applications() {
                     title="Approve Application?"
                     message={pendingApproval ? `Are you sure you want to approve the application from ${pendingApproval.first_name} ${pendingApproval.last_name}?\n\nThis will create a student account and add them to the system.` : ''}
                     confirmText={processing ? 'Approving...' : 'Approve Application'}
+                    isDestructive={false}
+                />
+                
+                {/* Restore Warning Dialog */}
+                <WarningDialog
+                    open={restoreModalOpen}
+                    onClose={() => {
+                        setRestoreModalOpen(false);
+                        setPendingRestore(null);
+                        setProcessing(false);
+                    }}
+                    onConfirm={confirmRestore}
+                    title="Restore Application?"
+                    message={pendingRestore ? `Are you sure you want to restore the application from ${pendingRestore.first_name} ${pendingRestore.last_name} back to pending status?\n\n${pendingRestore.status === 'approved' ? 'This will remove the student record that was created during approval.' : 'This will clear the rejection reason and allow you to process it again.'}` : ''}
+                    confirmText={processing ? 'Restoring...' : 'Restore Application'}
                     isDestructive={false}
                 />
             </div>

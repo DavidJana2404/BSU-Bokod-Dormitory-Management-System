@@ -511,6 +511,141 @@ class ApplicationController extends Controller
     }
     
     /**
+     * Restore an application back to pending status.
+     */
+    public function restore(Application $application)
+    {
+        try {
+            // Validate application status - can only restore approved or rejected applications
+            if ($application->status === 'pending') {
+                \Log::warning('Attempt to restore already pending application', [
+                    'application_id' => $application->id,
+                    'current_status' => $application->status
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'Application is already pending.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'Application is already pending.'], 422);
+                }
+                return redirect()->route('applications.index')->with('error', 'Application is already pending.');
+            }
+            
+            $user = Auth::user();
+            
+            // Ensure user is authenticated and has a role
+            if (!$user || !isset($user->role)) {
+                \Log::error('Unauthorized restore attempt', [
+                    'application_id' => $application->id,
+                    'user_id' => $user ? $user->id : 'null',
+                    'user_role' => $user ? $user->role ?? 'null' : 'null'
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'You must be logged in to restore applications.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'You must be logged in to restore applications.'], 401);
+                }
+                return redirect()->route('applications.index')->with('error', 'You must be logged in to restore applications.');
+            }
+            
+            // Check if manager has permission to restore this application
+            if ($user->role === 'manager' && isset($user->tenant_id) && $user->tenant_id !== $application->tenant_id) {
+                \Log::warning('Manager attempted to restore application outside their dormitory', [
+                    'user_id' => $user->id,
+                    'user_tenant_id' => $user->tenant_id,
+                    'application_tenant_id' => $application->tenant_id,
+                    'application_id' => $application->id
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'You do not have permission to restore this application.');
+                }
+                if (request()->expectsJson()) {
+                    return response()->json(['message' => 'You do not have permission to restore this application.'], 403);
+                }
+                return redirect()->route('applications.index')->with('error', 'You do not have permission to restore this application.');
+            }
+            
+            // Store original status for logging
+            $originalStatus = $application->status;
+            
+            // Use database transaction for consistency
+            DB::transaction(function () use ($application, $user) {
+                // If this was an approved application, we need to handle the student record
+                if ($application->status === 'approved') {
+                    // Find and remove the student record that was created during approval
+                    $student = Student::where('email', $application->email)
+                        ->where('tenant_id', $application->tenant_id)
+                        ->whereNull('archived_at')
+                        ->first();
+                    
+                    if ($student) {
+                        // Soft delete the student record
+                        $student->update(['archived_at' => now()]);
+                        
+                        \Log::info('Student record archived during application restore', [
+                            'student_id' => $student->id,
+                            'application_id' => $application->id,
+                            'restored_by' => $user->id
+                        ]);
+                    }
+                }
+                
+                // Reset application to pending status
+                $application->update([
+                    'status' => 'pending',
+                    'rejection_reason' => null,
+                    'processed_by' => null,
+                    'processed_at' => null,
+                ]);
+                
+                \Log::info('Application restored to pending status', [
+                    'application_id' => $application->id,
+                    'original_status' => $originalStatus,
+                    'restored_by' => $user->id
+                ]);
+            });
+            
+            $successMessage = "Application restored to pending status successfully!";
+            
+            // For Inertia.js requests, redirect back with success message
+            if (request()->header('X-Inertia')) {
+                return redirect()->route('applications.index')->with('success', $successMessage);
+            }
+            
+            // For AJAX requests, return JSON
+            if (request()->expectsJson()) {
+                return response()->json([
+                    'message' => $successMessage,
+                    'application_id' => $application->id
+                ]);
+            }
+            
+            return redirect()->route('applications.index')->with('success', $successMessage);
+            
+        } catch (\Exception $e) {
+            \Log::error('Fatal error in application restore', [
+                'application_id' => $application->id ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $errorMessage = 'Failed to restore application. Please try again.';
+            
+            if (request()->header('X-Inertia')) {
+                return back()->with('error', $errorMessage);
+            }
+            if (request()->expectsJson()) {
+                return response()->json(['message' => $errorMessage], 500);
+            }
+            return redirect()->route('applications.index')->with('error', $errorMessage);
+        }
+    }
+    
+    /**
      * Get dormitories for application form.
      */
     public function getDormitories()
