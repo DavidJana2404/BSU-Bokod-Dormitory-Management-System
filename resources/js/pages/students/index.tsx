@@ -360,7 +360,7 @@ export default function Students() {
                             )}
                             
                             {/* Students List - Scrollable */}
-                            <div className="max-h-[600px] overflow-y-auto space-y-3">
+                            <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-system">
                                 {displayedStudents.map((student: any) => (
                                     <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700">
                                 <CardContent className="p-4">
@@ -761,7 +761,7 @@ export default function Students() {
 
                 {/* Add/Edit Student Dialog */}
                 <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+                <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                     <DialogHeader>
                         <DialogTitle>{isEdit ? 'Update Student' : 'Add Student'}</DialogTitle>
                     </DialogHeader>
@@ -857,7 +857,7 @@ export default function Students() {
                 
                 {/* View Student Modal */}
                 <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-                    <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                         <DialogHeader>
                             <DialogTitle>Student Details</DialogTitle>
                             <DialogDescription>

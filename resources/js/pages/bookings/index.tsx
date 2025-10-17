@@ -396,7 +396,7 @@ export default function Bookings() {
                                 </div>
                             </div>
                             
-                            <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-gray-100 dark:scrollbar-track-gray-800">
+                            <div className="max-h-96 overflow-y-auto scrollbar-system">
                                 <div className="p-6">
                                 <div className="space-y-3">
                                     {displayedBookings.map((booking: any) => {
@@ -645,7 +645,7 @@ export default function Bookings() {
 
                 {/* Add/Edit Booking Dialog */}
                 <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+                <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                     <DialogHeader className="space-y-3">
                         <div className="flex items-center gap-3">
                             <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">

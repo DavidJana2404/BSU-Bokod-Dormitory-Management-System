@@ -671,7 +671,7 @@ export default function AdminUsers() {
                             </div>
                             
                             {/* Students List - Scrollable */}
-                            <div className="max-h-[600px] overflow-y-auto space-y-3">
+                            <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-system">
                                 {displayedStudents.length > 0 ? (
                                     <>
                                         {displayedStudents.map((student: any) => (
@@ -1086,7 +1086,7 @@ export default function AdminUsers() {
 
                 {/* Student Add/Edit Dialog */}
                 <Dialog open={studentDialogOpen} onOpenChange={setStudentDialogOpen}>
-                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                         <DialogHeader>
                             <DialogTitle>{isEditStudent ? 'Update Student' : 'Add Student'}</DialogTitle>
                         </DialogHeader>
@@ -1182,7 +1182,7 @@ export default function AdminUsers() {
                 
                 {/* View Student Modal */}
                 <Dialog open={viewStudentModalOpen} onOpenChange={setViewStudentModalOpen}>
-                    <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                         <DialogHeader>
                             <DialogTitle>Student Details</DialogTitle>
                         </DialogHeader>
@@ -1321,7 +1321,7 @@ export default function AdminUsers() {
 
                 {/* Role Edit Dialog */}
                 <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                         <DialogHeader>
                             <DialogTitle>Edit User Role</DialogTitle>
                         </DialogHeader>

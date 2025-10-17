@@ -75,9 +75,11 @@ export default function Applications() {
     
     // Search and pagination states
     const [pendingSearchTerm, setPendingSearchTerm] = useState('');
-    const [processedSearchTerm, setProcessedSearchTerm] = useState('');
+    const [approvedSearchTerm, setApprovedSearchTerm] = useState('');
+    const [rejectedSearchTerm, setRejectedSearchTerm] = useState('');
     const [pendingPage, setPendingPage] = useState(1);
-    const [processedPage, setProcessedPage] = useState(1);
+    const [approvedPage, setApprovedPage] = useState(1);
+    const [rejectedPage, setRejectedPage] = useState(1);
     const APPLICATIONS_PER_PAGE = 5;
     
     // Filter states
@@ -177,12 +179,12 @@ export default function Applications() {
         );
     };
 
-    const handleRestore = (application: Application) => {
+    const handleRevert = (application: Application) => {
         setPendingRestore(application);
         setRestoreModalOpen(true);
     };
     
-    const confirmRestore = () => {
+    const confirmRevert = () => {
         if (!pendingRestore) return;
         
         setProcessing(true);
@@ -191,21 +193,21 @@ export default function Applications() {
         
         router.put(`/applications/${pendingRestore.id}/restore`, {}, {
             onSuccess: (page) => {
-                console.log('Restore success response:', page);
-                setSuccess('Application restored to pending status successfully!');
+                console.log('Revert success response:', page);
+                setSuccess('Application reverted to pending status successfully!');
                 setRestoreModalOpen(false);
                 setPendingRestore(null);
             },
             onError: (errors) => {
-                console.error('Error restoring application:', errors);
+                console.error('Error reverting application:', errors);
                 console.error('Full error object:', JSON.stringify(errors, null, 2));
-                setError(errors?.message || Object.values(errors || {}).flat().join(', ') || 'Failed to restore application. Please try again.');
+                setError(errors?.message || Object.values(errors || {}).flat().join(', ') || 'Failed to revert application. Please try again.');
                 setRestoreModalOpen(false);
                 setPendingRestore(null);
             },
             onFinish: () => {
                 setProcessing(false);
-                console.log('Restore request finished');
+                console.log('Revert request finished');
             },
         });
     };
@@ -237,39 +239,41 @@ export default function Applications() {
         );
     });
     
-    // Filter processed applications based on search term and active filter
-    const getProcessedApplications = () => {
-        let apps = applications.filter(app => app.status !== 'pending');
-        
-        // Apply specific filter
-        if (activeFilter === 'approved') {
-            apps = applications.filter(app => app.status === 'approved');
-        } else if (activeFilter === 'rejected') {
-            apps = applications.filter(app => app.status === 'rejected');
-        }
-        
-        return apps;
-    };
-    
-    const allProcessedApplications = getProcessedApplications();
-    const filteredProcessedApplications = allProcessedApplications.filter(app => {
-        if (!processedSearchTerm) return true;
-        const searchLower = processedSearchTerm.toLowerCase();
+    // Filter approved applications based on search term
+    const allApprovedApplications = applications.filter(app => app.status === 'approved');
+    const filteredApprovedApplications = allApprovedApplications.filter(app => {
+        if (!approvedSearchTerm) return true;
+        const searchLower = approvedSearchTerm.toLowerCase();
         return (
             app.first_name.toLowerCase().includes(searchLower) ||
             app.last_name.toLowerCase().includes(searchLower) ||
             app.email.toLowerCase().includes(searchLower) ||
             app.phone.toLowerCase().includes(searchLower) ||
-            app.tenant.dormitory_name.toLowerCase().includes(searchLower) ||
-            app.status.toLowerCase().includes(searchLower)
+            app.tenant.dormitory_name.toLowerCase().includes(searchLower)
+        );
+    });
+    
+    // Filter rejected applications based on search term
+    const allRejectedApplications = applications.filter(app => app.status === 'rejected');
+    const filteredRejectedApplications = allRejectedApplications.filter(app => {
+        if (!rejectedSearchTerm) return true;
+        const searchLower = rejectedSearchTerm.toLowerCase();
+        return (
+            app.first_name.toLowerCase().includes(searchLower) ||
+            app.last_name.toLowerCase().includes(searchLower) ||
+            app.email.toLowerCase().includes(searchLower) ||
+            app.phone.toLowerCase().includes(searchLower) ||
+            app.tenant.dormitory_name.toLowerCase().includes(searchLower)
         );
     });
     
     // Paginate applications for infinite scroll
     const displayedPendingApplications = filteredPendingApplications.slice(0, pendingPage * APPLICATIONS_PER_PAGE);
-    const displayedProcessedApplications = filteredProcessedApplications.slice(0, processedPage * APPLICATIONS_PER_PAGE);
+    const displayedApprovedApplications = filteredApprovedApplications.slice(0, approvedPage * APPLICATIONS_PER_PAGE);
+    const displayedRejectedApplications = filteredRejectedApplications.slice(0, rejectedPage * APPLICATIONS_PER_PAGE);
     const hasMorePendingApplications = filteredPendingApplications.length > displayedPendingApplications.length;
-    const hasMoreProcessedApplications = filteredProcessedApplications.length > displayedProcessedApplications.length;
+    const hasMoreApprovedApplications = filteredApprovedApplications.length > displayedApprovedApplications.length;
+    const hasMoreRejectedApplications = filteredRejectedApplications.length > displayedRejectedApplications.length;
     
     const loadMorePendingApplications = () => {
         if (hasMorePendingApplications) {
@@ -277,15 +281,22 @@ export default function Applications() {
         }
     };
     
-    const loadMoreProcessedApplications = () => {
-        if (hasMoreProcessedApplications) {
-            setProcessedPage(prev => prev + 1);
+    const loadMoreApprovedApplications = () => {
+        if (hasMoreApprovedApplications) {
+            setApprovedPage(prev => prev + 1);
+        }
+    };
+    
+    const loadMoreRejectedApplications = () => {
+        if (hasMoreRejectedApplications) {
+            setRejectedPage(prev => prev + 1);
         }
     };
     
     // For compatibility, keep these names for stats
     const pendingApplications = allPendingApplications;
-    const processedApplications = allProcessedApplications;
+    const approvedApplications = allApprovedApplications;
+    const rejectedApplications = allRejectedApplications;
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Applications', href: '/applications' }]}>
@@ -432,7 +443,7 @@ export default function Applications() {
                             )}
                             
                             {/* Applications List - Scrollable */}
-                            <div className="max-h-[600px] overflow-y-auto space-y-3">
+                            <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-system">
                                 {displayedPendingApplications.map((application) => (
                                 <Card key={application.id} className="border border-yellow-200 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-950/10">
                                     <CardContent className="p-4">
@@ -535,48 +546,43 @@ export default function Applications() {
                     </Card>
                 )}
 
-                {/* Processed Applications Section */}
-                {((activeFilter === 'all') || (activeFilter === 'approved' || activeFilter === 'rejected')) && processedApplications.length > 0 && (
-                    <Card className="border border-gray-200 dark:border-gray-700">
+                {/* Approved Applications Section */}
+                {(activeFilter === 'all' || activeFilter === 'approved') && approvedApplications.length > 0 && (
+                    <Card className="border border-green-200 dark:border-green-700">
                         <CardContent className="p-6">
-                            {/* Search Bar */}
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                    <CheckCircle className="text-gray-500" size={20} />
-                                    {activeFilter === 'approved' ? `Approved Applications (${applications.filter(app => app.status === 'approved').length})` :
-                                     activeFilter === 'rejected' ? `Rejected Applications (${applications.filter(app => app.status === 'rejected').length})` :
-                                     `Processed Applications (${filteredProcessedApplications.length})`}
+                                    <CheckCircle className="text-green-500" size={20} />
+                                    Approved Applications ({filteredApprovedApplications.length})
                                 </h2>
                             </div>
                             <div className="relative mb-4">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                                 <Input
-                                    placeholder="Search processed applications..."
-                                    value={processedSearchTerm}
+                                    placeholder="Search approved applications..."
+                                    value={approvedSearchTerm}
                                     onChange={(e) => {
-                                        setProcessedSearchTerm(e.target.value);
-                                        setProcessedPage(1); // Reset pagination when searching
+                                        setApprovedSearchTerm(e.target.value);
+                                        setApprovedPage(1);
                                     }}
                                     className="pl-10"
                                 />
                             </div>
-                            {processedSearchTerm && (
+                            {approvedSearchTerm && (
                                 <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                                    Found {filteredProcessedApplications.length} of {processedApplications.length} processed applications
+                                    Found {filteredApprovedApplications.length} of {approvedApplications.length} approved applications
                                 </div>
                             )}
                             
-                            {/* Applications List - Scrollable */}
-                            <div className="max-h-[600px] overflow-y-auto space-y-3">
-                                {displayedProcessedApplications.map((application) => (
-                                <Card key={application.id} className="border border-gray-200 dark:border-gray-700">
+                            <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-system">
+                                {displayedApprovedApplications.map((application) => (
+                                <Card key={application.id} className="border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/10">
                                     <CardContent className="p-4">
                                         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-                                            {/* Applicant Info */}
                                             <div className="lg:col-span-3">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg p-2">
-                                                        <User className="text-gray-600 dark:text-gray-400" size={18} />
+                                                    <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-2">
+                                                        <User className="text-green-600 dark:text-green-400" size={18} />
                                                     </div>
                                                     <div>
                                                         <h3 className="font-semibold text-gray-900 dark:text-gray-100">
@@ -589,8 +595,6 @@ export default function Applications() {
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Contact & Dormitory */}
                                             <div className="lg:col-span-3 space-y-2">
                                                 <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                                     <Phone size={12} className="text-green-500" />
@@ -601,13 +605,11 @@ export default function Applications() {
                                                     {application.tenant.dormitory_name}
                                                 </div>
                                             </div>
-
-                                            {/* Application Date & Status */}
                                             <div className="lg:col-span-3 space-y-2">
                                                 <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
                                                     <Calendar size={12} className="text-orange-500" />
                                                     {application.processed_at ? 
-                                                        `Processed: ${new Date(application.processed_at).toLocaleDateString()}` :
+                                                        `Approved: ${new Date(application.processed_at).toLocaleDateString()}` :
                                                         `Applied: ${new Date(application.created_at).toLocaleDateString()}`
                                                     }
                                                 </div>
@@ -615,8 +617,6 @@ export default function Applications() {
                                                     {getStatusBadge(application.status)}
                                                 </div>
                                             </div>
-
-                                            {/* Actions */}
                                             <div className="lg:col-span-3 flex gap-2 justify-end">
                                                 <Button
                                                     size="sm"
@@ -630,7 +630,7 @@ export default function Applications() {
                                                 <Button
                                                     size="sm"
                                                     variant="outline"
-                                                    onClick={() => handleRestore(application)}
+                                                    onClick={() => handleRevert(application)}
                                                     className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
                                                     disabled={processing}
                                                 >
@@ -639,7 +639,7 @@ export default function Applications() {
                                                     ) : (
                                                         <RotateCcw size={12} className="mr-1" />
                                                     )}
-                                                    {processing && pendingRestore?.id === application.id ? 'Restoring...' : 'Restore'}
+                                                    {processing && pendingRestore?.id === application.id ? 'Reverting...' : 'Revert'}
                                                 </Button>
                                             </div>
                                         </div>
@@ -647,15 +647,131 @@ export default function Applications() {
                                 </Card>
                             ))}
                             
-                            {/* Load More Button */}
-                            {hasMoreProcessedApplications && (
+                            {hasMoreApprovedApplications && (
                                 <div className="pt-4 text-center">
                                     <Button
                                         variant="outline"
-                                        onClick={loadMoreProcessedApplications}
-                                        className="text-sm"
+                                        onClick={loadMoreApprovedApplications}
+                                        className="text-sm border-green-600 text-green-600 hover:bg-green-50"
                                     >
-                                        Load More Processed Applications
+                                        Load More Approved Applications
+                                    </Button>
+                                </div>
+                            )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Rejected Applications Section */}
+                {(activeFilter === 'all' || activeFilter === 'rejected') && rejectedApplications.length > 0 && (
+                    <Card className="border border-red-200 dark:border-red-700">
+                        <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <XCircle className="text-red-500" size={20} />
+                                    Rejected Applications ({filteredRejectedApplications.length})
+                                </h2>
+                            </div>
+                            <div className="relative mb-4">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                                <Input
+                                    placeholder="Search rejected applications..."
+                                    value={rejectedSearchTerm}
+                                    onChange={(e) => {
+                                        setRejectedSearchTerm(e.target.value);
+                                        setRejectedPage(1);
+                                    }}
+                                    className="pl-10"
+                                />
+                            </div>
+                            {rejectedSearchTerm && (
+                                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                                    Found {filteredRejectedApplications.length} of {rejectedApplications.length} rejected applications
+                                </div>
+                            )}
+                            
+                            <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-system">
+                                {displayedRejectedApplications.map((application) => (
+                                <Card key={application.id} className="border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/10">
+                                    <CardContent className="p-4">
+                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+                                            <div className="lg:col-span-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="bg-red-100 dark:bg-red-900/30 rounded-lg p-2">
+                                                        <User className="text-red-600 dark:text-red-400" size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                                                            {application.first_name} {application.last_name}
+                                                        </h3>
+                                                        <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                                            <Mail size={12} />
+                                                            {application.email}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="lg:col-span-3 space-y-2">
+                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                                    <Phone size={12} className="text-green-500" />
+                                                    {application.phone}
+                                                </div>
+                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                                    <Building2 size={12} className="text-purple-500" />
+                                                    {application.tenant.dormitory_name}
+                                                </div>
+                                            </div>
+                                            <div className="lg:col-span-3 space-y-2">
+                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                                    <Calendar size={12} className="text-orange-500" />
+                                                    {application.processed_at ? 
+                                                        `Rejected: ${new Date(application.processed_at).toLocaleDateString()}` :
+                                                        `Applied: ${new Date(application.created_at).toLocaleDateString()}`
+                                                    }
+                                                </div>
+                                                <div>
+                                                    {getStatusBadge(application.status)}
+                                                </div>
+                                            </div>
+                                            <div className="lg:col-span-3 flex gap-2 justify-end">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleViewApplication(application)}
+                                                    className="h-8 px-3 text-xs"
+                                                >
+                                                    <Eye size={12} className="mr-1" />
+                                                    View
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleRevert(application)}
+                                                    className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
+                                                    disabled={processing}
+                                                >
+                                                    {processing && pendingRestore?.id === application.id ? (
+                                                        <Loader2 size={12} className="mr-1 animate-spin" />
+                                                    ) : (
+                                                        <RotateCcw size={12} className="mr-1" />
+                                                    )}
+                                                    {processing && pendingRestore?.id === application.id ? 'Reverting...' : 'Revert'}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                            
+                            {hasMoreRejectedApplications && (
+                                <div className="pt-4 text-center">
+                                    <Button
+                                        variant="outline"
+                                        onClick={loadMoreRejectedApplications}
+                                        className="text-sm border-red-600 text-red-600 hover:bg-red-50"
+                                    >
+                                        Load More Rejected Applications
                                     </Button>
                                 </div>
                             )}
@@ -679,7 +795,7 @@ export default function Applications() {
 
                 {/* View Application Modal */}
                 <Dialog open={viewModalOpen} onOpenChange={setViewModalOpen}>
-                    <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="w-[95vw] max-w-md sm:max-w-lg md:max-w-xl mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                         <DialogHeader>
                             <DialogTitle>Application Details</DialogTitle>
                             <DialogDescription>
@@ -759,7 +875,7 @@ export default function Applications() {
 
                 {/* Reject Application Modal */}
                 <Dialog open={rejectModalOpen} onOpenChange={setRejectModalOpen}>
-                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
+                    <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                         <DialogHeader>
                             <DialogTitle>Reject Application</DialogTitle>
                             <DialogDescription>
@@ -834,7 +950,7 @@ export default function Applications() {
                     isDestructive={false}
                 />
                 
-                {/* Restore Warning Dialog */}
+                {/* Revert Warning Dialog */}
                 <WarningDialog
                     open={restoreModalOpen}
                     onClose={() => {
@@ -842,10 +958,10 @@ export default function Applications() {
                         setPendingRestore(null);
                         setProcessing(false);
                     }}
-                    onConfirm={confirmRestore}
-                    title="Restore Application?"
-                    message={pendingRestore ? `Are you sure you want to restore the application from ${pendingRestore.first_name} ${pendingRestore.last_name} back to pending status?\n\n${pendingRestore.status === 'approved' ? 'This will remove the student record that was created during approval.' : 'This will clear the rejection reason and allow you to process it again.'}` : ''}
-                    confirmText={processing ? 'Restoring...' : 'Restore Application'}
+                    onConfirm={confirmRevert}
+                    title="Revert Application?"
+                    message={pendingRestore ? `Are you sure you want to revert the application from ${pendingRestore.first_name} ${pendingRestore.last_name} back to pending status?\n\n${pendingRestore.status === 'approved' ? 'This will remove the student record that was created during approval.' : 'This will clear the rejection reason and allow you to process it again.'}` : ''}
+                    confirmText={processing ? 'Reverting...' : 'Revert Application'}
                     isDestructive={false}
                 />
             </div>
