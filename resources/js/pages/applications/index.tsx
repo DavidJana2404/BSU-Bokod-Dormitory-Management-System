@@ -546,235 +546,227 @@ export default function Applications() {
                     </Card>
                 )}
 
-                {/* Approved Applications Section */}
-                {(activeFilter === 'all' || activeFilter === 'approved') && approvedApplications.length > 0 && (
+                {/* Processed Applications Section - Contains both Approved and Rejected */}
+                {(activeFilter === 'all' || activeFilter === 'approved' || activeFilter === 'rejected') && (approvedApplications.length > 0 || rejectedApplications.length > 0) && (
                     <Card className="border border-gray-200 dark:border-gray-700">
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                    <CheckCircle className="text-green-500" size={20} />
-                                    Approved Applications ({filteredApprovedApplications.length})
+                                    <CheckCircle className="text-gray-500" size={20} />
+                                    Processed Applications ({approvedApplications.length + rejectedApplications.length})
                                 </h2>
                             </div>
-                            <div className="relative mb-4">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                                <Input
-                                    placeholder="Search approved applications..."
-                                    value={approvedSearchTerm}
-                                    onChange={(e) => {
-                                        setApprovedSearchTerm(e.target.value);
-                                        setApprovedPage(1);
-                                    }}
-                                    className="pl-10"
-                                />
-                            </div>
-                            {approvedSearchTerm && (
-                                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                                    Found {filteredApprovedApplications.length} of {approvedApplications.length} approved applications
-                                </div>
-                            )}
                             
-                            <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-system">
-                                {displayedApprovedApplications.map((application) => (
-                                <Card key={application.id} className="border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/10">
-                                    <CardContent className="p-4">
-                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-                                            <div className="lg:col-span-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-2">
-                                                        <User className="text-green-600 dark:text-green-400" size={18} />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                                                            {application.first_name} {application.last_name}
-                                                        </h3>
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                                            <Mail size={12} />
-                                                            {application.email}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Approved Applications Column */}
+                                {(activeFilter === 'all' || activeFilter === 'approved') && approvedApplications.length > 0 && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                                <CheckCircle className="text-green-500" size={18} />
+                                                Approved ({filteredApprovedApplications.length})
+                                            </h3>
+                                        </div>
+                                        <div className="relative mb-4">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                                            <Input
+                                                placeholder="Search approved..."
+                                                value={approvedSearchTerm}
+                                                onChange={(e) => {
+                                                    setApprovedSearchTerm(e.target.value);
+                                                    setApprovedPage(1);
+                                                }}
+                                                className="pl-9 h-8 text-sm"
+                                            />
+                                        </div>
+                                        {approvedSearchTerm && (
+                                            <div className="mb-3 text-xs text-gray-600 dark:text-gray-400">
+                                                Found {filteredApprovedApplications.length} of {approvedApplications.length}
+                                            </div>
+                                        )}
+                                        
+                                        <div className="max-h-[500px] overflow-y-auto space-y-3 scrollbar-system">
+                                            {displayedApprovedApplications.map((application) => (
+                                            <Card key={application.id} className="border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/10">
+                                                <CardContent className="p-3">
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-2 flex-shrink-0">
+                                                                <User className="text-green-600 dark:text-green-400" size={16} />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                                                                    {application.first_name} {application.last_name}
+                                                                </h4>
+                                                                <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+                                                                    <Mail size={10} />
+                                                                    {application.email}
+                                                                </div>
+                                                                <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+                                                                    <Building2 size={10} className="text-purple-500" />
+                                                                    {application.tenant.dormitory_name}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                                                <Calendar size={10} className="text-orange-500" />
+                                                                {application.processed_at ? 
+                                                                    new Date(application.processed_at).toLocaleDateString() :
+                                                                    new Date(application.created_at).toLocaleDateString()
+                                                                }
+                                                            </div>
+                                                            <div className="flex gap-1">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleViewApplication(application)}
+                                                                    className="h-6 px-2 text-xs"
+                                                                >
+                                                                    <Eye size={10} className="mr-1" />
+                                                                    View
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleRevert(application)}
+                                                                    className="h-6 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
+                                                                    disabled={processing}
+                                                                >
+                                                                    {processing && pendingRestore?.id === application.id ? (
+                                                                        <Loader2 size={10} className="mr-1 animate-spin" />
+                                                                    ) : (
+                                                                        <RotateCcw size={10} className="mr-1" />
+                                                                    )}
+                                                                    Revert
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                </CardContent>
+                                            </Card>
+                                            ))}
+                                            
+                                            {hasMoreApprovedApplications && (
+                                                <div className="pt-3 text-center">
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={loadMoreApprovedApplications}
+                                                        className="text-xs border-green-600 text-green-600 hover:bg-green-50 h-8"
+                                                    >
+                                                        Load More
+                                                    </Button>
                                                 </div>
-                                            </div>
-                                            <div className="lg:col-span-3 space-y-2">
-                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                                    <Phone size={12} className="text-green-500" />
-                                                    {application.phone}
-                                                </div>
-                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                                    <Building2 size={12} className="text-purple-500" />
-                                                    {application.tenant.dormitory_name}
-                                                </div>
-                                            </div>
-                                            <div className="lg:col-span-3 space-y-2">
-                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                                    <Calendar size={12} className="text-orange-500" />
-                                                    {application.processed_at ? 
-                                                        `Approved: ${new Date(application.processed_at).toLocaleDateString()}` :
-                                                        `Applied: ${new Date(application.created_at).toLocaleDateString()}`
-                                                    }
-                                                </div>
-                                                <div>
-                                                    {getStatusBadge(application.status)}
-                                                </div>
-                                            </div>
-                                            <div className="lg:col-span-3 flex gap-2 justify-end">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleViewApplication(application)}
-                                                    className="h-8 px-3 text-xs"
-                                                >
-                                                    <Eye size={12} className="mr-1" />
-                                                    View
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleRevert(application)}
-                                                    className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
-                                                    disabled={processing}
-                                                >
-                                                    {processing && pendingRestore?.id === application.id ? (
-                                                        <Loader2 size={12} className="mr-1 animate-spin" />
-                                                    ) : (
-                                                        <RotateCcw size={12} className="mr-1" />
-                                                    )}
-                                                    {processing && pendingRestore?.id === application.id ? 'Reverting...' : 'Revert'}
-                                                </Button>
-                                            </div>
+                                            )}
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                            
-                            {hasMoreApprovedApplications && (
-                                <div className="pt-4 text-center">
-                                    <Button
-                                        variant="outline"
-                                        onClick={loadMoreApprovedApplications}
-                                        className="text-sm border-green-600 text-green-600 hover:bg-green-50"
-                                    >
-                                        Load More Approved Applications
-                                    </Button>
-                                </div>
-                            )}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                                    </div>
+                                )}
 
-                {/* Rejected Applications Section */}
-                {(activeFilter === 'all' || activeFilter === 'rejected') && rejectedApplications.length > 0 && (
-                    <Card className="border border-gray-200 dark:border-gray-700">
-                        <CardContent className="p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                    <XCircle className="text-red-500" size={20} />
-                                    Rejected Applications ({filteredRejectedApplications.length})
-                                </h2>
-                            </div>
-                            <div className="relative mb-4">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                                <Input
-                                    placeholder="Search rejected applications..."
-                                    value={rejectedSearchTerm}
-                                    onChange={(e) => {
-                                        setRejectedSearchTerm(e.target.value);
-                                        setRejectedPage(1);
-                                    }}
-                                    className="pl-10"
-                                />
-                            </div>
-                            {rejectedSearchTerm && (
-                                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                                    Found {filteredRejectedApplications.length} of {rejectedApplications.length} rejected applications
-                                </div>
-                            )}
-                            
-                            <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-system">
-                                {displayedRejectedApplications.map((application) => (
-                                <Card key={application.id} className="border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/10">
-                                    <CardContent className="p-4">
-                                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
-                                            <div className="lg:col-span-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="bg-red-100 dark:bg-red-900/30 rounded-lg p-2">
-                                                        <User className="text-red-600 dark:text-red-400" size={18} />
-                                                    </div>
-                                                    <div>
-                                                        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
-                                                            {application.first_name} {application.last_name}
-                                                        </h3>
-                                                        <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                                            <Mail size={12} />
-                                                            {application.email}
+                                {/* Rejected Applications Column */}
+                                {(activeFilter === 'all' || activeFilter === 'rejected') && rejectedApplications.length > 0 && (
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                                <XCircle className="text-red-500" size={18} />
+                                                Rejected ({filteredRejectedApplications.length})
+                                            </h3>
+                                        </div>
+                                        <div className="relative mb-4">
+                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                                            <Input
+                                                placeholder="Search rejected..."
+                                                value={rejectedSearchTerm}
+                                                onChange={(e) => {
+                                                    setRejectedSearchTerm(e.target.value);
+                                                    setRejectedPage(1);
+                                                }}
+                                                className="pl-9 h-8 text-sm"
+                                            />
+                                        </div>
+                                        {rejectedSearchTerm && (
+                                            <div className="mb-3 text-xs text-gray-600 dark:text-gray-400">
+                                                Found {filteredRejectedApplications.length} of {rejectedApplications.length}
+                                            </div>
+                                        )}
+                                        
+                                        <div className="max-h-[500px] overflow-y-auto space-y-3 scrollbar-system">
+                                            {displayedRejectedApplications.map((application) => (
+                                            <Card key={application.id} className="border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/10">
+                                                <CardContent className="p-3">
+                                                    <div className="space-y-3">
+                                                        <div className="flex items-start gap-3">
+                                                            <div className="bg-red-100 dark:bg-red-900/30 rounded-lg p-2 flex-shrink-0">
+                                                                <User className="text-red-600 dark:text-red-400" size={16} />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                                                                    {application.first_name} {application.last_name}
+                                                                </h4>
+                                                                <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+                                                                    <Mail size={10} />
+                                                                    {application.email}
+                                                                </div>
+                                                                <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+                                                                    <Building2 size={10} className="text-purple-500" />
+                                                                    {application.tenant.dormitory_name}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                                                <Calendar size={10} className="text-orange-500" />
+                                                                {application.processed_at ? 
+                                                                    new Date(application.processed_at).toLocaleDateString() :
+                                                                    new Date(application.created_at).toLocaleDateString()
+                                                                }
+                                                            </div>
+                                                            <div className="flex gap-1">
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleViewApplication(application)}
+                                                                    className="h-6 px-2 text-xs"
+                                                                >
+                                                                    <Eye size={10} className="mr-1" />
+                                                                    View
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleRevert(application)}
+                                                                    className="h-6 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
+                                                                    disabled={processing}
+                                                                >
+                                                                    {processing && pendingRestore?.id === application.id ? (
+                                                                        <Loader2 size={10} className="mr-1 animate-spin" />
+                                                                    ) : (
+                                                                        <RotateCcw size={10} className="mr-1" />
+                                                                    )}
+                                                                    Revert
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                </CardContent>
+                                            </Card>
+                                            ))}
+                                            
+                                            {hasMoreRejectedApplications && (
+                                                <div className="pt-3 text-center">
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={loadMoreRejectedApplications}
+                                                        className="text-xs border-red-600 text-red-600 hover:bg-red-50 h-8"
+                                                    >
+                                                        Load More
+                                                    </Button>
                                                 </div>
-                                            </div>
-                                            <div className="lg:col-span-3 space-y-2">
-                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                                    <Phone size={12} className="text-green-500" />
-                                                    {application.phone}
-                                                </div>
-                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                                    <Building2 size={12} className="text-purple-500" />
-                                                    {application.tenant.dormitory_name}
-                                                </div>
-                                            </div>
-                                            <div className="lg:col-span-3 space-y-2">
-                                                <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                                                    <Calendar size={12} className="text-orange-500" />
-                                                    {application.processed_at ? 
-                                                        `Rejected: ${new Date(application.processed_at).toLocaleDateString()}` :
-                                                        `Applied: ${new Date(application.created_at).toLocaleDateString()}`
-                                                    }
-                                                </div>
-                                                <div>
-                                                    {getStatusBadge(application.status)}
-                                                </div>
-                                            </div>
-                                            <div className="lg:col-span-3 flex gap-2 justify-end">
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleViewApplication(application)}
-                                                    className="h-8 px-3 text-xs"
-                                                >
-                                                    <Eye size={12} className="mr-1" />
-                                                    View
-                                                </Button>
-                                                <Button
-                                                    size="sm"
-                                                    variant="outline"
-                                                    onClick={() => handleRevert(application)}
-                                                    className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white border-blue-600 hover:border-blue-700"
-                                                    disabled={processing}
-                                                >
-                                                    {processing && pendingRestore?.id === application.id ? (
-                                                        <Loader2 size={12} className="mr-1 animate-spin" />
-                                                    ) : (
-                                                        <RotateCcw size={12} className="mr-1" />
-                                                    )}
-                                                    {processing && pendingRestore?.id === application.id ? 'Reverting...' : 'Revert'}
-                                                </Button>
-                                            </div>
+                                            )}
                                         </div>
-                                    </CardContent>
-                                </Card>
-                            ))}
-                            
-                            {hasMoreRejectedApplications && (
-                                <div className="pt-4 text-center">
-                                    <Button
-                                        variant="outline"
-                                        onClick={loadMoreRejectedApplications}
-                                        className="text-sm border-red-600 text-red-600 hover:bg-red-50"
-                                    >
-                                        Load More Rejected Applications
-                                    </Button>
-                                </div>
-                            )}
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

@@ -374,31 +374,33 @@ export default function Bookings() {
                 {bookingList.length > 0 ? (
                     <Card className="border border-gray-200 dark:border-gray-700">
                         <CardContent className="p-6">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                    <Calendar className="text-blue-600 dark:text-blue-400" size={24} />
-                                    Bookings List
+                            {/* Search Bar */}
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                    <Calendar className="text-blue-600 dark:text-blue-400" size={20} />
+                                    Bookings ({filteredBookings.length})
                                 </h2>
-                                <div className="relative">
-                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                        <Search className="h-5 w-5 text-gray-400" />
-                                    </div>
-                                    <input
-                                        type="text"
-                                        placeholder="Search bookings..."
-                                        value={searchTerm}
-                                        onChange={(e) => {
-                                            setSearchTerm(e.target.value);
-                                            setBookingsPage(1); // Reset pagination when searching
-                                        }}
-                                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white dark:bg-gray-700 dark:border-gray-600 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                                    />
-                                </div>
                             </div>
+                            <div className="relative mb-4">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                                <Input
+                                    placeholder="Search bookings by student name, room number, or booking ID..."
+                                    value={searchTerm}
+                                    onChange={(e) => {
+                                        setSearchTerm(e.target.value);
+                                        setBookingsPage(1); // Reset pagination when searching
+                                    }}
+                                    className="pl-10"
+                                />
+                            </div>
+                            {searchTerm && (
+                                <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                                    Found {filteredBookings.length} of {bookingList.length} bookings
+                                </div>
+                            )}
                             
-                            <div className="max-h-96 overflow-y-auto scrollbar-system">
-                                <div className="p-6">
-                                <div className="space-y-3">
+                            {/* Bookings List - Scrollable */}
+                            <div className="max-h-[600px] overflow-y-auto space-y-3 scrollbar-system">
                                     {displayedBookings.map((booking: any) => {
                             // Use student and room data directly from booking relationships
                             const student = booking.student || null;
@@ -579,20 +581,19 @@ export default function Bookings() {
                             );
                         })}
                         
-                        {/* Load More Button */}
-                        {hasMoreBookings && (
-                            <div className="pt-4 text-center">
-                                <button
-                                    onClick={loadMoreBookings}
-                                    className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 border border-blue-600 dark:border-blue-400 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-                                >
-                                    Load More Bookings
-                                </button>
+                            {/* Load More Button */}
+                            {hasMoreBookings && (
+                                <div className="pt-4 text-center">
+                                    <Button
+                                        variant="outline"
+                                        onClick={loadMoreBookings}
+                                        className="text-sm"
+                                    >
+                                        Load More Bookings
+                                    </Button>
+                                </div>
+                            )}
                             </div>
-                        )}
-                    </div>
-                </div>
-            </div>
                         </CardContent>
                     </Card>
                 ) : (
