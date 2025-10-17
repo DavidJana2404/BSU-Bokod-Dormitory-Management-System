@@ -548,7 +548,7 @@ export default function Applications() {
 
                 {/* Approved Applications Section */}
                 {(activeFilter === 'all' || activeFilter === 'approved') && approvedApplications.length > 0 && (
-                    <Card className="border border-green-200 dark:border-green-700">
+                    <Card className="border border-gray-200 dark:border-gray-700">
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -665,7 +665,7 @@ export default function Applications() {
 
                 {/* Rejected Applications Section */}
                 {(activeFilter === 'all' || activeFilter === 'rejected') && rejectedApplications.length > 0 && (
-                    <Card className="border border-red-200 dark:border-red-700">
+                    <Card className="border border-gray-200 dark:border-gray-700">
                         <CardContent className="p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
