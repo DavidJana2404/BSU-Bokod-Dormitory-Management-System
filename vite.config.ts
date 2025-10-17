@@ -21,15 +21,35 @@ export default defineConfig({
         jsx: 'automatic',
     },
     build: {
-        // Use default Vite build settings for maximum compatibility
-        minify: true,  // Uses esbuild by default
+        // Optimize build settings for production deployment
+        minify: 'esbuild',
+        target: 'es2020',
+        reportCompressedSize: false,
+        chunkSizeWarningLimit: 1000,
         rollupOptions: {
             output: {
-                // Simple asset naming
+                // Consistent asset naming for better caching
                 assetFileNames: 'assets/[name]-[hash][extname]',
                 chunkFileNames: 'js/[name]-[hash].js',
-                entryFileNames: 'js/[name]-[hash].js'
+                entryFileNames: 'js/[name]-[hash].js',
+                // Automatic chunk optimization
+                manualChunks(id) {
+                    if (id.includes('node_modules')) {
+                        if (id.includes('react') || id.includes('react-dom')) {
+                            return 'vendor';
+                        }
+                        if (id.includes('@radix-ui')) {
+                            return 'ui';
+                        }
+                        return 'vendor';
+                    }
+                }
             }
+        }
+    },
+    server: {
+        hmr: {
+            overlay: false
         }
     }
 });

@@ -29,10 +29,8 @@
     {{-- Optimized font loading to prevent preload warnings --}}
     <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
     <link rel="dns-prefetch" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600&display=swap" rel="stylesheet" media="print" onload="this.media='all'; this.onload=null;" />
-    <noscript>
-        <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600&display=swap" rel="stylesheet" />
-    </noscript>
+    <link rel="preload" href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600&display=swap" as="style" crossorigin>
+    <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600&display=swap" rel="stylesheet" crossorigin>
 
     @routes {{-- Ziggy routes --}}
     @viteReactRefresh
