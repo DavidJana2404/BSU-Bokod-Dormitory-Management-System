@@ -218,6 +218,7 @@ class Room extends Model
             'student_id',   // Foreign key on students table
             'room_id',      // Local key on rooms table
             'student_id'    // Local key on bookings table
-        )->whereNull('bookings.archived_at');
+        )->whereNull('bookings.archived_at')
+         ->whereNull('students.archived_at');
     }
 }
