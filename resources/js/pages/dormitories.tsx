@@ -17,12 +17,18 @@ interface Dormitory {
     created_at: string;
 }
 
-const emptyForm = { dormitory_name: '', address: '', contact_number: '' };
+const emptyForm = { dormitory_name: '' };
+
+type FormState = {
+    dormitory_name: string;
+    address?: string;
+    contact_number?: string;
+};
 
 export default function ManageDormitories() {
     const { dormitories } = usePage().props as unknown as { dormitories: Dormitory[] };
     const [open, setOpen] = useState(false);
-    const [form, setForm] = useState(emptyForm);
+    const [form, setForm] = useState<FormState>(emptyForm);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isEdit, setIsEdit] = useState(false);
@@ -337,41 +343,53 @@ export default function ManageDormitories() {
                                 {errors.dormitory_name && <div className="text-red-500 text-xs mt-1 flex items-center gap-1">⚠️ {errors.dormitory_name[0]}</div>}
                             </div>
 
-                            <div className="space-y-2">
-                                <label htmlFor="address" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    <MapPin size={14} className="text-blue-500" />
-                                    Address
-                                </label>
-                                <input 
-                                    id="address" 
-                                    name="address" 
-                                    type="text" 
-                                    value={form.address} 
-                                    onChange={handleChange} 
-                                    className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400" 
-                                    placeholder="Enter full address..."
-                                    required 
-                                />
-                                {errors.address && <div className="text-red-500 text-xs mt-1 flex items-center gap-1">⚠️ {errors.address[0]}</div>}
-                            </div>
+                            {isEdit && (
+                                <>
+                                    <div className="space-y-2">
+                                        <label htmlFor="address" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            <MapPin size={14} className="text-blue-500" />
+                                            Address
+                                        </label>
+                                        <input 
+                                            id="address" 
+                                            name="address" 
+                                            type="text" 
+                                            value={form.address || ''} 
+                                            onChange={handleChange} 
+                                            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400" 
+                                            placeholder="Enter full address..."
+                                            required 
+                                        />
+                                        {errors.address && <div className="text-red-500 text-xs mt-1 flex items-center gap-1">⚠️ {errors.address[0]}</div>}
+                                    </div>
 
-                            <div className="space-y-2">
-                                <label htmlFor="contact_number" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    <Phone size={14} className="text-blue-500" />
-                                    Contact Number
-                                </label>
-                                <input 
-                                    id="contact_number" 
-                                    name="contact_number" 
-                                    type="tel" 
-                                    value={form.contact_number} 
-                                    onChange={handleChange} 
-                                    className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400" 
-                                    placeholder="Enter phone number..."
-                                    required 
-                                />
-                                {errors.contact_number && <div className="text-red-500 text-xs mt-1 flex items-center gap-1">⚠️ {errors.contact_number[0]}</div>}
-                            </div>
+                                    <div className="space-y-2">
+                                        <label htmlFor="contact_number" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                                            <Phone size={14} className="text-blue-500" />
+                                            Contact Number
+                                        </label>
+                                        <input 
+                                            id="contact_number" 
+                                            name="contact_number" 
+                                            type="tel" 
+                                            value={form.contact_number || ''} 
+                                            onChange={handleChange} 
+                                            className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-4 py-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:focus:border-blue-400 dark:focus:ring-blue-400" 
+                                            placeholder="Enter phone number..."
+                                            required 
+                                        />
+                                        {errors.contact_number && <div className="text-red-500 text-xs mt-1 flex items-center gap-1">⚠️ {errors.contact_number[0]}</div>}
+                                    </div>
+                                </>
+                            )}
+
+                            {!isEdit && (
+                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                        <strong>Note:</strong> Address will be set to the default Boys dormitory address, and contact will automatically use the manager's email.
+                                    </p>
+                                </div>
+                            )}
 
                             <DialogFooter className="flex gap-3 pt-6">
                                 <Button 
