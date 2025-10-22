@@ -27,9 +27,7 @@ class CleaningScheduleController extends Controller
         // Create a weekly schedule structure
         $weeklySchedule = [];
         for ($day = 1; $day <= 7; $day++) {
-            $weeklySchedule[$day] = CleaningSchedule::with(['room', 'room.students' => function ($query) {
-                    $query->notArchived();
-                }])
+            $weeklySchedule[$day] = CleaningSchedule::with(['room', 'room.students'])
                 ->whereHas('room', function ($query) use ($user) {
                     $query->where('tenant_id', $user->tenant_id)->notArchived();
                 })
