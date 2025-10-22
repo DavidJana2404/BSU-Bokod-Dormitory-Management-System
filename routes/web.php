@@ -211,6 +211,7 @@ Route::middleware(['auth:student', 'ensure.student.guard'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('cashier/dashboard', [CashierDashboardController::class, 'index'])->name('cashier.dashboard')->middleware('throttle:60,1');
     Route::put('cashier/students/{student}/payment', [CashierDashboardController::class, 'updatePaymentStatus'])->name('cashier.students.payment.update')->middleware('throttle:10,1');
+    Route::post('cashier/reset-payments', [CashierDashboardController::class, 'resetPayments'])->name('cashier.reset-payments')->middleware('throttle:2,1');
 });
 
 

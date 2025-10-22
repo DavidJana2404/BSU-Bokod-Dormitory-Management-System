@@ -135,4 +135,32 @@ class CashierDashboardController extends Controller
         // Redirect back to the cashier dashboard with a success message
         return redirect()->route('cashier.dashboard')->with('success', 'Payment status updated successfully');
     }
+    
+    /**
+     * Reset all student payment statuses for a new semester
+     */
+    public function resetPayments(Request $request)
+    {
+        $user = $request->user();
+        
+        // Verify user is a cashier
+        if ($user->role !== 'cashier') {
+            return redirect()->route('dashboard')->with('error', 'Unauthorized access');
+        }
+        
+        try {
+            // Reset all student payments
+            Student::whereNull('archived_at')->update([
+                'payment_status' => 'unpaid',
+                'payment_date' => null,
+                'amount_paid' => null,
+                'payment_notes' => null,
+            ]);
+            
+            return redirect()->route('cashier.dashboard')->with('success', 'All student payments have been reset for the new semester');
+        } catch (\Exception $e) {
+            \Log::error('Error resetting payments', ['error' => $e->getMessage()]);
+            return redirect()->route('cashier.dashboard')->with('error', 'Failed to reset payments. Please try again.');
+        }
+    }
 }

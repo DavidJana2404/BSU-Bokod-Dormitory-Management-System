@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import WarningDialog from '@/components/warning-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Users, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, Mail, Phone, Edit3 } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, Mail, Phone, Edit3, RefreshCw } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 
 interface Student {
@@ -57,6 +58,8 @@ export default function CashierDashboard() {
     const [paymentNotes, setPaymentNotes] = useState('');
     const [filterStatus, setFilterStatus] = useState<string>('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [newSemesterDialogOpen, setNewSemesterDialogOpen] = useState(false);
+    const [resettingPayments, setResettingPayments] = useState(false);
 
     // Filter students based on search term and status filter
     const filteredStudents = students.filter(student => {
@@ -107,6 +110,21 @@ export default function CashierDashboard() {
             },
             onError: (errors) => {
                 console.error('Error updating payment:', errors);
+            }
+        }
+    };
+
+    const handleNewSemester = () => {
+        setResettingPayments(true);
+        
+        router.post('/cashier/reset-payments', {}, {
+            onSuccess: () => {
+                setNewSemesterDialogOpen(false);
+                setResettingPayments(false);
+            },
+            onError: (errors) => {
+                console.error('Error resetting payments:', errors);
+                setResettingPayments(false);
             }
         });
     };
@@ -224,19 +242,28 @@ export default function CashierDashboard() {
                 {/* Student Payment Management */}
                 <div className="space-y-6">
                     {/* Section Header */}
-                    <div className="flex items-center gap-3">
-                        <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
-                            <DollarSign className="text-green-600 dark:text-green-400" size={24} />
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
+                                <DollarSign className="text-green-600 dark:text-green-400" size={24} />
+                            </div>
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Student Payment Management</h2>
+                                <p className="text-gray-600 dark:text-gray-400">Individual payment tracking and management</p>
+                            </div>
                         </div>
-                        <div>
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Student Payment Management</h2>
-                            <p className="text-gray-600 dark:text-gray-400">Individual payment tracking and management</p>
-                        </div>
+                        <Button 
+                            onClick={() => setNewSemesterDialogOpen(true)} 
+                            className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                        >
+                            <RefreshCw size={18} />
+                            New Semester
+                        </Button>
                     </div>
 
                     {/* Students Cards */}
                     {filteredStudents.length > 0 ? (
-                        <div className="space-y-4">
+                        <div className="max-h-[800px] overflow-y-auto space-y-4 pr-2 scrollbar-system">
                             {filteredStudents.map((student) => (
                                 <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200">
                                     <CardContent className="p-5">
@@ -604,6 +631,20 @@ export default function CashierDashboard() {
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>
+
+                {/* New Semester Warning Dialog */}
+                <WarningDialog
+                    open={newSemesterDialogOpen}
+                    onClose={() => {
+                        setNewSemesterDialogOpen(false);
+                        setResettingPayments(false);
+                    }}
+                    onConfirm={handleNewSemester}
+                    title="Start New Semester?"
+                    message="This will reset ALL student payment statuses to 'Unpaid' and clear all payment records.\n\nThis action is typically done at the start of a new semester.\n\nAre you sure you want to proceed?"
+                    confirmText={resettingPayments ? 'Resetting...' : 'Reset All Payments'}
+                    isDestructive={true}
+                />
             </div>
         </AppLayout>
     );
