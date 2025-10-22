@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Carbon\Carbon;
 use App\Models\CleaningSchedule;
 use App\Models\Tenant;
+use App\Models\Student;
+use App\Models\Booking;
 
 class Room extends Model
 {
@@ -202,5 +204,20 @@ class Room extends Model
     public function cleaningSchedules()
     {
         return $this->hasMany(CleaningSchedule::class, 'room_id', 'room_id');
+    }
+    
+    /**
+     * Get students currently assigned to this room through active bookings
+     */
+    public function students()
+    {
+        return $this->hasManyThrough(
+            Student::class,
+            Booking::class,
+            'room_id',      // Foreign key on bookings table
+            'student_id',   // Foreign key on students table
+            'room_id',      // Local key on rooms table
+            'student_id'    // Local key on bookings table
+        )->whereNull('bookings.archived_at');
     }
 }
