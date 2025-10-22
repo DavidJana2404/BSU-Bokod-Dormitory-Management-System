@@ -27,7 +27,9 @@ class CleaningScheduleController extends Controller
         // Create a weekly schedule structure
         $weeklySchedule = [];
         for ($day = 1; $day <= 7; $day++) {
-            $weeklySchedule[$day] = CleaningSchedule::with('room')
+            $weeklySchedule[$day] = CleaningSchedule::with(['room', 'room.students' => function ($query) {
+                    $query->notArchived();
+                }])
                 ->whereHas('room', function ($query) use ($user) {
                     $query->where('tenant_id', $user->tenant_id)->notArchived();
                 })
@@ -40,6 +42,13 @@ class CleaningScheduleController extends Controller
                         'room_number' => $schedule->room->room_number,
                         'day_of_week' => $schedule->day_of_week,
                         'day_name' => $schedule->day_name,
+                        'students' => $schedule->room->students->map(function ($student) {
+                            return [
+                                'student_id' => $student->student_id,
+                                'first_name' => $student->first_name,
+                                'last_name' => $student->last_name,
+                            ];
+                        }),
                     ];
                 });
         }

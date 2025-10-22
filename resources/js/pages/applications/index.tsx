@@ -557,35 +557,36 @@ export default function Applications() {
                                 </h2>
                             </div>
                             
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                {/* Approved Applications Column */}
+                            <div className="space-y-6">
+                                {/* Approved Applications Section */}
                                 {(activeFilter === 'all' || activeFilter === 'approved') && approvedApplications.length > 0 && (
-                                    <div>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                                <CheckCircle className="text-green-500" size={18} />
-                                                Approved ({filteredApprovedApplications.length})
-                                            </h3>
-                                        </div>
-                                        <div className="relative mb-4">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-                                            <Input
-                                                placeholder="Search approved..."
-                                                value={approvedSearchTerm}
-                                                onChange={(e) => {
-                                                    setApprovedSearchTerm(e.target.value);
-                                                    setApprovedPage(1);
-                                                }}
-                                                className="pl-9 h-8 text-sm"
-                                            />
-                                        </div>
-                                        {approvedSearchTerm && (
-                                            <div className="mb-3 text-xs text-gray-600 dark:text-gray-400">
-                                                Found {filteredApprovedApplications.length} of {approvedApplications.length}
+                                    <Card className="border border-green-200 dark:border-green-800">
+                                        <CardContent className="p-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                                    <CheckCircle className="text-green-500" size={18} />
+                                                    Approved ({filteredApprovedApplications.length})
+                                                </h3>
                                             </div>
-                                        )}
-                                        
-                                        <div className="max-h-[500px] overflow-y-auto space-y-3 scrollbar-system">
+                                            <div className="relative mb-4">
+                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                                                <Input
+                                                    placeholder="Search approved..."
+                                                    value={approvedSearchTerm}
+                                                    onChange={(e) => {
+                                                        setApprovedSearchTerm(e.target.value);
+                                                        setApprovedPage(1);
+                                                    }}
+                                                    className="pl-9 h-8 text-sm"
+                                                />
+                                            </div>
+                                            {approvedSearchTerm && (
+                                                <div className="mb-3 text-xs text-gray-600 dark:text-gray-400">
+                                                    Found {filteredApprovedApplications.length} of {approvedApplications.length}
+                                                </div>
+                                            )}
+                                            
+                                            <div className="max-h-[500px] overflow-y-auto space-y-3 scrollbar-system">
                                             {displayedApprovedApplications.map((application) => (
                                             <Card key={application.id} className="border border-green-200 dark:border-green-800 bg-green-50/50 dark:bg-green-950/10">
                                                 <CardContent className="p-3">
@@ -659,38 +660,40 @@ export default function Applications() {
                                                     </Button>
                                                 </div>
                                             )}
-                                        </div>
-                                    </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 )}
 
-                                {/* Rejected Applications Column */}
+                                {/* Rejected Applications Section */}
                                 {(activeFilter === 'all' || activeFilter === 'rejected') && rejectedApplications.length > 0 && (
-                                    <div>
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                                                <XCircle className="text-red-500" size={18} />
-                                                Rejected ({filteredRejectedApplications.length})
-                                            </h3>
-                                        </div>
-                                        <div className="relative mb-4">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
-                                            <Input
-                                                placeholder="Search rejected..."
-                                                value={rejectedSearchTerm}
-                                                onChange={(e) => {
-                                                    setRejectedSearchTerm(e.target.value);
-                                                    setRejectedPage(1);
-                                                }}
-                                                className="pl-9 h-8 text-sm"
-                                            />
-                                        </div>
-                                        {rejectedSearchTerm && (
-                                            <div className="mb-3 text-xs text-gray-600 dark:text-gray-400">
-                                                Found {filteredRejectedApplications.length} of {rejectedApplications.length}
+                                    <Card className="border border-red-200 dark:border-red-800">
+                                        <CardContent className="p-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                                                    <XCircle className="text-red-500" size={18} />
+                                                    Rejected ({filteredRejectedApplications.length})
+                                                </h3>
                                             </div>
-                                        )}
-                                        
-                                        <div className="max-h-[500px] overflow-y-auto space-y-3 scrollbar-system">
+                                            <div className="relative mb-4">
+                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                                                <Input
+                                                    placeholder="Search rejected..."
+                                                    value={rejectedSearchTerm}
+                                                    onChange={(e) => {
+                                                        setRejectedSearchTerm(e.target.value);
+                                                        setRejectedPage(1);
+                                                    }}
+                                                    className="pl-9 h-8 text-sm"
+                                                />
+                                            </div>
+                                            {rejectedSearchTerm && (
+                                                <div className="mb-3 text-xs text-gray-600 dark:text-gray-400">
+                                                    Found {filteredRejectedApplications.length} of {rejectedApplications.length}
+                                                </div>
+                                            )}
+                                            
+                                            <div className="max-h-[500px] overflow-y-auto space-y-3 scrollbar-system">
                                             {displayedRejectedApplications.map((application) => (
                                             <Card key={application.id} className="border border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-950/10">
                                                 <CardContent className="p-3">
@@ -764,8 +767,9 @@ export default function Applications() {
                                                     </Button>
                                                 </div>
                                             )}
-                                        </div>
-                                    </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 )}
                             </div>
                         </CardContent>

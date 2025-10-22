@@ -383,14 +383,6 @@ export default function ManageDormitories() {
                                 </>
                             )}
 
-                            {!isEdit && (
-                                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                                    <p className="text-sm text-blue-700 dark:text-blue-300">
-                                        <strong>Note:</strong> Address will be set to the default Boys dormitory address, and contact will automatically use the manager's email.
-                                    </p>
-                                </div>
-                            )}
-
                             <DialogFooter className="flex gap-3 pt-6">
                                 <Button 
                                     type="button" 

@@ -11,6 +11,12 @@ import WarningDialog from '@/components/warning-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import type { PageProps } from '@/types';
 
+interface Student {
+    student_id: number;
+    first_name: string;
+    last_name: string;
+}
+
 interface CleaningSchedulesPageProps extends PageProps {
     rooms: {
         room_id: number;
@@ -28,6 +34,7 @@ interface CleaningSchedulesPageProps extends PageProps {
             room_number: string;
             day_of_week: number;
             day_name: string;
+            students: Student[];
         }[];
     };
     success?: string;
@@ -246,7 +253,24 @@ export default function CleaningSchedules() {
                                                 <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
                                                     Room {schedule.room_number}
                                                 </div>
-                                                <div className="flex gap-1">
+                                                {schedule.students && schedule.students.length > 0 ? (
+                                                    <div className="space-y-1">
+                                                        {schedule.students.map((student) => (
+                                                            <div 
+                                                                key={student.student_id} 
+                                                                className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-1"
+                                                            >
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                                                                {student.first_name} {student.last_name}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-xs text-gray-500 dark:text-gray-500 italic">
+                                                        No students assigned
+                                                    </div>
+                                                )}
+                                                <div className="flex gap-1 pt-1">
                                                     <Button 
                                                         size="sm"
                                                         variant="outline" 
