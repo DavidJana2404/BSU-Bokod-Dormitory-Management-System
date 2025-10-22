@@ -111,7 +111,7 @@ export default function CashierDashboard() {
             onError: (errors) => {
                 console.error('Error updating payment:', errors);
             }
-        }
+        });
     };
 
     const handleNewSemester = () => {
