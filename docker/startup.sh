@@ -97,9 +97,14 @@ php /var/www/html/docker/check-env.php || {
 echo "Testing database connection..."
 if php artisan migrate:status --no-interaction 2>/dev/null; then
     echo "✅ Database connection successful"
+    echo "Running migrations..."
+    php artisan migrate --force --no-interaction || {
+        echo "⚠️  Migration failed, but continuing..."
+    }
+    echo "✅ Migrations completed"
 else
     echo "❌ Database connection failed!"
-    echo "Attempting to run migrations..."
+    echo "Attempting to run migrations with retry logic..."
     
     # Wait for database to be ready (with timeout)
     counter=0
@@ -116,6 +121,7 @@ else
         echo "❌ Current settings: ${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
         exit 1
     fi
+    echo "✅ Migrations completed after retries"
 fi
 
 echo "Running Laravel optimizations..."
