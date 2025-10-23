@@ -1,4 +1,5 @@
 import AppLayout from '@/layouts/app-layout';
+import SettingsLayout from '@/layouts/settings/layout';
 import { Head, usePage, router } from '@inertiajs/react';
 import type { PageProps } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Archive, DollarSign, CheckCircle, XCircle, AlertCircle, Mail, RotateCcw, Calendar, User } from 'lucide-react';
 import React, { useState } from 'react';
 import WarningDialog from '@/components/warning-dialog';
+import HeadingSmall from '@/components/heading-small';
 
 interface PaymentRecord {
     id: number;
@@ -80,19 +82,15 @@ export default function ArchivedPaymentRecords() {
     };
 
     return (
-        <AppLayout breadcrumbs={[{ title: 'Settings', href: '#' }, { title: 'Archived Records', href: '/cashier/archived-records' }]}>
-            <Head title="Archived Payment Records" />
-            <div className="p-6 space-y-6">
-                {/* Header */}
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                        <Archive className="text-orange-600 dark:text-orange-400" size={24} />
-                    </div>
-                    <div>
-                        <h1 className="text-3xl font-bold text-foreground">Archived Payment Records</h1>
-                        <p className="text-muted-foreground">View and restore archived payment transaction history</p>
-                    </div>
-                </div>
+        <AppLayout breadcrumbs={[{ title: 'Settings', href: '/settings/profile' }, { title: 'Payment Archives', href: '/cashier/archived-records' }]}>
+            <Head title="Payment Archives" />
+            
+            <SettingsLayout>
+                <div className="space-y-6">
+                    <HeadingSmall 
+                        title="Payment Archives" 
+                        description="View and restore archived payment transaction history" 
+                    />
 
                 {/* Flash Messages */}
                 {success && (
@@ -234,16 +232,17 @@ export default function ArchivedPaymentRecords() {
                     </CardContent>
                 </Card>
 
-                <WarningDialog
-                    open={restoreDialogOpen}
-                    onClose={() => setRestoreDialogOpen(false)}
-                    onConfirm={confirmRestore}
-                    title="Restore Payment Record?"
-                    message="Are you sure you want to restore this payment record? It will be moved back to the active records list."
-                    confirmText="Restore Record"
-                    isDestructive={false}
-                />
-            </div>
+                    <WarningDialog
+                        open={restoreDialogOpen}
+                        onClose={() => setRestoreDialogOpen(false)}
+                        onConfirm={confirmRestore}
+                        title="Restore Payment Record?"
+                        message="Are you sure you want to restore this payment record? It will be moved back to the active records list."
+                        confirmText="Restore Record"
+                        isDestructive={false}
+                    />
+                </div>
+            </SettingsLayout>
         </AppLayout>
     );
 }

@@ -38,14 +38,20 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
             href: appearance(),
             icon: null,
         },
-        // Only show Archive for non-cashier users
-        ...(userRole !== 'cashier' ? [
+        // Show different archive options based on role
+        ...(userRole === 'cashier' ? [
+            {
+                title: 'Payment Archives',
+                href: '/cashier/archived-records',
+                icon: null,
+            },
+        ] : [
             {
                 title: 'Archive',
                 href: archive.index(),
                 icon: null,
             },
-        ] : []),
+        ]),
     ];
 
     return (
