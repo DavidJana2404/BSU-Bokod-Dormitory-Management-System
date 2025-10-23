@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 // Deployment trigger: 2025-01-09 06:27:46 - Force redeploy after timeout
 use App\Models\Student;
 use App\Models\Tenant;
+use App\Models\PaymentRecord;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 
@@ -131,6 +132,41 @@ class CashierDashboardController extends Controller
         }
         
         $student->update($updateData);
+        
+        // Create payment record for history tracking
+        try {
+            $studentWithDetails = Student::join('tenants', 'students.tenant_id', '=', 'tenants.tenant_id')
+                ->leftJoin('bookings', function($join) {
+                    $join->on('students.student_id', '=', 'bookings.student_id')
+                         ->whereNull('bookings.archived_at');
+                })
+                ->leftJoin('rooms', 'bookings.room_id', '=', 'rooms.room_id')
+                ->where('students.student_id', $studentId)
+                ->select(
+                    'students.*',
+                    'tenants.dormitory_name',
+                    'rooms.room_number',
+                    'bookings.semester_count'
+                )
+                ->first();
+            
+            PaymentRecord::create([
+                'student_id' => $student->student_id,
+                'processed_by_user_id' => $user->id,
+                'payment_status' => $request->payment_status,
+                'amount_paid' => $updateData['amount_paid'] ?? null,
+                'payment_notes' => $paymentNotes,
+                'student_name' => $student->first_name . ' ' . $student->last_name,
+                'student_email' => $student->email,
+                'dormitory_name' => $studentWithDetails->dormitory_name ?? 'Unknown',
+                'room_number' => $studentWithDetails->room_number,
+                'semester_count' => $studentWithDetails->semester_count,
+                'payment_date' => $updateData['payment_date'] ?? null,
+            ]);
+        } catch (\Exception $e) {
+            \Log::warning('Failed to create payment record', ['error' => $e->getMessage()]);
+            // Continue even if payment record creation fails
+        }
         
         // Redirect back to the cashier dashboard with a success message
         return redirect()->route('cashier.dashboard')->with('success', 'Payment status updated successfully');

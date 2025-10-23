@@ -85,6 +85,11 @@ const cashierNavItems: NavItem[] = [
         href: '/cashier/dashboard',
         icon: LayoutGrid,
     },
+    {
+        title: 'Records',
+        href: '/cashier/records',
+        icon: FileText,
+    },
 ];
 
 const footerNavItems: NavItem[] = [
