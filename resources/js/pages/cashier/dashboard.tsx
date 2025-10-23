@@ -261,9 +261,11 @@ export default function CashierDashboard() {
                         </Button>
                     </div>
 
-                    {/* Students Cards */}
-                    {filteredStudents.length > 0 ? (
-                        <div className="max-h-[800px] overflow-y-auto space-y-4 pr-2 scrollbar-system">
+                    {/* Students Cards - Wrapped in Card with scrollable container */}
+                    <Card className="border border-gray-200 dark:border-gray-700">
+                        <CardContent className="p-6">
+                            {filteredStudents.length > 0 ? (
+                                <div className="max-h-[800px] overflow-y-auto space-y-4 pr-2 scrollbar-system">
                             {filteredStudents.map((student) => (
                                 <Card key={student.student_id} className="border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-200">
                                     <CardContent className="p-5">
@@ -536,16 +538,18 @@ export default function CashierDashboard() {
                                     </CardContent>
                                 </Card>
                             ))}
-                        </div>
-                    ) : (
-                        <Card className="p-12 text-center">
-                            <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                                <DollarSign className="text-gray-400" size={32} />
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
-                            <p className="text-gray-500 dark:text-gray-500">No students match your search criteria or payment status filter.</p>
-                        </Card>
-                    )}
+                                </div>
+                            ) : (
+                                <div className="p-12 text-center">
+                                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                                        <DollarSign className="text-gray-400" size={32} />
+                                    </div>
+                                    <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
+                                    <p className="text-gray-500 dark:text-gray-500">No students match your search criteria or payment status filter.</p>
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Payment Update Dialog */}
