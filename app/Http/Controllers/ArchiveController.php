@@ -7,6 +7,7 @@ use App\Models\Room;
 use App\Models\Student;
 use App\Models\Booking;
 use App\Models\Tenant;
+use App\Models\User;
 use Inertia\Inertia;
 
 class ArchiveController extends Controller
@@ -34,13 +35,30 @@ class ArchiveController extends Controller
                         'data' => $dormitory,
                     ];
                 });
+            
+            // Admin can see archived staff users (managers and cashiers)
+            $archivedUsers = User::archived()
+                ->whereIn('role', ['manager', 'cashier'])
+                ->with('tenant')
+                ->get()
+                ->map(function ($staffUser) {
+                    return [
+                        'id' => $staffUser->id,
+                        'type' => 'user',
+                        'title' => $staffUser->name,
+                        'subtitle' => $staffUser->email . ' - ' . ucfirst($staffUser->role) . ($staffUser->tenant ? ' (' . $staffUser->tenant->dormitory_name . ')' : ''),
+                        'archived_at' => $staffUser->archived_at,
+                        'data' => $staffUser,
+                    ];
+                });
                 
-            // Admin sees NO rooms, students, or bookings in archive
+            // Admin sees NO rooms in archive
             // These are managed by individual managers
             $archivedRooms = collect();
         } else {
-            // Managers cannot see dormitories (they don't manage dormitories)
+            // Managers cannot see dormitories or staff users
             $archivedDormitories = collect();
+            $archivedUsers = collect();
             
             // Manager can only see rooms from their own tenant
             $archivedRooms = Room::where('tenant_id', $user->tenant_id)
@@ -75,22 +93,8 @@ class ArchiveController extends Controller
                     ];
                 });
             
-            // Admin can see all archived bookings (system-wide)
-            $archivedBookings = Booking::archived()
-                ->with(['student', 'room', 'room.tenant'])
-                ->get()
-                ->map(function ($booking) {
-                    $dormitoryName = $booking->room && $booking->room->tenant ? $booking->room->tenant->dormitory_name : 'Unknown Dormitory';
-                    return [
-                        'id' => $booking->booking_id,
-                        'type' => 'booking',
-                        'title' => 'Booking #' . $booking->booking_id,
-                        'subtitle' => ($booking->student ? $booking->student->first_name . ' ' . $booking->student->last_name : 'Unknown Student') . 
-                                     ' - Room ' . ($booking->room ? $booking->room->room_number : 'Unknown') . ' (' . $dormitoryName . ')',
-                        'archived_at' => $booking->archived_at,
-                        'data' => $booking,
-                    ];
-                });
+            // Admin does NOT see bookings - those are managed by individual managers
+            $archivedBookings = collect();
         } else {
             // Manager can only see students and bookings from their own tenant
             $archivedStudents = Student::where('tenant_id', $user->tenant_id)
@@ -127,6 +131,7 @@ class ArchiveController extends Controller
         // Combine all archived items and sort by archived date
         $archivedItems = collect()
             ->merge($archivedDormitories)
+            ->merge($archivedUsers ?? collect())
             ->merge($archivedRooms)
             ->merge($archivedStudents)
             ->merge($archivedBookings)
@@ -137,6 +142,7 @@ class ArchiveController extends Controller
             'archivedItems' => $archivedItems,
             'stats' => [
                 'dormitories' => $archivedDormitories->count(),
+                'users' => isset($archivedUsers) ? $archivedUsers->count() : 0,
                 'rooms' => $archivedRooms->count(),
                 'students' => $archivedStudents->count(),
                 'bookings' => $archivedBookings->count(),
@@ -161,6 +167,12 @@ class ArchiveController extends Controller
                 }
                 $item = Tenant::findOrFail($id);
                 break;
+            case 'user':
+                if ($user->role !== 'admin') {
+                    return redirect()->back()->with('error', 'Unauthorized action.');
+                }
+                $item = User::findOrFail($id);
+                break;
             case 'room':
                 $item = Room::findOrFail($id);
                 break;
@@ -176,9 +188,9 @@ class ArchiveController extends Controller
         
         // Check if user has access to this item based on role
         if ($user->role === 'admin') {
-            // Admin can restore dormitories and all students (system-wide)
-            if ($type !== 'dormitory' && $type !== 'student' && $type !== 'booking') {
-                return redirect()->back()->with('error', 'Unauthorized action. Admins can only restore dormitories, students, and bookings.');
+            // Admin can restore dormitories, users, and students (system-wide, but not bookings)
+            if ($type !== 'dormitory' && $type !== 'user' && $type !== 'student') {
+                return redirect()->back()->with('error', 'Unauthorized action. Admins can only restore dormitories, staff users, and students.');
             }
         } else {
             // Manager can restore rooms, students, bookings from their tenant (but not dormitories)
@@ -211,6 +223,12 @@ class ArchiveController extends Controller
                 }
                 $item = Tenant::findOrFail($id);
                 break;
+            case 'user':
+                if ($user->role !== 'admin') {
+                    return redirect()->back()->with('error', 'Unauthorized action.');
+                }
+                $item = User::findOrFail($id);
+                break;
             case 'room':
                 $item = Room::findOrFail($id);
                 break;
@@ -226,9 +244,9 @@ class ArchiveController extends Controller
         
         // Check if user has access to this item based on role
         if ($user->role === 'admin') {
-            // Admin can delete dormitories and all students (system-wide)
-            if ($type !== 'dormitory' && $type !== 'student' && $type !== 'booking') {
-                return redirect()->back()->with('error', 'Unauthorized action. Admins can only delete dormitories, students, and bookings.');
+            // Admin can delete dormitories, users, and students (system-wide, but not bookings)
+            if ($type !== 'dormitory' && $type !== 'user' && $type !== 'student') {
+                return redirect()->back()->with('error', 'Unauthorized action. Admins can only delete dormitories, staff users, and students.');
             }
         } else {
             // Manager can delete rooms, students, bookings from their tenant (but not dormitories)
@@ -257,17 +275,17 @@ class ArchiveController extends Controller
         $deletedCount = 0;
         
         if ($user->role === 'admin') {
-            // Admin can clear dormitories, students, and bookings (system-wide)
+            // Admin can clear dormitories, users, and students (system-wide, but not bookings)
             $dormitoriesCount = Tenant::archived()->count();
+            $usersCount = User::archived()->whereIn('role', ['manager', 'cashier'])->count();
             $studentsCount = Student::archived()->count();
-            $bookingsCount = Booking::archived()->count();
             
-            $deletedCount = $dormitoriesCount + $studentsCount + $bookingsCount;
+            $deletedCount = $dormitoriesCount + $usersCount + $studentsCount;
             
             // Force delete all archived items system-wide
             Tenant::archived()->forceDelete();
+            User::archived()->whereIn('role', ['manager', 'cashier'])->forceDelete();
             Student::archived()->forceDelete();
-            Booking::archived()->forceDelete();
         } else {
             // Manager can clear rooms, students, bookings from their tenant
             $roomsCount = Room::where('tenant_id', $user->tenant_id)->archived()->count();

@@ -25,7 +25,7 @@ import WarningDialog from '@/components/warning-dialog';
 
 interface ArchivedItem {
     id: number;
-    type: 'room' | 'student' | 'booking' | 'dormitory';
+    type: 'room' | 'student' | 'booking' | 'dormitory' | 'user';
     title: string;
     subtitle: string;
     archived_at: string;
@@ -34,6 +34,7 @@ interface ArchivedItem {
 
 interface ArchiveStats {
     dormitories: number;
+    users: number;
     rooms: number;
     students: number;
     bookings: number;
@@ -57,6 +58,11 @@ const typeConfig = {
         icon: Building2,
         color: 'bg-orange-100 text-orange-700 border-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:border-orange-800',
         label: 'Dormitory'
+    },
+    user: {
+        icon: Users,
+        color: 'bg-indigo-100 text-indigo-700 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-300 dark:border-indigo-800',
+        label: 'Staff User'
     },
     room: {
         icon: Bed,
@@ -169,8 +175,8 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
             return `Are you sure you want to permanently delete "${pendingItem.title}"?\n\nThis action cannot be undone and the item will be completely removed from the database.`;
         } else if (warningAction === 'clearAll') {
             const totalItems = stats.total;
-            const itemText = isAdmin ? 'dormitories, students, and bookings' : 'rooms, students, and bookings';
-            return `Are you sure you want to permanently delete ALL ${totalItems} archived ${itemText}?\n\nThis action cannot be undone and all archived items will be completely removed from the database.`;
+            const itemText = isAdmin ? 'dormitories, staff users, and students' : 'rooms, students, and bookings';
+            return `Are you sure you want to permanently delete ALL ${totalItems} archived ${itemText}?\\n\\nThis action cannot be undone and all archived items will be completely removed from the database.`;
         }
         
         return '';
@@ -184,12 +190,13 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                 <div className="space-y-6">
                     <HeadingSmall 
                         title="Archive" 
-                        description={isAdmin ? "Manage archived dormitories, students, and bookings" : "Manage archived rooms, students, and bookings"} 
+                        description={isAdmin ? "Manage archived dormitories, staff users, and students" : "Manage archived rooms, students, and bookings"} 
                     />
 
                     {/* Stats Cards */}
                     <div className={`grid grid-cols-2 sm:grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-4'} gap-3 sm:gap-4`}>
                     {isAdmin && (
+                        <>
                         <Card className="text-center bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
                             <CardContent className="p-4 sm:p-6">
                                 <div className="p-3 bg-orange-100 dark:bg-orange-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -199,6 +206,17 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                                 <div className="text-2xl sm:text-3xl font-bold text-orange-900 dark:text-orange-100">{stats.dormitories}</div>
                             </CardContent>
                         </Card>
+                        
+                        <Card className="text-center bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                            <CardContent className="p-4 sm:p-6">
+                                <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                    <Users className="text-indigo-600 dark:text-indigo-400" size={24} />
+                                </div>
+                                <div className="text-sm sm:text-lg font-semibold mb-2 text-indigo-800 dark:text-indigo-200">Archived Staff Users</div>
+                                <div className="text-2xl sm:text-3xl font-bold text-indigo-900 dark:text-indigo-100">{stats.users}</div>
+                            </CardContent>
+                        </Card>
+                        </>
                     )}
                     
                     {/* Students Card - Show for both admin and manager */}
@@ -212,7 +230,8 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                         </CardContent>
                     </Card>
                     
-                    {/* Bookings Card - Show for both admin and manager */}
+                    {/* Bookings Card - Show for manager only (not admin) */}
+                    {!isAdmin && (
                     <Card className="text-center bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
                         <CardContent className="p-4 sm:p-6">
                             <div className="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
@@ -222,6 +241,7 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                             <div className="text-2xl sm:text-3xl font-bold text-purple-900 dark:text-purple-100">{stats.bookings}</div>
                         </CardContent>
                     </Card>
+                    )}
 
                     {/* Rooms Card - Show only for managers */}
                     {!isAdmin && (

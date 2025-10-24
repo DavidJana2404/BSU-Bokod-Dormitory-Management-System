@@ -305,4 +305,24 @@ class AdminUsersController extends Controller
             return redirect()->back()->with('error', 'Failed to archive student: ' . $e->getMessage());
         }
     }
+    
+    public function archiveUser($id)
+    {
+        try {
+            $user = User::whereIn('role', ['manager', 'cashier'])->findOrFail($id);
+            
+            // Check if user is admin (cannot archive admin)
+            if ($user->role === 'admin') {
+                return redirect()->back()->with('error', 'Cannot archive admin users');
+            }
+            
+            // Soft delete the user (archive)
+            $user->delete(); // Uses SoftDeletes which sets archived_at
+            
+            return redirect()->back()->with('success', ucfirst($user->role) . ' archived successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to archive user: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Failed to archive user: ' . $e->getMessage());
+        }
+    }
 }

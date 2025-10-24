@@ -333,6 +333,14 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::post('/admin/users/{id}/toggle-active', [AdminUsersController::class, 'toggleUserActive'])->name('admin.users.toggleActive');
     Route::post('/admin/users/toggle-registration', [AdminUsersController::class, 'toggleRegistration'])->name('admin.users.toggleRegistration');
     
+    // Admin student management routes
+    Route::post('/admin/students', [AdminUsersController::class, 'storeStudent'])->name('admin.students.store');
+    Route::put('/admin/students/{id}', [AdminUsersController::class, 'updateStudent'])->name('admin.students.update');
+    Route::delete('/admin/students/{id}', [AdminUsersController::class, 'archiveStudent'])->name('admin.students.destroy');
+    
+    // Admin staff user archiving
+    Route::delete('/admin/users/{id}', [AdminUsersController::class, 'archiveUser'])->name('admin.users.destroy');
+    
     // Debug route for registration status
     Route::get('/debug/registration', function() {
         $cacheValue = cache('registration_enabled', 'not set');
