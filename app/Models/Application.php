@@ -15,6 +15,9 @@ class Application extends Model
         'last_name',
         'email',
         'phone',
+        'parent_name',
+        'parent_phone',
+        'parent_relationship',
         'additional_info',
         'status',
         'rejection_reason',
@@ -64,6 +67,14 @@ class Application extends Model
                 'max:20',
                 new \App\Rules\PhilippinePhoneNumber
             ],
+            'parent_name' => ['nullable', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
+            'parent_phone' => [
+                'nullable',
+                'string',
+                'max:20',
+                new \App\Rules\PhilippinePhoneNumber
+            ],
+            'parent_relationship' => ['nullable', 'string', 'max:50'],
             'additional_info' => 'nullable|string|max:1000',
         ];
     }

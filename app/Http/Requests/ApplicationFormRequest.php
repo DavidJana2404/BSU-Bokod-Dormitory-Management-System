@@ -43,6 +43,14 @@ class ApplicationFormRequest extends FormRequest
                 'max:20',
                 new PhilippinePhoneNumber
             ],
+            'parent_name' => ['nullable', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
+            'parent_phone' => [
+                'nullable',
+                'string',
+                'max:20',
+                new PhilippinePhoneNumber
+            ],
+            'parent_relationship' => ['nullable', 'string', 'max:50'],
             'additional_info' => ['nullable', 'string', 'max:1000'],
         ];
     }
@@ -55,6 +63,7 @@ class ApplicationFormRequest extends FormRequest
         return [
             'first_name.regex' => 'The first name may only contain letters, spaces, hyphens, and apostrophes.',
             'last_name.regex' => 'The last name may only contain letters, spaces, hyphens, and apostrophes.',
+            'parent_name.regex' => 'The parent/guardian name may only contain letters, spaces, hyphens, and apostrophes.',
             'email.email' => 'The email must be a valid email address.',
             'email.unique' => 'This email address has already been used for an application.',
             'email.lowercase' => 'The email must be in lowercase.',
@@ -73,6 +82,9 @@ class ApplicationFormRequest extends FormRequest
             'last_name' => 'last name',
             'email' => 'email address',
             'phone' => 'phone number',
+            'parent_name' => 'parent/guardian name',
+            'parent_phone' => 'parent/guardian phone number',
+            'parent_relationship' => 'relationship to parent/guardian',
             'tenant_id' => 'dormitory',
             'additional_info' => 'additional information',
         ];
