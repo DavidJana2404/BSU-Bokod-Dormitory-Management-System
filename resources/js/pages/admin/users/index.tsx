@@ -186,6 +186,11 @@ export default function AdminUsers() {
         setPendingAction({ type: 'archive_student', id: student.student_id, student });
         setWarningDialogOpen(true);
     };
+    
+    const handleArchiveStaffUser = (user: StaffUser) => {
+        setPendingAction({ type: 'archive_user', id: user.id, user });
+        setWarningDialogOpen(true);
+    };
 
     const confirmAction = () => {
         if (!pendingAction) return;
@@ -203,6 +208,17 @@ export default function AdminUsers() {
             });
         } else if (pendingAction.type === 'archive_student') {
             router.delete(`/admin/students/${pendingAction.id}`, {
+                onSuccess: () => {
+                    setWarningDialogOpen(false);
+                    setPendingAction(null);
+                },
+                onError: () => {
+                    setWarningDialogOpen(false);
+                    setPendingAction(null);
+                }
+            });
+        } else if (pendingAction.type === 'archive_user') {
+            router.delete(`/admin/users/${pendingAction.id}`, {
                 onSuccess: () => {
                     setWarningDialogOpen(false);
                     setPendingAction(null);
@@ -260,6 +276,14 @@ export default function AdminUsers() {
             } else {
                 return `Are you sure you want to archive ${studentName}?\\n\\nYou can restore them later from the Archive settings.`;
             }
+        }
+        
+        if (pendingAction.type === 'archive_user' && pendingAction.user) {
+            const user = pendingAction.user;
+            const userName = user.name;
+            const userRole = user.role;
+            
+            return `Are you sure you want to archive ${userName} (${userRole})?\\n\\nArchiving this staff user will:\\n• Remove them from active staff listings\\n• They won't be able to log in\\n• You can restore them later from Archive settings\\n\\nConfirm archiving?`;
         }
         
         return '';
@@ -612,6 +636,15 @@ export default function AdminUsers() {
                                                     ) : (
                                                         <><UserCheck size={12} className="mr-1" />Activate</>
                                                     )}
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => handleArchiveStaffUser(user)}
+                                                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
+                                                >
+                                                    <Archive size={12} className="mr-1" />
+                                                    Archive
                                                 </Button>
                                             </div>
                                         </div>
