@@ -43,14 +43,14 @@ class ApplicationFormRequest extends FormRequest
                 'max:20',
                 new PhilippinePhoneNumber
             ],
-            'parent_name' => ['nullable', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
+            'parent_name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
             'parent_phone' => [
-                'nullable',
+                'required',
                 'string',
                 'max:20',
                 new PhilippinePhoneNumber
             ],
-            'parent_relationship' => ['nullable', 'string', 'max:50'],
+            'parent_relationship' => ['required', 'string', 'max:50'],
             'additional_info' => ['nullable', 'string', 'max:1000'],
         ];
     }
