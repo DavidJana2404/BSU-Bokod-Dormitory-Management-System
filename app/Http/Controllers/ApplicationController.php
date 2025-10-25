@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplicationFormRequest;
+use App\Mail\StudentWelcomeMail;
 use App\Models\Application;
 use App\Models\Student;
 use App\Models\Tenant;
@@ -11,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class ApplicationController extends Controller
@@ -328,6 +330,31 @@ class ApplicationController extends Controller
                     throw $e; // Re-throw to trigger rollback
                 }
             });
+            
+            // Send welcome email to the student
+            if ($student && $studentCreated) {
+                try {
+                    // Get dormitory name
+                    $dormitoryName = null;
+                    if ($application->tenant_id) {
+                        $tenant = Tenant::find($application->tenant_id);
+                        $dormitoryName = $tenant ? $tenant->dormitory_name : null;
+                    }
+                    
+                    Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
+                    
+                    \Log::info('Welcome email sent to student', [
+                        'student_id' => $student->id,
+                        'email' => $student->email
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send welcome email', [
+                        'student_id' => $student->id,
+                        'error' => $e->getMessage()
+                    ]);
+                    // Don't fail the whole process if email fails
+                }
+            }
             
             // Prepare response data
             $successMessage = 'Application approved successfully! Student has been added to the system.';

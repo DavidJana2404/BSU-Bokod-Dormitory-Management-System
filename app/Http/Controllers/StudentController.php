@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Requests\StudentFormRequest;
+use App\Mail\PasswordSetupMail;
+use App\Mail\StudentWelcomeMail;
 use App\Models\Student;
+use App\Models\Tenant;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 
 class StudentController extends Controller
@@ -110,7 +114,30 @@ class StudentController extends Controller
             $data['password'] = null; // Students without passwords cannot login
         }
         
-        Student::create($data);
+        $student = Student::create($data);
+        
+        // Send welcome email to the student
+        try {
+            // Get dormitory name
+            $dormitoryName = null;
+            if ($user->tenant_id) {
+                $tenant = Tenant::find($user->tenant_id);
+                $dormitoryName = $tenant ? $tenant->dormitory_name : null;
+            }
+            
+            Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
+            
+            \Log::info('Welcome email sent to manually added student', [
+                'student_id' => $student->student_id,
+                'email' => $student->email
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to send welcome email to manually added student', [
+                'student_id' => $student->student_id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the whole process if email fails
+        }
         
         return redirect()->route('students.index')
             ->with('success', 'Student created successfully.');
@@ -205,12 +232,38 @@ class StudentController extends Controller
         
         $data = $request->only(['first_name', 'last_name', 'email', 'phone']);
         
+        // Track if password was set up (student previously had no password)
+        $wasPasswordSetup = false;
+        $plainPassword = null;
+        
         // Update password if provided
         if ($request->filled('password')) {
+            // Check if student previously had no password
+            $wasPasswordSetup = empty($student->password);
+            $plainPassword = $request->password;
             $data['password'] = Hash::make($request->password);
         }
         
         $student->update($data);
+        
+        // Send password setup email if password was just set up for the first time
+        if ($wasPasswordSetup && $plainPassword) {
+            try {
+                $loginUrl = route('login');
+                Mail::to($student->email)->send(new PasswordSetupMail($student, $plainPassword, $loginUrl));
+                
+                \Log::info('Password setup email sent to student', [
+                    'student_id' => $student->student_id,
+                    'email' => $student->email
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to send password setup email', [
+                    'student_id' => $student->student_id,
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the whole process if email fails
+            }
+        }
         
         return redirect()->route('students.index')
             ->with('success', 'Student updated successfully.');
