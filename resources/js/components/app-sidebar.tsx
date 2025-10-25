@@ -6,7 +6,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import type { SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Bed, BookOpen, Building2, CalendarCheck, Folder, LayoutGrid, Users, FileText, Calendar } from 'lucide-react';
+import { Bed, Building2, CalendarCheck, LayoutGrid, Users, FileText, Calendar } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const managerNavItems: NavItem[] = [
@@ -92,18 +92,7 @@ const cashierNavItems: NavItem[] = [
     },
 ];
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
-];
+const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
     const {auth} = usePage<SharedData>().props;
