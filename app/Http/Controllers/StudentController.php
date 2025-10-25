@@ -123,25 +123,20 @@ class StudentController extends Controller
             $dormitoryName = $tenant ? $tenant->dormitory_name : null;
         }
         
-        // Send email in background process to avoid timeout
-        $studentEmail = $student->email;
-        $studentId = $student->student_id;
-        
-        // Use register_shutdown_function to send email after response
-        register_shutdown_function(function() use ($student, $dormitoryName, $studentEmail, $studentId) {
-            try {
-                Mail::to($studentEmail)->send(new StudentWelcomeMail($student, $dormitoryName));
-                \Log::info('Welcome email sent to manually added student', [
-                    'student_id' => $studentId,
-                    'email' => $studentEmail
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Failed to send welcome email to manually added student', [
-                    'student_id' => $studentId,
-                    'error' => $e->getMessage()
-                ]);
-            }
-        });
+        // Send email immediately - wrapped in try-catch to prevent failures
+        try {
+            @Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
+            \Log::info('Welcome email sent to manually added student', [
+                'student_id' => $student->student_id,
+                'email' => $student->email
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Failed to send welcome email to manually added student', [
+                'student_id' => $student->student_id,
+                'error' => $e->getMessage()
+            ]);
+            // Continue regardless of email failure
+        }
         
         return redirect()->route('students.index')
             ->with('success', 'Student created successfully. Welcome email will be sent shortly.');
@@ -252,26 +247,23 @@ class StudentController extends Controller
         
         // Send password setup email if password was just set up for the first time
         if ($wasPasswordSetup && $plainPassword) {
-            $student->refresh();
-            $loginUrl = route('login');
-            $studentEmail = $student->email;
-            $studentId = $student->student_id;
-            
-            // Use register_shutdown_function to send email after response
-            register_shutdown_function(function() use ($student, $plainPassword, $loginUrl, $studentEmail, $studentId) {
-                try {
-                    Mail::to($studentEmail)->send(new PasswordSetupMail($student, $plainPassword, $loginUrl));
-                    \Log::info('Password setup email sent to student', [
-                        'student_id' => $studentId,
-                        'email' => $studentEmail
-                    ]);
-                } catch (\Exception $e) {
-                    \Log::error('Failed to send password setup email', [
-                        'student_id' => $studentId,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            });
+            try {
+                $student->refresh();
+                $loginUrl = route('login');
+                
+                @Mail::to($student->email)->send(new PasswordSetupMail($student, $plainPassword, $loginUrl));
+                
+                \Log::info('Password setup email sent to student', [
+                    'student_id' => $student->student_id,
+                    'email' => $student->email
+                ]);
+            } catch (\Throwable $e) {
+                \Log::error('Failed to send password setup email', [
+                    'student_id' => $student->student_id,
+                    'error' => $e->getMessage()
+                ]);
+                // Continue regardless of email failure
+            }
         }
         
         return redirect()->route('students.index')
