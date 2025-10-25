@@ -1,3 +1,4 @@
+import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
@@ -5,7 +6,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import type { SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Bed, Building2, CalendarCheck, LayoutGrid, Users, FileText, Calendar } from 'lucide-react';
+import { Bed, BookOpen, Building2, CalendarCheck, Folder, LayoutGrid, Users, FileText, Calendar } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const managerNavItems: NavItem[] = [
@@ -91,6 +92,18 @@ const cashierNavItems: NavItem[] = [
     },
 ];
 
+const footerNavItems: NavItem[] = [
+    {
+        title: 'Repository',
+        href: 'https://github.com/laravel/react-starter-kit',
+        icon: Folder,
+    },
+    {
+        title: 'Documentation',
+        href: 'https://laravel.com/docs/starter-kits#react',
+        icon: BookOpen,
+    },
+];
 
 export function AppSidebar() {
     const {auth} = usePage<SharedData>().props;
@@ -111,10 +124,11 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={unassignedManagerNavItems} label="Menu" />
+                <NavMain items={unassignedManagerNavItems} />
             </SidebarContent>
 
             <SidebarFooter>
+                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
@@ -138,10 +152,11 @@ export function AppSidebar() {
                 </SidebarHeader>
 
                 <SidebarContent>
-                    <NavMain items={cashierNavItems} label="Cashier Menu" />
+                    <NavMain items={cashierNavItems} />
                 </SidebarContent>
 
                 <SidebarFooter>
+                    <NavFooter items={footerNavItems} className="mt-auto" />
                     <NavUser />
                 </SidebarFooter>
             </Sidebar>
@@ -164,10 +179,11 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={isAdmin ? adminNavItems: managerNavItems} label={isAdmin ? 'Admin Menu' : 'Manager Menu'} />
+                <NavMain items={isAdmin ? adminNavItems: managerNavItems} />
             </SidebarContent>
 
             <SidebarFooter>
+                <NavFooter items={footerNavItems} className="mt-auto" />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>
