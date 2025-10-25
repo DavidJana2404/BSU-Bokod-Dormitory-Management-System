@@ -116,30 +116,31 @@ class StudentController extends Controller
         
         $student = Student::create($data);
         
-        // Send welcome email asynchronously to avoid timeout
-        // Get dormitory name
-        $dormitoryName = null;
-        if ($user->tenant_id) {
-            $tenant = Tenant::find($user->tenant_id);
-            $dormitoryName = $tenant ? $tenant->dormitory_name : null;
-        }
-        
-        // Send email after response to prevent timeout
-        dispatch(function() use ($student, $dormitoryName) {
-            try {
-                Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
-                
-                \Log::info('Welcome email sent to manually added student', [
-                    'student_id' => $student->student_id,
-                    'email' => $student->email
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Failed to send welcome email to manually added student', [
-                    'student_id' => $student->student_id,
-                    'error' => $e->getMessage()
-                ]);
+        // Send welcome email to the student
+        try {
+            // Get dormitory name
+            $dormitoryName = null;
+            if ($user->tenant_id) {
+                $tenant = Tenant::find($user->tenant_id);
+                $dormitoryName = $tenant ? $tenant->dormitory_name : null;
             }
-        })->afterResponse();
+            
+            // Send email with timeout protection
+            set_time_limit(60);
+            
+            Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
+            
+            \Log::info('Welcome email sent to manually added student', [
+                'student_id' => $student->student_id,
+                'email' => $student->email
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to send welcome email to manually added student', [
+                'student_id' => $student->student_id,
+                'error' => $e->getMessage()
+            ]);
+            // Don't fail the whole process if email fails
+        }
         
         return redirect()->route('students.index')
             ->with('success', 'Student created successfully.');
@@ -248,28 +249,28 @@ class StudentController extends Controller
         
         $student->update($data);
         
-        // Send password setup email asynchronously to avoid timeout
+        // Send password setup email if password was just set up for the first time
         if ($wasPasswordSetup && $plainPassword) {
-            // Refresh student model to get updated data
-            $student->refresh();
-            $loginUrl = route('login');
-            
-            // Use dispatch to send email after response (prevents timeout)
-            dispatch(function() use ($student, $plainPassword, $loginUrl) {
-                try {
-                    Mail::to($student->email)->send(new PasswordSetupMail($student, $plainPassword, $loginUrl));
-                    
-                    \Log::info('Password setup email sent to student', [
-                        'student_id' => $student->student_id,
-                        'email' => $student->email
-                    ]);
-                } catch (\Exception $e) {
-                    \Log::error('Failed to send password setup email', [
-                        'student_id' => $student->student_id,
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            })->afterResponse();
+            try {
+                $student->refresh();
+                $loginUrl = route('login');
+                
+                // Send email synchronously with timeout protection
+                set_time_limit(60); // Give 60 seconds for this operation
+                
+                Mail::to($student->email)->send(new PasswordSetupMail($student, $plainPassword, $loginUrl));
+                
+                \Log::info('Password setup email sent to student', [
+                    'student_id' => $student->student_id,
+                    'email' => $student->email
+                ]);
+            } catch (\Exception $e) {
+                \Log::error('Failed to send password setup email', [
+                    'student_id' => $student->student_id,
+                    'error' => $e->getMessage()
+                ]);
+                // Don't fail the whole process if email fails
+            }
         }
         
         return redirect()->route('students.index')

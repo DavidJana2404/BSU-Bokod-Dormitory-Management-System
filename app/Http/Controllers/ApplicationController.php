@@ -331,31 +331,32 @@ class ApplicationController extends Controller
                 }
             });
             
-            // Send welcome email asynchronously to avoid timeout
+            // Send welcome email to the student
             if ($student && $studentCreated) {
-                // Get dormitory name
-                $dormitoryName = null;
-                if ($application->tenant_id) {
-                    $tenant = Tenant::find($application->tenant_id);
-                    $dormitoryName = $tenant ? $tenant->dormitory_name : null;
-                }
-                
-                // Send email after response to prevent timeout
-                dispatch(function() use ($student, $dormitoryName) {
-                    try {
-                        Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
-                        
-                        \Log::info('Welcome email sent to student', [
-                            'student_id' => $student->student_id,
-                            'email' => $student->email
-                        ]);
-                    } catch (\Exception $e) {
-                        \Log::error('Failed to send welcome email', [
-                            'student_id' => $student->student_id,
-                            'error' => $e->getMessage()
-                        ]);
+                try {
+                    // Get dormitory name
+                    $dormitoryName = null;
+                    if ($application->tenant_id) {
+                        $tenant = Tenant::find($application->tenant_id);
+                        $dormitoryName = $tenant ? $tenant->dormitory_name : null;
                     }
-                })->afterResponse();
+                    
+                    // Send email with timeout protection
+                    set_time_limit(60);
+                    
+                    Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
+                    
+                    \Log::info('Welcome email sent to student', [
+                        'student_id' => $student->student_id,
+                        'email' => $student->email
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send welcome email', [
+                        'student_id' => $student->student_id,
+                        'error' => $e->getMessage()
+                    ]);
+                    // Don't fail the whole process if email fails
+                }
             }
             
             // Prepare response data
