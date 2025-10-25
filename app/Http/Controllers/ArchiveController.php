@@ -37,7 +37,7 @@ class ArchiveController extends Controller
                 });
             
             // Admin can see archived staff users (managers and cashiers)
-            $archivedUsers = User::archived()
+            $archivedUsers = User::onlyTrashed()
                 ->whereIn('role', ['manager', 'cashier'])
                 ->with('tenant')
                 ->get()
@@ -171,7 +171,7 @@ class ArchiveController extends Controller
                 if ($user->role !== 'admin') {
                     return redirect()->back()->with('error', 'Unauthorized action.');
                 }
-                $item = User::findOrFail($id);
+                $item = User::withTrashed()->findOrFail($id);
                 break;
             case 'room':
                 $item = Room::findOrFail($id);
@@ -227,7 +227,7 @@ class ArchiveController extends Controller
                 if ($user->role !== 'admin') {
                     return redirect()->back()->with('error', 'Unauthorized action.');
                 }
-                $item = User::findOrFail($id);
+                $item = User::withTrashed()->findOrFail($id);
                 break;
             case 'room':
                 $item = Room::findOrFail($id);
@@ -277,14 +277,14 @@ class ArchiveController extends Controller
         if ($user->role === 'admin') {
             // Admin can clear dormitories, users, and students (system-wide, but not bookings)
             $dormitoriesCount = Tenant::archived()->count();
-            $usersCount = User::archived()->whereIn('role', ['manager', 'cashier'])->count();
+            $usersCount = User::onlyTrashed()->whereIn('role', ['manager', 'cashier'])->count();
             $studentsCount = Student::archived()->count();
             
             $deletedCount = $dormitoriesCount + $usersCount + $studentsCount;
             
             // Force delete all archived items system-wide
             Tenant::archived()->forceDelete();
-            User::archived()->whereIn('role', ['manager', 'cashier'])->forceDelete();
+            User::onlyTrashed()->whereIn('role', ['manager', 'cashier'])->forceDelete();
             Student::archived()->forceDelete();
         } else {
             // Manager can clear rooms, students, bookings from their tenant
