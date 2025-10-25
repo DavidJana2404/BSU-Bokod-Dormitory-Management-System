@@ -641,7 +641,7 @@ export default function AdminUsers() {
                                                     size="sm"
                                                     variant="outline"
                                                     onClick={() => handleArchiveStaffUser(user)}
-                                                    className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/20"
+                                                    className="text-xs border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/20"
                                                 >
                                                     <Archive size={12} className="mr-1" />
                                                     Archive
