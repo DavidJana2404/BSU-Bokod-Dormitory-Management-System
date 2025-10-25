@@ -130,6 +130,21 @@ Route::get('/fix-booking-schema', function () {
     }
 })->name('fix.booking.schema');
 
+// Email configuration debug endpoint
+Route::get('/debug-email-config', function () {
+    return response()->json([
+        'mail_mailer' => config('mail.default'),
+        'mail_host' => config('mail.mailers.smtp.host'),
+        'mail_port' => config('mail.mailers.smtp.port'),
+        'mail_username' => config('mail.mailers.smtp.username'),
+        'mail_encryption' => config('mail.mailers.smtp.encryption'),
+        'mail_from_address' => config('mail.from.address'),
+        'mail_from_name' => config('mail.from.name'),
+        'password_set' => !empty(config('mail.mailers.smtp.password')) ? 'YES' : 'NO',
+        'password_length' => strlen(config('mail.mailers.smtp.password')),
+    ]);
+});
+
 // Debug endpoint for troubleshooting (remove in production)
 Route::get('/debug-info', function () {
     try {
