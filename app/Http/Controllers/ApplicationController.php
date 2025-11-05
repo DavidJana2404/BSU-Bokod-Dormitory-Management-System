@@ -318,12 +318,18 @@ class ApplicationController extends Controller
                     'processed_at' => now(),
                 ]);
                 
+                // Refresh the application model to ensure we have the latest data
+                $application->refresh();
+                
                 DB::commit();
                 
                 Log::info('Application approved successfully', [
                     'application_id' => $application->id,
                     'student_id' => $student->student_id,
-                    'processed_by' => $user->id
+                    'student_email' => $student->email,
+                    'application_status' => $application->status,
+                    'processed_by' => $user->id,
+                    'processed_at' => $application->processed_at
                 ]);
                 
             } catch (\Exception $transactionError) {
