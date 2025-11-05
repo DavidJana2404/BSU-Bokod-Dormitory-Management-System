@@ -24,7 +24,8 @@ import {
     ThumbsDown,
     Loader2,
     Search,
-    RotateCcw
+    RotateCcw,
+    Archive
 } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
@@ -70,6 +71,8 @@ export default function Applications() {
     const [pendingApproval, setPendingApproval] = useState<Application | null>(null);
     const [pendingRejection, setPendingRejection] = useState<Application | null>(null);
     const [pendingRestore, setPendingRestore] = useState<Application | null>(null);
+    const [pendingArchive, setPendingArchive] = useState<Application | null>(null);
+    const [archiveModalOpen, setArchiveModalOpen] = useState(false);
     const [error, setError] = useState<string | null>(serverError || flash?.error || null);
     const [success, setSuccess] = useState<string | null>(flash?.success || null);
     
@@ -208,6 +211,39 @@ export default function Applications() {
             onFinish: () => {
                 setProcessing(false);
                 console.log('Revert request finished');
+            },
+        });
+    };
+    
+    const handleArchive = (application: Application) => {
+        setPendingArchive(application);
+        setArchiveModalOpen(true);
+    };
+    
+    const confirmArchive = () => {
+        if (!pendingArchive) return;
+        
+        setProcessing(true);
+        setError(null);
+        setSuccess(null);
+        
+        router.post(`/applications/${pendingArchive.id}/archive`, {}, {
+            onSuccess: (page) => {
+                console.log('Archive success response:', page);
+                setSuccess('Application archived successfully!');
+                setArchiveModalOpen(false);
+                setPendingArchive(null);
+            },
+            onError: (errors) => {
+                console.error('Error archiving application:', errors);
+                console.error('Full error object:', JSON.stringify(errors, null, 2));
+                setError(errors?.message || Object.values(errors || {}).flat().join(', ') || 'Failed to archive application. Please try again.');
+                setArchiveModalOpen(false);
+                setPendingArchive(null);
+            },
+            onFinish: () => {
+                setProcessing(false);
+                console.log('Archive request finished');
             },
         });
     };
@@ -642,6 +678,20 @@ export default function Applications() {
                                                                     )}
                                                                     Revert
                                                                 </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleArchive(application)}
+                                                                    className="h-6 px-2 text-xs bg-orange-600 hover:bg-orange-700 text-white border-orange-600 hover:border-orange-700"
+                                                                    disabled={processing}
+                                                                >
+                                                                    {processing && pendingArchive?.id === application.id ? (
+                                                                        <Loader2 size={10} className="mr-1 animate-spin" />
+                                                                    ) : (
+                                                                        <Archive size={10} className="mr-1" />
+                                                                    )}
+                                                                    Archive
+                                                                </Button>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -748,6 +798,20 @@ export default function Applications() {
                                                                         <RotateCcw size={10} className="mr-1" />
                                                                     )}
                                                                     Revert
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() => handleArchive(application)}
+                                                                    className="h-6 px-2 text-xs bg-orange-600 hover:bg-orange-700 text-white border-orange-600 hover:border-orange-700"
+                                                                    disabled={processing}
+                                                                >
+                                                                    {processing && pendingArchive?.id === application.id ? (
+                                                                        <Loader2 size={10} className="mr-1 animate-spin" />
+                                                                    ) : (
+                                                                        <Archive size={10} className="mr-1" />
+                                                                    )}
+                                                                    Archive
                                                                 </Button>
                                                             </div>
                                                         </div>
@@ -958,6 +1022,21 @@ export default function Applications() {
                     title="Revert Application?"
                     message={pendingRestore ? `Are you sure you want to revert the application from ${pendingRestore.first_name} ${pendingRestore.last_name} back to pending status?\n\n${pendingRestore.status === 'approved' ? 'This will remove the student record that was created during approval.' : 'This will clear the rejection reason and allow you to process it again.'}` : ''}
                     confirmText={processing ? 'Reverting...' : 'Revert Application'}
+                    isDestructive={false}
+                />
+                
+                {/* Archive Warning Dialog */}
+                <WarningDialog
+                    open={archiveModalOpen}
+                    onClose={() => {
+                        setArchiveModalOpen(false);
+                        setPendingArchive(null);
+                        setProcessing(false);
+                    }}
+                    onConfirm={confirmArchive}
+                    title="Archive Application?"
+                    message={pendingArchive ? `Are you sure you want to archive the application from ${pendingArchive.first_name} ${pendingArchive.last_name}?\n\nArchived applications can be restored from the Archive in Settings.` : ''}
+                    confirmText={processing ? 'Archiving...' : 'Archive Application'}
                     isDestructive={false}
                 />
             </div>

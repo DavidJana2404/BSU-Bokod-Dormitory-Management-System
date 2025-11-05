@@ -331,6 +331,9 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::put('/applications/{application}/approve', [ApplicationController::class, 'approve'])->name('applications.approve');
     Route::put('/applications/{application}/reject', [ApplicationController::class, 'reject'])->name('applications.reject');
     Route::put('/applications/{application}/restore', [ApplicationController::class, 'restore'])->name('applications.restore');
+    Route::post('/applications/{application}/archive', [ApplicationController::class, 'archive'])->name('applications.archive');
+    Route::post('/applications/{application}/restore-archived', [ApplicationController::class, 'restoreArchived'])->name('applications.restore-archived');
+    Route::delete('/applications/{application}/force', [ApplicationController::class, 'forceDelete'])->name('applications.force-delete');
     // Redirect GET requests to approval/rejection URLs to applications index
     Route::get('/applications/{application}/approve', function($application) {
         return redirect()->route('applications.index')->with('error', 'Invalid request method. Please use the application interface to approve applications.');

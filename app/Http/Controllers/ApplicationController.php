@@ -71,7 +71,8 @@ class ApplicationController extends Controller
                     'id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone', 
                     'additional_info', 'status', 'rejection_reason', 'processed_by', 
                     'processed_at', 'created_at'
-                ]);
+                ])
+                ->notArchived(); // Exclude archived applications
                 
                 // Check if user has proper role and tenant access
                 if (!isset($user->role)) {
@@ -670,6 +671,61 @@ class ApplicationController extends Controller
             }
             return redirect()->route('applications.index')->with('error', $errorMessage);
         }
+    }
+    
+    /**
+     * Archive an application.
+     */
+    public function archive(Request $request, $id)
+    {
+        $user = $request->user();
+        $application = Application::findOrFail($id);
+        
+        // Check if manager has permission
+        if ($user->role === 'manager' && $user->tenant_id !== $application->tenant_id) {
+            return redirect()->back()->with('error', 'Unauthorized action.');
+        }
+        
+        $application->archive();
+        
+        return redirect()->route('applications.index')
+            ->with('success', 'Application archived successfully.');
+    }
+    
+    /**
+     * Restore an archived application.
+     */
+    public function restoreArchived($id)
+    {
+        $user = request()->user();
+        $application = Application::findOrFail($id);
+        
+        // Check if manager has permission
+        if ($user->role === 'manager' && $user->tenant_id !== $application->tenant_id) {
+            return redirect()->back()->with('error', 'Unauthorized action.');
+        }
+        
+        $application->restore();
+        
+        return redirect()->back()->with('success', 'Application restored successfully.');
+    }
+    
+    /**
+     * Permanently delete an application.
+     */
+    public function forceDelete($id)
+    {
+        $user = request()->user();
+        $application = Application::findOrFail($id);
+        
+        // Check if manager has permission
+        if ($user->role === 'manager' && $user->tenant_id !== $application->tenant_id) {
+            return redirect()->back()->with('error', 'Unauthorized action.');
+        }
+        
+        $application->forceDelete();
+        
+        return redirect()->back()->with('success', 'Application permanently deleted.');
     }
     
     /**

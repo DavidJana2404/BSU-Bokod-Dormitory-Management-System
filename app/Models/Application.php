@@ -28,6 +28,7 @@ class Application extends Model
     
     protected $casts = [
         'processed_at' => 'datetime',
+        'archived_at' => 'datetime',
     ];
     
     /**
@@ -112,5 +113,53 @@ class Application extends Model
     public function scopeRejected($query)
     {
         return $query->where('status', 'rejected');
+    }
+    
+    /**
+     * Scope to exclude archived applications
+     */
+    public function scopeNotArchived($query)
+    {
+        return $query->whereNull('archived_at');
+    }
+    
+    /**
+     * Scope to get only archived applications
+     */
+    public function scopeArchived($query)
+    {
+        return $query->whereNotNull('archived_at');
+    }
+    
+    /**
+     * Archive this application
+     */
+    public function archive()
+    {
+        $this->update(['archived_at' => now()]);
+    }
+    
+    /**
+     * Restore this application from archive
+     */
+    public function restore()
+    {
+        $this->update(['archived_at' => null]);
+    }
+    
+    /**
+     * Check if application is archived
+     */
+    public function isArchived()
+    {
+        return !is_null($this->archived_at);
+    }
+    
+    /**
+     * Force delete the application
+     */
+    public function forceDelete()
+    {
+        return $this->delete();
     }
 }

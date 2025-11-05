@@ -8,6 +8,7 @@ use App\Models\Student;
 use App\Models\Booking;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Models\Application;
 use Inertia\Inertia;
 
 class ArchiveController extends Controller
@@ -127,6 +128,39 @@ class ArchiveController extends Controller
                     ];
                 });
         }
+        
+        // Handle archived applications based on user role
+        if ($user->role === 'admin') {
+            // Admin can see all archived applications (system-wide)
+            $archivedApplications = Application::archived()
+                ->with(['tenant'])
+                ->get()
+                ->map(function ($application) {
+                    return [
+                        'id' => $application->id,
+                        'type' => 'application',
+                        'title' => $application->first_name . ' ' . $application->last_name,
+                        'subtitle' => $application->email . ' - ' . ucfirst($application->status) . ($application->tenant ? ' (' . $application->tenant->dormitory_name . ')' : ''),
+                        'archived_at' => $application->archived_at,
+                        'data' => $application,
+                    ];
+                });
+        } else {
+            // Manager can only see applications from their own tenant
+            $archivedApplications = Application::where('tenant_id', $user->tenant_id)
+                ->archived()
+                ->get()
+                ->map(function ($application) {
+                    return [
+                        'id' => $application->id,
+                        'type' => 'application',
+                        'title' => $application->first_name . ' ' . $application->last_name,
+                        'subtitle' => $application->email . ' - ' . ucfirst($application->status),
+                        'archived_at' => $application->archived_at,
+                        'data' => $application,
+                    ];
+                });
+        }
             
         // Combine all archived items and sort by archived date
         $archivedItems = collect()
@@ -135,6 +169,7 @@ class ArchiveController extends Controller
             ->merge($archivedRooms)
             ->merge($archivedStudents)
             ->merge($archivedBookings)
+            ->merge($archivedApplications)
             ->sortByDesc('archived_at')
             ->values();
             
@@ -146,6 +181,7 @@ class ArchiveController extends Controller
                 'rooms' => $archivedRooms->count(),
                 'students' => $archivedStudents->count(),
                 'bookings' => $archivedBookings->count(),
+                'applications' => $archivedApplications->count(),
                 'total' => $archivedItems->count(),
             ],
         ]);
@@ -182,18 +218,21 @@ class ArchiveController extends Controller
             case 'booking':
                 $item = Booking::findOrFail($id);
                 break;
+            case 'application':
+                $item = Application::findOrFail($id);
+                break;
             default:
                 return redirect()->back()->with('error', 'Invalid item type.');
         }
         
         // Check if user has access to this item based on role
         if ($user->role === 'admin') {
-            // Admin can restore dormitories, users, and students (system-wide, but not bookings)
-            if ($type !== 'dormitory' && $type !== 'user' && $type !== 'student') {
-                return redirect()->back()->with('error', 'Unauthorized action. Admins can only restore dormitories, staff users, and students.');
+            // Admin can restore dormitories, users, students, and applications (system-wide, but not bookings)
+            if ($type !== 'dormitory' && $type !== 'user' && $type !== 'student' && $type !== 'application') {
+                return redirect()->back()->with('error', 'Unauthorized action. Admins can only restore dormitories, staff users, students, and applications.');
             }
         } else {
-            // Manager can restore rooms, students, bookings from their tenant (but not dormitories)
+            // Manager can restore rooms, students, bookings, applications from their tenant (but not dormitories)
             if ($type === 'dormitory') {
                 return redirect()->back()->with('error', 'Unauthorized action. Managers cannot manage dormitories.');
             }
@@ -238,18 +277,21 @@ class ArchiveController extends Controller
             case 'booking':
                 $item = Booking::findOrFail($id);
                 break;
+            case 'application':
+                $item = Application::findOrFail($id);
+                break;
             default:
                 return redirect()->back()->with('error', 'Invalid item type.');
         }
         
         // Check if user has access to this item based on role
         if ($user->role === 'admin') {
-            // Admin can delete dormitories, users, and students (system-wide, but not bookings)
-            if ($type !== 'dormitory' && $type !== 'user' && $type !== 'student') {
-                return redirect()->back()->with('error', 'Unauthorized action. Admins can only delete dormitories, staff users, and students.');
+            // Admin can delete dormitories, users, students, and applications (system-wide, but not bookings)
+            if ($type !== 'dormitory' && $type !== 'user' && $type !== 'student' && $type !== 'application') {
+                return redirect()->back()->with('error', 'Unauthorized action. Admins can only delete dormitories, staff users, students, and applications.');
             }
         } else {
-            // Manager can delete rooms, students, bookings from their tenant (but not dormitories)
+            // Manager can delete rooms, students, bookings, applications from their tenant (but not dormitories)
             if ($type === 'dormitory') {
                 return redirect()->back()->with('error', 'Unauthorized action. Managers cannot manage dormitories.');
             }
@@ -275,29 +317,33 @@ class ArchiveController extends Controller
         $deletedCount = 0;
         
         if ($user->role === 'admin') {
-            // Admin can clear dormitories, users, and students (system-wide, but not bookings)
+            // Admin can clear dormitories, users, students, and applications (system-wide, but not bookings)
             $dormitoriesCount = Tenant::archived()->count();
             $usersCount = User::onlyTrashed()->whereIn('role', ['manager', 'cashier'])->count();
             $studentsCount = Student::archived()->count();
+            $applicationsCount = Application::archived()->count();
             
-            $deletedCount = $dormitoriesCount + $usersCount + $studentsCount;
+            $deletedCount = $dormitoriesCount + $usersCount + $studentsCount + $applicationsCount;
             
             // Force delete all archived items system-wide
             Tenant::archived()->forceDelete();
             User::onlyTrashed()->whereIn('role', ['manager', 'cashier'])->forceDelete();
             Student::archived()->forceDelete();
+            Application::archived()->forceDelete();
         } else {
-            // Manager can clear rooms, students, bookings from their tenant
+            // Manager can clear rooms, students, bookings, applications from their tenant
             $roomsCount = Room::where('tenant_id', $user->tenant_id)->archived()->count();
             $studentsCount = Student::where('tenant_id', $user->tenant_id)->archived()->count();
             $bookingsCount = Booking::where('tenant_id', $user->tenant_id)->archived()->count();
+            $applicationsCount = Application::where('tenant_id', $user->tenant_id)->archived()->count();
             
-            $deletedCount = $roomsCount + $studentsCount + $bookingsCount;
+            $deletedCount = $roomsCount + $studentsCount + $bookingsCount + $applicationsCount;
             
             // Force delete all archived items for this tenant
             Room::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
             Student::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
             Booking::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
+            Application::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
         }
         
         $message = $deletedCount > 0 
