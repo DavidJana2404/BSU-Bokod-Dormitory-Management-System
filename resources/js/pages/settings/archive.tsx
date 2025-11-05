@@ -15,7 +15,8 @@ import {
     CalendarCheck,
     Clock,
     AlertCircle,
-    Building2 
+    Building2,
+    FileText
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useState } from 'react';
@@ -25,7 +26,7 @@ import WarningDialog from '@/components/warning-dialog';
 
 interface ArchivedItem {
     id: number;
-    type: 'room' | 'student' | 'booking' | 'dormitory' | 'user';
+    type: 'room' | 'student' | 'booking' | 'dormitory' | 'user' | 'application';
     title: string;
     subtitle: string;
     archived_at: string;
@@ -38,6 +39,7 @@ interface ArchiveStats {
     rooms: number;
     students: number;
     bookings: number;
+    applications: number;
     total: number;
 }
 
@@ -78,6 +80,11 @@ const typeConfig = {
         icon: CalendarCheck,
         color: 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800',
         label: 'Booking'
+    },
+    application: {
+        icon: FileText,
+        color: 'bg-yellow-100 text-yellow-700 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800',
+        label: 'Application'
     }
 };
 
@@ -175,7 +182,7 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
             return `Are you sure you want to permanently delete "${pendingItem.title}"?\n\nThis action cannot be undone and the item will be completely removed from the database.`;
         } else if (warningAction === 'clearAll') {
             const totalItems = stats.total;
-            const itemText = isAdmin ? 'dormitories, staff users, and students' : 'rooms, students, and bookings';
+            const itemText = isAdmin ? 'dormitories, staff users, students, and applications' : 'rooms, students, bookings, and applications';
             return `Are you sure you want to permanently delete ALL ${totalItems} archived ${itemText}?\\n\\nThis action cannot be undone and all archived items will be completely removed from the database.`;
         }
         
@@ -190,7 +197,7 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                 <div className="space-y-6">
                     <HeadingSmall 
                         title="Archive" 
-                        description={isAdmin ? "Manage archived dormitories, staff users, and students" : "Manage archived rooms, students, and bookings"} 
+                        description={isAdmin ? "Manage archived dormitories, staff users, students, and applications" : "Manage archived rooms, students, bookings, and applications"}
                     />
 
                     {/* Stats Cards */}
@@ -255,6 +262,17 @@ export default function ArchivePage({ archivedItems, stats }: ArchiveProps) {
                             </CardContent>
                         </Card>
                     )}
+                    
+                    {/* Applications Card - Show for both admin and manager */}
+                    <Card className="text-center bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200 dark:border-yellow-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
+                        <CardContent className="p-4 sm:p-6">
+                            <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
+                                <FileText className="text-yellow-600 dark:text-yellow-400" size={24} />
+                            </div>
+                            <div className="text-sm sm:text-lg font-semibold mb-2 text-yellow-800 dark:text-yellow-200">Archived Applications</div>
+                            <div className="text-2xl sm:text-3xl font-bold text-yellow-900 dark:text-yellow-100">{stats.applications}</div>
+                        </CardContent>
+                    </Card>
 
                     <Card className="text-center bg-gray-50 dark:bg-gray-950/30 border-gray-200 dark:border-gray-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
                         <CardContent className="p-4 sm:p-6">

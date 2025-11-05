@@ -73,6 +73,7 @@ export default function Applications() {
     const [pendingRestore, setPendingRestore] = useState<Application | null>(null);
     const [pendingArchive, setPendingArchive] = useState<Application | null>(null);
     const [archiveModalOpen, setArchiveModalOpen] = useState(false);
+    const [archiveAllModalOpen, setArchiveAllModalOpen] = useState(false);
     const [error, setError] = useState<string | null>(serverError || flash?.error || null);
     const [success, setSuccess] = useState<string | null>(flash?.success || null);
     
@@ -246,6 +247,62 @@ export default function Applications() {
                 console.log('Archive request finished');
             },
         });
+    };
+    
+    const handleArchiveAll = () => {
+        setArchiveAllModalOpen(true);
+    };
+    
+    const confirmArchiveAll = () => {
+        setProcessing(true);
+        setError(null);
+        setSuccess(null);
+        
+        // Get all processed (approved and rejected) application IDs
+        const processedApplicationIds = applications
+            .filter(app => app.status === 'approved' || app.status === 'rejected')
+            .map(app => app.id);
+        
+        if (processedApplicationIds.length === 0) {
+            setError('No processed applications to archive.');
+            setArchiveAllModalOpen(false);
+            setProcessing(false);
+            return;
+        }
+        
+        // Archive applications one by one (you could also create a batch endpoint)
+        let archived = 0;
+        let failed = 0;
+        
+        const archiveNext = (index: number) => {
+            if (index >= processedApplicationIds.length) {
+                setProcessing(false);
+                setArchiveAllModalOpen(false);
+                if (failed === 0) {
+                    setSuccess(`Successfully archived ${archived} application(s)!`);
+                } else {
+                    setError(`Archived ${archived} application(s), but ${failed} failed.`);
+                }
+                // Reload the page to refresh the list
+                router.reload();
+                return;
+            }
+            
+            router.post(`/applications/${processedApplicationIds[index]}/archive`, {}, {
+                onSuccess: () => {
+                    archived++;
+                    archiveNext(index + 1);
+                },
+                onError: () => {
+                    failed++;
+                    archiveNext(index + 1);
+                },
+                preserveState: true,
+                preserveScroll: true,
+            });
+        };
+        
+        archiveNext(0);
     };
 
     const getStatusBadge = (status: string) => {
@@ -591,6 +648,18 @@ export default function Applications() {
                                     <CheckCircle className="text-gray-500" size={20} />
                                     Processed Applications ({approvedApplications.length + rejectedApplications.length})
                                 </h2>
+                                {(approvedApplications.length > 0 || rejectedApplications.length > 0) && (
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleArchiveAll}
+                                        disabled={processing}
+                                        className="h-8 px-3 text-xs bg-orange-600 hover:bg-orange-700 text-white border-orange-600 hover:border-orange-700"
+                                    >
+                                        <Archive size={12} className="mr-1" />
+                                        {processing ? 'Archiving...' : 'Archive All Processed'}
+                                    </Button>
+                                )}
                             </div>
                             
                             <div className="space-y-6">
@@ -1037,6 +1106,20 @@ export default function Applications() {
                     title="Archive Application?"
                     message={pendingArchive ? `Are you sure you want to archive the application from ${pendingArchive.first_name} ${pendingArchive.last_name}?\n\nArchived applications can be restored from the Archive in Settings.` : ''}
                     confirmText={processing ? 'Archiving...' : 'Archive Application'}
+                    isDestructive={false}
+                />
+                
+                {/* Archive All Warning Dialog */}
+                <WarningDialog
+                    open={archiveAllModalOpen}
+                    onClose={() => {
+                        setArchiveAllModalOpen(false);
+                        setProcessing(false);
+                    }}
+                    onConfirm={confirmArchiveAll}
+                    title="Archive All Processed Applications?"
+                    message={`Are you sure you want to archive all ${approvedApplications.length + rejectedApplications.length} processed applications?\n\nThis will archive both approved and rejected applications. Archived applications can be restored from the Archive in Settings.`}
+                    confirmText={processing ? 'Archiving...' : 'Archive All'}
                     isDestructive={false}
                 />
             </div>
