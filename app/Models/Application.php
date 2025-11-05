@@ -24,6 +24,7 @@ class Application extends Model
         'rejection_reason',
         'processed_by',
         'processed_at',
+        'archived_at',
     ];
     
     protected $casts = [

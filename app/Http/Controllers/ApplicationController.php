@@ -678,18 +678,51 @@ class ApplicationController extends Controller
      */
     public function archive(Request $request, $id)
     {
-        $user = $request->user();
-        $application = Application::findOrFail($id);
-        
-        // Check if manager has permission
-        if ($user->role === 'manager' && $user->tenant_id !== $application->tenant_id) {
-            return redirect()->back()->with('error', 'Unauthorized action.');
+        try {
+            $user = $request->user();
+            $application = Application::findOrFail($id);
+            
+            // Check if manager has permission
+            if ($user->role === 'manager' && $user->tenant_id !== $application->tenant_id) {
+                \Log::warning('Unauthorized archive attempt', [
+                    'user_id' => $user->id,
+                    'application_id' => $id
+                ]);
+                
+                if (request()->header('X-Inertia')) {
+                    return back()->with('error', 'Unauthorized action.');
+                }
+                return redirect()->back()->with('error', 'Unauthorized action.');
+            }
+            
+            $application->archive();
+            
+            \Log::info('Application archived', [
+                'application_id' => $id,
+                'archived_by' => $user->id
+            ]);
+            
+            if (request()->header('X-Inertia')) {
+                return redirect()->route('applications.index')
+                    ->with('success', 'Application archived successfully.');
+            }
+            
+            return redirect()->route('applications.index')
+                ->with('success', 'Application archived successfully.');
+                
+        } catch (\Exception $e) {
+            \Log::error('Error archiving application', [
+                'application_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            if (request()->header('X-Inertia')) {
+                return back()->with('error', 'Failed to archive application. Please try again.');
+            }
+            
+            return redirect()->back()->with('error', 'Failed to archive application. Please try again.');
         }
-        
-        $application->archive();
-        
-        return redirect()->route('applications.index')
-            ->with('success', 'Application archived successfully.');
     }
     
     /**
