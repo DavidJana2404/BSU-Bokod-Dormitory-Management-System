@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use App\Rules\PhilippinePhoneNumber;
 use Illuminate\Validation\Rule;
+use App\Models\Student;
 
 class ApplicationFormRequest extends FormRequest
 {
@@ -35,7 +36,17 @@ class ApplicationFormRequest extends FormRequest
                 'email:rfc,dns', // Enhanced email validation
                 'max:255',
                 'lowercase',
-                Rule::unique('applications', 'email')->ignore($applicationId, 'id')
+                Rule::unique('applications', 'email')->ignore($applicationId, 'id'),
+                function ($attribute, $value, $fail) {
+                    // Check if email exists in active (non-archived) students
+                    $existsInActiveStudents = Student::whereNull('archived_at')
+                        ->where('email', $value)
+                        ->exists();
+                    
+                    if ($existsInActiveStudents) {
+                        $fail('This email address is already registered to an active student.');
+                    }
+                },
             ],
             'phone' => [
                 'required',

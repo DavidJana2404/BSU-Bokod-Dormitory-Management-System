@@ -34,7 +34,9 @@ class StudentFormRequest extends FormRequest
                 'email:rfc,dns', // Enhanced email validation
                 'max:255',
                 'lowercase',
-                Rule::unique('students', 'email')->ignore($studentId, 'student_id')
+                Rule::unique('students', 'email')
+                    ->ignore($studentId, 'student_id')
+                    ->whereNull('archived_at') // Exclude archived students
             ],
             'phone' => [
                 'required',

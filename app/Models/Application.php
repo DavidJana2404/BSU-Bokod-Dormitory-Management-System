@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\Rule;
 
 class Application extends Model
 {
@@ -59,7 +60,17 @@ class Application extends Model
                 'email:rfc,dns',
                 'max:255',
                 'lowercase',
-                'unique:applications,email'
+                'unique:applications,email',
+                function ($attribute, $value, $fail) {
+                    // Check if email exists in active (non-archived) students
+                    $existsInActiveStudents = Student::whereNull('archived_at')
+                        ->where('email', $value)
+                        ->exists();
+                    
+                    if ($existsInActiveStudents) {
+                        $fail('This email address is already registered to an active student.');
+                    }
+                },
             ],
             'phone' => [
                 'required',

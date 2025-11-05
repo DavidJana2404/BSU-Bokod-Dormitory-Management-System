@@ -186,7 +186,15 @@ class Student extends Authenticatable
                 'email:rfc,dns',
                 'max:255',
                 'lowercase',
-                'unique:students,email' . ($id ? ',' . $id . ',student_id' : '')
+                function ($attribute, $value, $fail) use ($id) {
+                    $query = self::where('email', $value)->whereNull('archived_at');
+                    if ($id) {
+                        $query->where('student_id', '!=', $id);
+                    }
+                    if ($query->exists()) {
+                        $fail('This email address is already registered to an active student.');
+                    }
+                }
             ],
             'phone' => [
                 'required',
