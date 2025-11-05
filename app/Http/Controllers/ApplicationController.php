@@ -318,19 +318,30 @@ class ApplicationController extends Controller
                     'processed_at' => now(),
                 ]);
                 
-                // Refresh the application model to ensure we have the latest data
-                $application->refresh();
-                
+                // Commit the transaction first
                 DB::commit();
+                
+                // Refresh the application model AFTER commit to ensure we have the latest persisted data
+                $application = $application->fresh();
+                
+                // Verify the data was actually saved
+                $verifyApplication = Application::find($application->id);
                 
                 Log::info('Application approved successfully', [
                     'application_id' => $application->id,
                     'student_id' => $student->student_id,
                     'student_email' => $student->email,
                     'application_status' => $application->status,
-                    'processed_by' => $user->id,
-                    'processed_at' => $application->processed_at
+                    'verified_status' => $verifyApplication->status,
+                    'processed_by' => $application->processed_by,
+                    'processed_at' => $application->processed_at,
+                    'status_match' => ($application->status === 'approved' && $verifyApplication->status === 'approved')
                 ]);
+                
+                // If verification fails, throw an error
+                if ($verifyApplication->status !== 'approved') {
+                    throw new \Exception('Application status was not saved correctly. Expected: approved, Got: ' . $verifyApplication->status);
+                }
                 
             } catch (\Exception $transactionError) {
                 DB::rollBack();
