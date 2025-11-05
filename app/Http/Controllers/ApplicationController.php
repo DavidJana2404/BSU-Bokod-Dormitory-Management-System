@@ -72,8 +72,12 @@ class ApplicationController extends Controller
                     'id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone', 
                     'additional_info', 'status', 'rejection_reason', 'processed_by', 
                     'processed_at', 'created_at'
-                ])
-                ->notArchived(); // Exclude archived applications
+                ]);
+                
+                // Only exclude archived if column exists (safety check for production)
+                if (\Schema::hasColumn('applications', 'archived_at')) {
+                    $applicationsQuery->notArchived();
+                }
                 
                 // Check if user has proper role and tenant access
                 if (!isset($user->role)) {
@@ -289,9 +293,14 @@ class ApplicationController extends Controller
                 DB::beginTransaction();
                 
                 // Check if student with this email already exists
-                $existingStudent = Student::where('email', $application->email)
-                    ->whereNull('archived_at')
-                    ->first();
+                $existingStudent = Student::where('email', $application->email);
+                
+                // Only check archived_at if column exists
+                if (\Schema::hasColumn('students', 'archived_at')) {
+                    $existingStudent->whereNull('archived_at');
+                }
+                
+                $existingStudent = $existingStudent->first();
                 
                 if ($existingStudent) {
                     throw new \Exception('A student with this email already exists in the system.');
