@@ -285,53 +285,56 @@ class ApplicationController extends Controller
             $studentCreated = false;
             
             // Use database transaction for data consistency
-            \DB::transaction(function () use ($application, $user, &$student, &$studentCreated) {
-                try {
-                    // Check if student with this email already exists
-                    $existingStudent = Student::where('email', $application->email)
-                        ->whereNull('archived_at')
-                        ->first();
-                    
-                    if ($existingStudent) {
-                        throw new \Exception('A student with this email already exists in the system.');
-                    }
-                    
-                    // Create student record WITHOUT password
-                    $student = Student::create([
-                        'tenant_id' => $application->tenant_id,
-                        'first_name' => $application->first_name,
-                        'last_name' => $application->last_name,
-                        'email' => $application->email,
-                        'phone' => $application->phone,
-                        'password' => null, // No password - student must set one to gain access
-                        'status' => 'in',
-                        'payment_status' => 'unpaid',
-                    ]);
-                    
-                    $studentCreated = true;
-                    
-                    // Update application status
-                    $application->update([
-                        'status' => 'approved',
-                        'processed_by' => $user->id,
-                        'processed_at' => now(),
-                    ]);
-                    
-                    \Log::info('Application approved successfully', [
-                        'application_id' => $application->id,
-                        'student_id' => $student->id,
-                        'processed_by' => $user->id
-                    ]);
-                    
-                } catch (\Exception $e) {
-                    \Log::error('Error in application approval transaction', [
-                        'application_id' => $application->id,
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString()
-                    ]);
-                    throw $e; // Re-throw to trigger rollback
+            try {
+                DB::beginTransaction();
+                
+                // Check if student with this email already exists
+                $existingStudent = Student::where('email', $application->email)
+                    ->whereNull('archived_at')
+                    ->first();
+                
+                if ($existingStudent) {
+                    throw new \Exception('A student with this email already exists in the system.');
                 }
-            });
+                
+                // Create student record WITHOUT password
+                $student = Student::create([
+                    'tenant_id' => $application->tenant_id,
+                    'first_name' => $application->first_name,
+                    'last_name' => $application->last_name,
+                    'email' => $application->email,
+                    'phone' => $application->phone,
+                    'password' => null, // No password - student must set one to gain access
+                    'status' => 'in',
+                    'payment_status' => 'unpaid',
+                ]);
+                
+                $studentCreated = true;
+                
+                // Update application status
+                $application->update([
+                    'status' => 'approved',
+                    'processed_by' => $user->id,
+                    'processed_at' => now(),
+                ]);
+                
+                DB::commit();
+                
+                Log::info('Application approved successfully', [
+                    'application_id' => $application->id,
+                    'student_id' => $student->student_id,
+                    'processed_by' => $user->id
+                ]);
+                
+            } catch (\Exception $transactionError) {
+                DB::rollBack();
+                Log::error('Transaction error in application approval', [
+                    'application_id' => $application->id,
+                    'error' => $transactionError->getMessage(),
+                    'trace' => $transactionError->getTraceAsString()
+                ]);
+                throw $transactionError;
+            }
             
             // Queue welcome email to the student (don't wait for it)
             if ($student && $studentCreated) {
