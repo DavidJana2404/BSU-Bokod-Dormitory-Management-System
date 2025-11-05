@@ -332,7 +332,7 @@ class ApplicationController extends Controller
                 }
             });
             
-            // Send welcome email to the student
+            // Queue welcome email to the student (don't wait for it)
             if ($student && $studentCreated) {
                 try {
                     // Get dormitory name
@@ -342,18 +342,19 @@ class ApplicationController extends Controller
                         $dormitoryName = $tenant ? $tenant->dormitory_name : null;
                     }
                     
+                    // Send email asynchronously to avoid timeout
                     @Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
                     
-                    \Log::info('Welcome email sent to student', [
+                    \Log::info('Welcome email queued for student', [
                         'student_id' => $student->student_id,
                         'email' => $student->email
                     ]);
                 } catch (\Throwable $e) {
-                    \Log::error('Failed to send welcome email', [
-                        'student_id' => $student->student_id,
+                    \Log::error('Failed to queue welcome email', [
+                        'student_id' => $student->student_id ?? 'unknown',
                         'error' => $e->getMessage()
                     ]);
-                    // Continue regardless of email failure
+                    // Continue regardless of email failure - email is not critical
                 }
             }
             
@@ -361,7 +362,7 @@ class ApplicationController extends Controller
             $successMessage = 'Application approved successfully! Student has been added to the system.';
             $responseData = [
                 'message' => $successMessage,
-                'student_id' => $student ? $student->id : null,
+                'student_id' => $student ? $student->student_id : null,
                 'application_id' => $application->id
             ];
             
@@ -615,7 +616,7 @@ class ApplicationController extends Controller
                         $student->update(['archived_at' => now()]);
                         
                         \Log::info('Student record archived during application restore', [
-                            'student_id' => $student->id,
+                            'student_id' => $student->student_id,
                             'application_id' => $application->id,
                             'restored_by' => $user->id
                         ]);

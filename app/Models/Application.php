@@ -137,7 +137,21 @@ class Application extends Model
      */
     public function archive()
     {
-        $this->update(['archived_at' => now()]);
+        try {
+            // Check if column exists (for production safety)
+            if (\Schema::hasColumn('applications', 'archived_at')) {
+                $this->update(['archived_at' => now()]);
+            } else {
+                \Log::warning('archived_at column does not exist on applications table');
+                throw new \Exception('Archive feature not available. Please run migrations.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Error archiving application', [
+                'application_id' => $this->id,
+                'error' => $e->getMessage()
+            ]);
+            throw $e;
+        }
     }
     
     /**
