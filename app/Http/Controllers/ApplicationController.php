@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ApplicationController extends Controller
@@ -602,7 +603,9 @@ class ApplicationController extends Controller
             $originalStatus = $application->status;
             
             // Use database transaction for consistency
-            DB::transaction(function () use ($application, $user) {
+            try {
+                DB::beginTransaction();
+                
                 // If this was an approved application, we need to handle the student record
                 if ($application->status === 'approved') {
                     // Find and remove the student record that was created during approval
@@ -615,10 +618,15 @@ class ApplicationController extends Controller
                         // Soft delete the student record
                         $student->update(['archived_at' => now()]);
                         
-                        \Log::info('Student record archived during application restore', [
+                        Log::info('Student record archived during application restore', [
                             'student_id' => $student->student_id,
                             'application_id' => $application->id,
                             'restored_by' => $user->id
+                        ]);
+                    } else {
+                        Log::warning('No student record found to archive during restore', [
+                            'application_id' => $application->id,
+                            'email' => $application->email
                         ]);
                     }
                 }
@@ -631,12 +639,22 @@ class ApplicationController extends Controller
                     'processed_at' => null,
                 ]);
                 
-                \Log::info('Application restored to pending status', [
+                DB::commit();
+                
+                Log::info('Application restored to pending status', [
                     'application_id' => $application->id,
                     'original_status' => $originalStatus,
                     'restored_by' => $user->id
                 ]);
-            });
+            } catch (\Exception $transactionError) {
+                DB::rollBack();
+                Log::error('Transaction error in application restore', [
+                    'application_id' => $application->id,
+                    'error' => $transactionError->getMessage(),
+                    'trace' => $transactionError->getTraceAsString()
+                ]);
+                throw $transactionError;
+            }
             
             $successMessage = "Application restored to pending status successfully!";
             
