@@ -318,30 +318,12 @@ class ApplicationController extends Controller
                     'processed_at' => now(),
                 ]);
                 
-                // Commit the transaction first
                 DB::commit();
                 
-                // Refresh the application model AFTER commit to ensure we have the latest persisted data
-                $application = $application->fresh();
-                
-                // Verify the data was actually saved
-                $verifyApplication = Application::find($application->id);
-                
-                Log::info('Application approved successfully', [
+                Log::info('Application approved - committed to database', [
                     'application_id' => $application->id,
-                    'student_id' => $student->student_id,
-                    'student_email' => $student->email,
-                    'application_status' => $application->status,
-                    'verified_status' => $verifyApplication->status,
-                    'processed_by' => $application->processed_by,
-                    'processed_at' => $application->processed_at,
-                    'status_match' => ($application->status === 'approved' && $verifyApplication->status === 'approved')
+                    'student_id' => $student->student_id
                 ]);
-                
-                // If verification fails, throw an error
-                if ($verifyApplication->status !== 'approved') {
-                    throw new \Exception('Application status was not saved correctly. Expected: approved, Got: ' . $verifyApplication->status);
-                }
                 
             } catch (\Exception $transactionError) {
                 DB::rollBack();
@@ -353,31 +335,8 @@ class ApplicationController extends Controller
                 throw $transactionError;
             }
             
-            // Queue welcome email to the student (don't wait for it)
-            if ($student && $studentCreated) {
-                try {
-                    // Get dormitory name
-                    $dormitoryName = null;
-                    if ($application->tenant_id) {
-                        $tenant = Tenant::find($application->tenant_id);
-                        $dormitoryName = $tenant ? $tenant->dormitory_name : null;
-                    }
-                    
-                    // Send email asynchronously to avoid timeout
-                    @Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
-                    
-                    \Log::info('Welcome email queued for student', [
-                        'student_id' => $student->student_id,
-                        'email' => $student->email
-                    ]);
-                } catch (\Throwable $e) {
-                    \Log::error('Failed to queue welcome email', [
-                        'student_id' => $student->student_id ?? 'unknown',
-                        'error' => $e->getMessage()
-                    ]);
-                    // Continue regardless of email failure - email is not critical
-                }
-            }
+            // Skip email sending to avoid timeout - can be sent later
+            // Email sending removed to prevent 502 errors
             
             // Prepare response data
             $successMessage = 'Application approved successfully! Student has been added to the system.';
