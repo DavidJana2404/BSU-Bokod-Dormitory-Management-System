@@ -7,7 +7,7 @@ Great news! Your login credentials have been set up by the dormitory manager. Yo
 
 **Your Login Credentials:**
 - **Email:** {{ $student->email }}
-- **Student ID:** {{ $student->student_id }}
+- **Dormitorian ID:** {{ $student->student_id }}
 - **Temporary Password:** {{ $password }}
 
 <x-mail::button :url="$loginUrl">

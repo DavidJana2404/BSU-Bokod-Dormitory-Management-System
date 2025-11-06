@@ -26,7 +26,7 @@ const managerNavItems: NavItem[] = [
         icon: Bed,
     },
     {
-        title: 'Students',
+        title: 'Dormitorians',
         href: '/students',
         icon: Users,
     },
@@ -50,7 +50,7 @@ const unassignedManagerNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Students',
+        title: 'Dormitorians',
         href: '/students',
         icon: Users,
     },

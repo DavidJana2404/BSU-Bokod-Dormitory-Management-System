@@ -6,14 +6,14 @@ A comprehensive dormitory management system built with Laravel 12, Inertia.js, a
 
 ### **Multi-Role Access**
 - **Admin**: System-wide management, dormitory oversight, user management
-- **Manager**: Dormitory-specific management, student registration, room assignments
+- **Manager**: Dormitory-specific management, dormitorian registration, room assignments
 - **Cashier**: Payment processing and tracking across all dormitories
-- **Students**: Personal dashboard, status updates, password management
+- **Dormitorians**: Personal dashboard, status updates, password management
 
 ### **Core Functionality**
-- 📋 **Application Management**: Student application processing with approval/rejection workflow
+- 📋 **Application Management**: Dormitorian application processing with approval/rejection workflow
 - 🏠 **Room Management**: Room assignments, capacity tracking, pricing per semester
-- 👥 **Student Management**: Registration, status tracking, payment monitoring
+- 👥 **Dormitorian Management**: Registration, status tracking, payment monitoring
 - 📅 **Booking System**: Semester-based booking (replaced date-based system)
 - 💰 **Payment Tracking**: Comprehensive payment status management for cashiers
 - 🧹 **Cleaning Schedules**: Room cleaning schedule management
@@ -105,11 +105,11 @@ After deployment, you'll need to create initial users through database seeding o
 
 ### Database Schema
 - **Users**: System administrators and managers
-- **Students**: Student records with authentication
+- **Students**: Dormitorian records with authentication
 - **Tenants**: Dormitory/campus information
 - **Rooms**: Room details with capacity and pricing
 - **Bookings**: Semester-based room assignments
-- **Applications**: Student application workflow
+- **Applications**: Dormitorian application workflow
 
 ## 🧪 Testing
 
@@ -135,8 +135,8 @@ php artisan test --coverage
 - `/dormitories` - Dormitory management
 
 ### Manager Routes
-- `/applications` - Student application management
-- `/students` - Student management
+- `/applications` - Dormitorian application management
+- `/students` - Dormitorian management
 - `/rooms` - Room management
 - `/bookings` - Booking management
 - `/cleaning-schedules` - Cleaning schedule management
@@ -144,9 +144,9 @@ php artisan test --coverage
 ### Cashier Routes
 - `/cashier/dashboard` - Payment management dashboard
 
-### Student Routes
-- `/student/dashboard` - Student personal dashboard
-- `/student/settings` - Student account settings
+### Dormitorian Routes
+- `/student/dashboard` - Dormitorian personal dashboard
+- `/student/settings` - Dormitorian account settings
 
 ## 🔧 Configuration
 

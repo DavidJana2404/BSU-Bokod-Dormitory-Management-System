@@ -189,8 +189,8 @@ export default function Students() {
     };
 
     return (
-        <AppLayout breadcrumbs={[{ title: 'Students', href: '/students' }]}>
-            <Head title="Students" />
+        <AppLayout breadcrumbs={[{ title: 'Dormitorians', href: '/students' }]}>
+            <Head title="Dormitorians" />
             <div className="p-6 space-y-6">
                 {/* Header Section */}
                 <div className="flex items-center justify-between">
@@ -199,14 +199,14 @@ export default function Students() {
                             <Users className="text-blue-600 dark:text-blue-400" size={32} />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Students Management</h1>
-                            <p className="text-gray-600 dark:text-gray-400">Manage student information and access credentials</p>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dormitorians Management</h1>
+                            <p className="text-gray-600 dark:text-gray-400">Manage dormitorian information and access credentials</p>
                         </div>
                     </div>
                     
                     {!error && (
                         <Button onClick={handleOpenAdd} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                            <Plus size={18} /> Add New Student
+                            <Plus size={18} /> Add New Dormitorian
                         </Button>
                     )}
                 </div>
@@ -225,7 +225,7 @@ export default function Students() {
                             </div>
                             <div>
                                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{filteredStudents.length}</div>
-                                <div className="text-sm text-blue-600 dark:text-blue-400">{searchTerm ? 'Filtered' : 'Total'} Students</div>
+                                <div className="text-sm text-blue-600 dark:text-blue-400">{searchTerm ? 'Filtered' : 'Total'} Dormitorians</div>
                             </div>
                         </div>
                         
@@ -234,7 +234,7 @@ export default function Students() {
                             <div 
                                 className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'with-login' ? 'bg-green-700' : 'bg-green-600'} text-white`}
                                 onClick={() => setActiveFilter('with-login')}
-                                title="Students With Login Access"
+                                title="Dormitorians With Login Access"
                             >
                                 <Shield size={20} />
                             </div>
@@ -251,7 +251,7 @@ export default function Students() {
                             <div 
                                 className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'paid' ? 'bg-emerald-700' : 'bg-emerald-600'} text-white`}
                                 onClick={() => setActiveFilter('paid')}
-                                title="Students With Complete Payments"
+                                title="Dormitorians With Complete Payments"
                             >
                                 <DollarSign size={20} />
                             </div>
@@ -268,7 +268,7 @@ export default function Students() {
                             <div 
                                 className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'present' ? 'bg-purple-700' : 'bg-purple-600'} text-white`}
                                 onClick={() => setActiveFilter('present')}
-                                title="Currently Present Students"
+                                title="Currently Present Dormitorians"
                             >
                                 <CheckCircle2 size={20} />
                             </div>
@@ -285,7 +285,7 @@ export default function Students() {
                             <div 
                                 className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'booked' ? 'bg-orange-700' : 'bg-orange-600'} text-white`}
                                 onClick={() => setActiveFilter('booked')}
-                                title="Currently Booked Students"
+                                title="Currently Booked Dormitorians"
                             >
                                 <Bed size={20} />
                             </div>
@@ -309,7 +309,7 @@ export default function Students() {
                                 </div>
                                 <div className="flex-1">
                                     <h3 className={`font-semibold mb-2 ${show_assignment_notice ? 'text-yellow-800 dark:text-yellow-200' : 'text-red-800 dark:text-red-200'}`}>
-                                        {show_assignment_notice ? 'Dormitory Assignment Required' : 'Unable to Load Students'}
+                                        {show_assignment_notice ? 'Dormitory Assignment Required' : 'Unable to Load Dormitorians'}
                                     </h3>
                                     <p className={`text-sm ${show_assignment_notice ? 'text-yellow-700 dark:text-yellow-300' : 'text-red-700 dark:text-red-300'}`}>
                                         {error as ReactNode}
@@ -338,13 +338,13 @@ export default function Students() {
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                                     <Users className="text-blue-600 dark:text-blue-400" size={24} />
-                                    Students ({filteredStudents.length})
+                                    Dormitorians ({filteredStudents.length})
                                 </h2>
                             </div>
                             <div className="relative mb-4">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
                                 <Input
-                                    placeholder="Search students by name, email, or room number..."
+                                    placeholder="Search dormitorians by name, email, or room number..."
                                     value={searchTerm}
                                     onChange={(e) => {
                                         setSearchTerm(e.target.value);
@@ -355,7 +355,7 @@ export default function Students() {
                             </div>
                             {searchTerm && (
                                 <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                                    Found {filteredStudents.length} of {studentList.length} students
+                                    Found {filteredStudents.length} of {studentList.length} dormitorians
                                 </div>
                             )}
                             
@@ -385,7 +385,7 @@ export default function Students() {
                                                 {/* Status Badges in Grid Layout */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                                     <div>
-                                                        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Student Status</div>
+                                                <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Dormitorian Status</div>
                                                         {student.status === 'on_leave' && student.leave_reason ? (
                                                             <button
                                                                 onClick={() => toggleLeaveReason(student.student_id)}
@@ -727,7 +727,7 @@ export default function Students() {
                                             onClick={loadMoreStudents}
                                             className="text-sm"
                                         >
-                                            Load More Students
+                                            Load More Dormitorians
                                         </Button>
                                     </div>
                                 )}
@@ -738,8 +738,8 @@ export default function Students() {
                                     <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
                                         <Users className="text-gray-400" size={32} />
                                     </div>
-                                    <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
-                                    <p className="text-gray-500 dark:text-gray-500">No students match your search criteria.</p>
+                                    <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No dormitorians found</h3>
+                                    <p className="text-gray-500 dark:text-gray-500">No dormitorians match your search criteria.</p>
                                 </div>
                             )}
                         </CardContent>
@@ -750,10 +750,10 @@ export default function Students() {
                             <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
                                 <Users className="text-gray-400" size={32} />
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
-                            <p className="text-gray-500 dark:text-gray-500 mb-6">Start by adding your first student to manage dormitory residents.</p>
+                            <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No dormitorians found</h3>
+                            <p className="text-gray-500 dark:text-gray-500 mb-6">Start by adding your first dormitorian to manage dormitory residents.</p>
                             <Button onClick={handleOpenAdd} className="gap-2">
-                                <Plus size={16} /> Create Your First Student
+                                <Plus size={16} /> Create Your First Dormitorian
                             </Button>
                         </Card>
                     )
@@ -763,7 +763,7 @@ export default function Students() {
                 <Dialog open={open} onOpenChange={setOpen}>
                 <DialogContent className="w-[95vw] max-w-sm sm:max-w-md md:max-w-lg mx-auto max-h-[90vh] overflow-y-auto scrollbar-system">
                     <DialogHeader>
-                        <DialogTitle>{isEdit ? 'Update Student' : 'Add Student'}</DialogTitle>
+                        <DialogTitle>{isEdit ? 'Update Dormitorian' : 'Add Dormitorian'}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
@@ -808,7 +808,7 @@ export default function Students() {
                         </div>
                         <div>
                             <Label htmlFor="password">
-                                Password {!isEdit ? '(Optional - Required only for student login access)' : '(Leave blank to keep current password)'}
+                                Password {!isEdit ? '(Optional - Required only for dormitorian login access)' : '(Leave blank to keep current password)'}
                             </Label>
                             <Input 
                                 id="password" 

@@ -181,10 +181,10 @@ export default function StudentShow() {
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Students', href: '/students' },
+            { title: 'Dormitorians', href: '/students' },
             { title: `${student.first_name} ${student.last_name}`, href: `/students/${student.student_id}` }
         ]}>
-            <Head title={`${student.first_name} ${student.last_name} - Student Details`} />
+            <Head title={`${student.first_name} ${student.last_name} - Dormitorian Details`} />
             <div className="p-6 space-y-6">
                 {/* Header Section */}
                 <div className="flex items-center justify-between">
@@ -192,7 +192,7 @@ export default function StudentShow() {
                         <Link href="/students">
                             <Button variant="outline" size="sm" className="gap-2">
                                 <ArrowLeft size={16} />
-                                Back to Students
+                                Back to Dormitorians
                             </Button>
                         </Link>
                         <Separator orientation="vertical" className="h-6" />
@@ -204,14 +204,14 @@ export default function StudentShow() {
                                 <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                                     {student.first_name} {student.last_name}
                                 </h1>
-                                <p className="text-gray-600 dark:text-gray-400">Student Details & Information</p>
+                                <p className="text-gray-600 dark:text-gray-400">Dormitorian Details & Information</p>
                             </div>
                         </div>
                     </div>
                     
                     <Button onClick={handleEdit} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
                         <Edit3 size={18} />
-                        Edit Student
+                        Edit Dormitorian
                     </Button>
                 </div>
 
@@ -221,7 +221,7 @@ export default function StudentShow() {
                         <CardContent className="p-4">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm text-gray-600 dark:text-gray-400">Student Status</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Dormitorian Status</p>
                                     {getStatusBadge(student.status, student.leave_reason)}
                                 </div>
                                 <CheckCircle2 className="text-green-500" size={20} />
@@ -287,7 +287,7 @@ export default function StudentShow() {
                                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{student.last_name}</p>
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Student ID</label>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Dormitorian ID</label>
                                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{student.student_id}</p>
                                     </div>
                                 </div>

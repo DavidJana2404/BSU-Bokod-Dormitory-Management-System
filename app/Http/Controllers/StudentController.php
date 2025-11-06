@@ -31,8 +31,8 @@ class StudentController extends Controller
             // Handle managers without tenant assignment
             if (!$user->tenant_id) {
                 $errorMessage = $user->role === 'manager' 
-                    ? 'You have not been assigned to a dormitory yet. Please contact your administrator to assign you to a dormitory so you can manage students.'
-                    : 'Unable to load students. Please contact your administrator.';
+                    ? 'You have not been assigned to a dormitory yet. Please contact your administrator to assign you to a dormitory so you can manage dormitorians.'
+                    : 'Unable to load dormitorians. Please contact your administrator.';
                 
                 \Log::info('StudentController accessed by user without tenant assignment', [
                     'user_id' => $user->id,
@@ -93,7 +93,7 @@ class StudentController extends Controller
             return Inertia::render('students/index', [
                 'students' => [],
                 'tenant_id' => null,
-                'error' => 'Unable to load students. Please try again later.'
+                'error' => 'Unable to load dormitorians. Please try again later.'
             ]);
         }
     }
@@ -139,7 +139,7 @@ class StudentController extends Controller
         }
         
         return redirect()->route('students.index')
-            ->with('success', 'Student created successfully. Welcome email will be sent shortly.');
+            ->with('success', 'Dormitorian created successfully. Welcome email will be sent shortly.');
     }
 
     public function show(Request $request, $id)
@@ -167,7 +167,7 @@ class StudentController extends Controller
             // Check if student exists and belongs to the current tenant
             if (!$student) {
                 return redirect()->route('students.index')
-                    ->with('error', 'Student not found or you do not have permission to view this student.');
+                    ->with('error', 'Dormitorian not found or you do not have permission to view this dormitorian.');
             }
             
             // Use simplified data mapping
@@ -218,7 +218,7 @@ class StudentController extends Controller
             ]);
             
             return redirect()->route('students.index')
-                ->with('error', 'Unable to load student details. Please try again later.');
+                ->with('error', 'Unable to load dormitorian details. Please try again later.');
         }
     }
 
@@ -267,7 +267,7 @@ class StudentController extends Controller
         }
         
         return redirect()->route('students.index')
-            ->with('success', 'Student updated successfully. ' . ($wasPasswordSetup ? 'Password setup email will be sent shortly.' : ''));
+            ->with('success', 'Dormitorian updated successfully. ' . ($wasPasswordSetup ? 'Password setup email will be sent shortly.' : ''));
     }
 
     public function destroy(Request $request, $id)
@@ -277,7 +277,7 @@ class StudentController extends Controller
         $student->archive();
         
         return redirect()->route('students.index')
-            ->with('success', 'Student archived successfully.');
+            ->with('success', 'Dormitorian archived successfully.');
     }
     
     public function restore($id)
@@ -285,7 +285,7 @@ class StudentController extends Controller
         $user = request()->user();
         $student = Student::findOrFail($id);
         $student->restore();
-        return redirect()->back()->with('success', 'Student restored successfully.');
+        return redirect()->back()->with('success', 'Dormitorian restored successfully.');
     }
     
     public function forceDelete($id)
@@ -293,7 +293,7 @@ class StudentController extends Controller
         $user = request()->user();
         $student = Student::findOrFail($id);
         $student->delete();
-        return redirect()->back()->with('success', 'Student permanently deleted.');
+        return redirect()->back()->with('success', 'Dormitorian permanently deleted.');
     }
     
     /**

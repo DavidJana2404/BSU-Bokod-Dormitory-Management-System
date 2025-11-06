@@ -113,7 +113,7 @@ export default function Welcome() {
                             </h1>
                             
                             <p className="text-xl md:text-2xl text-muted-foreground mb-10 max-w-4xl mx-auto leading-relaxed">
-                                Transform your dormitory operations with our comprehensive platform. Manage students, rooms, and bookings with ease and efficiency.
+                                Transform your dormitory operations with our comprehensive platform. Manage dormitorians, rooms, and bookings with ease and efficiency.
                             </p>
                             
                             {/* CTA Buttons */}
@@ -165,9 +165,9 @@ export default function Welcome() {
                                 <div className="mb-6 p-4 bg-yellow-100 dark:bg-yellow-900/50 rounded-full w-fit mx-auto group-hover:scale-110 transition-transform duration-300">
                                     <Users className="text-yellow-600 dark:text-yellow-400" size={32} />
                                 </div>
-                                <CardTitle className="text-xl font-semibold mb-4 text-yellow-800 dark:text-yellow-200">Student Management</CardTitle>
+                                <CardTitle className="text-xl font-semibold mb-4 text-yellow-800 dark:text-yellow-200">Dormitorian Management</CardTitle>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    Complete student profiles, room assignments, access control, and comprehensive records with streamlined workflows.
+                                    Complete dormitorian profiles, room assignments, access control, and comprehensive records with streamlined workflows.
                                 </p>
                             </Card>
 

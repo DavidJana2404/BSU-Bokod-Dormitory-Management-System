@@ -402,8 +402,8 @@ export default function Applications() {
                             <FileText className="text-blue-600 dark:text-blue-400" size={32} />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Student Applications</h1>
-                            <p className="text-gray-600 dark:text-gray-400">Review and manage student dormitory applications</p>
+                            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dormitorian Applications</h1>
+                            <p className="text-gray-600 dark:text-gray-400">Review and manage dormitorian dormitory applications</p>
                         </div>
                     </div>
                 </div>
@@ -917,7 +917,7 @@ export default function Applications() {
                         </div>
                         <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No applications yet</h3>
                         <p className="text-gray-500 dark:text-gray-500">
-                            Student applications will appear here when they are submitted through the public application form.
+                            Dormitorian applications will appear here when they are submitted through the public application form.
                         </p>
                     </Card>
                 )}
@@ -928,7 +928,7 @@ export default function Applications() {
                         <DialogHeader>
                             <DialogTitle>Application Details</DialogTitle>
                             <DialogDescription>
-                                View detailed information about this student application.
+                                View detailed information about this dormitorian application.
                             </DialogDescription>
                         </DialogHeader>
                         {selectedApplication && (
@@ -1074,7 +1074,7 @@ export default function Applications() {
                     }}
                     onConfirm={confirmApproval}
                     title="Approve Application?"
-                    message={pendingApproval ? `Are you sure you want to approve the application from ${pendingApproval.first_name} ${pendingApproval.last_name}?\n\nThis will create a student account and add them to the system.` : ''}
+                    message={pendingApproval ? `Are you sure you want to approve the application from ${pendingApproval.first_name} ${pendingApproval.last_name}?\n\nThis will create a dormitorian account and add them to the system.` : ''}
                     confirmText={processing ? 'Approving...' : 'Approve Application'}
                     isDestructive={false}
                 />
@@ -1089,7 +1089,7 @@ export default function Applications() {
                     }}
                     onConfirm={confirmRevert}
                     title="Revert Application?"
-                    message={pendingRestore ? `Are you sure you want to revert the application from ${pendingRestore.first_name} ${pendingRestore.last_name} back to pending status?\n\n${pendingRestore.status === 'approved' ? 'This will remove the student record that was created during approval.' : 'This will clear the rejection reason and allow you to process it again.'}` : ''}
+                    message={pendingRestore ? `Are you sure you want to revert the application from ${pendingRestore.first_name} ${pendingRestore.last_name} back to pending status?\n\n${pendingRestore.status === 'approved' ? 'This will remove the dormitorian record that was created during approval.' : 'This will clear the rejection reason and allow you to process it again.'}` : ''}
                     confirmText={processing ? 'Reverting...' : 'Revert Application'}
                     isDestructive={false}
                 />

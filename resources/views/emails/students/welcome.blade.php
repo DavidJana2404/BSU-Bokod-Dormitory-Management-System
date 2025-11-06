@@ -6,7 +6,7 @@ Dear {{ $student->first_name }} {{ $student->last_name }},
 We are delighted to inform you that your application has been approved! Welcome to our dormitory community.
 
 **Your Details:**
-- **Student ID:** {{ $student->student_id }}
+- **Dormitorian ID:** {{ $student->student_id }}
 - **Email:** {{ $student->email }}
 - **Phone:** {{ $student->phone }}
 

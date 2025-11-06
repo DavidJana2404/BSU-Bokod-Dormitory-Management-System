@@ -128,7 +128,7 @@ export default function Dashboard() {
                             <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                                 <Users className="text-yellow-600 dark:text-yellow-400" size={28} />
                             </div>
-                            <div className="text-lg font-semibold mb-2 text-yellow-800 dark:text-yellow-200">Total Students</div>
+                            <div className="text-lg font-semibold mb-2 text-yellow-800 dark:text-yellow-200">Total Dormitorians</div>
                             <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{totalStudents ?? 0}</div>
                         </Card>
                     </div>
@@ -302,7 +302,7 @@ export default function Dashboard() {
                         <div className="p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-full w-fit mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                             <Users className="text-yellow-600 dark:text-yellow-400" size={28} />
                         </div>
-                        <div className="text-lg font-semibold mb-2 text-yellow-800 dark:text-yellow-200">Total Students</div>
+                        <div className="text-lg font-semibold mb-2 text-yellow-800 dark:text-yellow-200">Total Dormitorians</div>
                         <div className="text-3xl font-bold text-yellow-900 dark:text-yellow-100">{safeStudentsCount}</div>
                     </Card>
                     <Card className="p-6 text-center bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group">
@@ -392,7 +392,7 @@ export default function Dashboard() {
                                                         : 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
                                             }`}>
                                                 <div className="text-sm font-semibold">
-                                                    {room.current_occupancy}/{room.max_capacity} Students
+                                                    {room.current_occupancy}/{room.max_capacity} Dormitorians
                                                 </div>
                                                 <div className="text-xs opacity-75">
                                                     {room.is_at_capacity ? 'Full Capacity' : `${room.available_capacity} spaces left`}
@@ -411,7 +411,7 @@ export default function Dashboard() {
                                                             <Users className="text-blue-600 dark:text-blue-400" size={16} />
                                                         </div>
                                                         <span className="text-sm font-medium text-foreground">
-                                                            Current Students ({room.current_students.length})
+                                                            Current Dormitorians ({room.current_students.length})
                                                         </span>
                                                     </div>
                                                 </div>
@@ -423,7 +423,7 @@ export default function Dashboard() {
                                                             {/* Student Number Badge */}
                                                             <div className="flex items-start justify-between mb-2">
                                                                 <span className="bg-blue-600 text-white text-xs font-medium px-2 py-1 rounded">
-                                                                    Student {index + 1}
+                                                                    Dormitorian {index + 1}
                                                                 </span>
                                                             </div>
                                                             
