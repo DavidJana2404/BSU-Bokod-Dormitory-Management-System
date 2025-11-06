@@ -118,6 +118,11 @@ export default function Applications() {
     const confirmApproval = () => {
         if (!pendingApproval) return;
         
+        console.log('=== APPROVAL STARTED ===');
+        console.log('Application ID:', pendingApproval.id);
+        console.log('Current status:', pendingApproval.status);
+        console.log('Applications before approval:', applications.length);
+        
         setProcessing(true);
         setError(null);
         setSuccess(null);
@@ -126,13 +131,23 @@ export default function Applications() {
             preserveState: false,
             preserveScroll: false,
             replace: false,
+            onBefore: () => {
+                console.log('Request about to be sent...');
+            },
+            onStart: () => {
+                console.log('Request started...');
+            },
             onSuccess: (page) => {
-                console.log('Approval success response:', page);
+                console.log('=== APPROVAL SUCCESS ===');
+                console.log('Success response page:', page);
+                console.log('Applications after approval:', page.props.applications?.length);
+                console.log('Flash messages:', page.props.flash);
                 setSuccess('Application approved successfully!');
                 setWarningDialogOpen(false);
                 setPendingApproval(null);
             },
             onError: (errors) => {
+                console.error('=== APPROVAL ERROR ===');
                 console.error('Error approving application:', errors);
                 console.error('Full error object:', JSON.stringify(errors, null, 2));
                 setError(errors?.message || Object.values(errors || {}).flat().join(', ') || 'Failed to approve application. Please try again.');
@@ -140,8 +155,9 @@ export default function Applications() {
                 setPendingApproval(null);
             },
             onFinish: () => {
+                console.log('=== APPROVAL FINISHED ===');
+                console.log('Processing complete');
                 setProcessing(false);
-                console.log('Approval request finished');
             },
         });
     };

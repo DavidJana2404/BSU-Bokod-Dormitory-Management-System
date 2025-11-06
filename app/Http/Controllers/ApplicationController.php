@@ -286,7 +286,6 @@ class ApplicationController extends Controller
             
             // Initialize variables
             $student = null;
-            $studentCreated = false;
             
             // Log BEFORE any changes
             Log::info('BEFORE APPROVAL - Application state', [
@@ -310,30 +309,28 @@ class ApplicationController extends Controller
                 throw new \Exception('A student with this email already exists in the system.');
             }
             
-            // Create student record WITHOUT password
-            $student = Student::create([
-                'tenant_id' => $application->tenant_id,
-                'first_name' => $application->first_name,
-                'last_name' => $application->last_name,
-                'email' => $application->email,
-                'phone' => $application->phone,
-                'password' => null, // No password - student must set one to gain access
-                'status' => 'in',
-                'payment_status' => 'unpaid',
-            ]);
-            
-            $studentCreated = true;
-            
-            Log::info('Student created successfully', [
-                'student_id' => $student->student_id,
-                'email' => $student->email,
-            ]);
-            
-            // Use database transaction to ensure consistency
+            // Use database transaction to ensure everything is atomic
             DB::beginTransaction();
             
             try {
-                // Update application status using update method (more reliable)
+                // Create student record WITHOUT password
+                $student = Student::create([
+                    'tenant_id' => $application->tenant_id,
+                    'first_name' => $application->first_name,
+                    'last_name' => $application->last_name,
+                    'email' => $application->email,
+                    'phone' => $application->phone,
+                    'password' => null, // No password - student must set one to gain access
+                    'status' => 'in',
+                    'payment_status' => 'unpaid',
+                ]);
+                
+                Log::info('Student created successfully', [
+                    'student_id' => $student->student_id,
+                    'email' => $student->email,
+                ]);
+                
+                // Update application status using update method
                 $application->update([
                     'status' => 'approved',
                     'processed_by' => $user->id,
