@@ -296,40 +296,56 @@ class ApplicationController extends Controller
                 'tenant_id' => $application->tenant_id,
             ]);
             
-            // Check if student with this email already exists
-            $existingStudent = Student::where('email', $application->email);
+            // Check if student with this email already exists (active)
+            $existingActiveStudent = Student::where('email', $application->email)
+                ->whereNull('archived_at')
+                ->first();
             
-            // Only check archived_at if column exists
-            if (\Schema::hasColumn('students', 'archived_at')) {
-                $existingStudent->whereNull('archived_at');
-            }
-            
-            $existingStudent = $existingStudent->first();
-            
-            if ($existingStudent) {
+            if ($existingActiveStudent) {
                 throw new \Exception('A student with this email already exists in the system.');
             }
+            
+            // Check if there's an archived student from a previous approval
+            $archivedStudent = Student::where('email', $application->email)
+                ->whereNotNull('archived_at')
+                ->first();
             
             // Use database transaction to ensure everything is atomic
             DB::beginTransaction();
             
             try {
-                // Create student record WITHOUT password
-                $student = Student::create([
-                    'tenant_id' => $application->tenant_id,
-                    'first_name' => $application->first_name,
-                    'last_name' => $application->last_name,
-                    'email' => $application->email,
-                    'phone' => $application->phone,
-                    'password' => null, // No password - student must set one to gain access
-                    'status' => 'in',
-                    'payment_status' => 'unpaid',
-                ]);
-                
-                Log::info('Student created successfully', [
-                    'student_id' => $student->student_id,
-                    'email' => $student->email,
-                ]);
+                // If there's an archived student, restore it instead of creating a new one
+                if ($archivedStudent) {
+                    // Restore the archived student
+                    $archivedStudent->update([
+                        'archived_at' => null,
+                        'status' => 'in',
+                        'payment_status' => 'unpaid',
+                    ]);
+                    $student = $archivedStudent;
+                    
+                    Log::info('Archived student restored', [
+                        'student_id' => $student->student_id,
+                        'email' => $student->email,
+                    ]);
+                } else {
+                    // Create new student record WITHOUT password
+                    $student = Student::create([
+                        'tenant_id' => $application->tenant_id,
+                        'first_name' => $application->first_name,
+                        'last_name' => $application->last_name,
+                        'email' => $application->email,
+                        'phone' => $application->phone,
+                        'password' => null, // No password - student must set one to gain access
+                        'status' => 'in',
+                        'payment_status' => 'unpaid',
+                    ]);
+                    
+                    Log::info('New student created successfully', [
+                        'student_id' => $student->student_id,
+                        'email' => $student->email,
+                    ]);
+                }
                 
                 // Update application status using update method
                 $application->update([
