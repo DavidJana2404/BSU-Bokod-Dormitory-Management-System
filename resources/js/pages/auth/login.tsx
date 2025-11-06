@@ -130,7 +130,7 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                             </TextLink>
                         </div>
 
-                        {/* Student Access Notice */}
+                        {/* Dormitorian Access Notice */}
                         <div className="rounded-md border border-border bg-muted/50 p-3">
                             <div className="flex items-start gap-2">
                                 <div className="mt-0.5">
@@ -139,9 +139,9 @@ export default function Login({ status, canResetPassword }: LoginProps) {
                                     </svg>
                                 </div>
                                 <div className="space-y-1">
-                                    <p className="text-sm font-medium">Student Access</p>
+                                    <p className="text-sm font-medium">Dormitorian Access</p>
                                     <p className="text-xs text-muted-foreground">
-                          Use the credentials provided by dormitory administration to access your student account.
+                          Use the credentials provided by dormitory administration to access your dormitorian account.
                                     </p>
                                 </div>
                             </div>
