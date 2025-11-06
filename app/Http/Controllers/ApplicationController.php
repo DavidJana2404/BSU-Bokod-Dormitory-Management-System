@@ -288,74 +288,86 @@ class ApplicationController extends Controller
             $student = null;
             $studentCreated = false;
             
-            // Use database transaction for data consistency
-            try {
-                DB::beginTransaction();
-                
-                // Check if student with this email already exists
-                $existingStudent = Student::where('email', $application->email);
-                
-                // Only check archived_at if column exists
-                if (\Schema::hasColumn('students', 'archived_at')) {
-                    $existingStudent->whereNull('archived_at');
-                }
-                
-                $existingStudent = $existingStudent->first();
-                
-                if ($existingStudent) {
-                    throw new \Exception('A student with this email already exists in the system.');
-                }
-                
-                // Create student record WITHOUT password
-                $student = Student::create([
-                    'tenant_id' => $application->tenant_id,
-                    'first_name' => $application->first_name,
-                    'last_name' => $application->last_name,
-                    'email' => $application->email,
-                    'phone' => $application->phone,
-                    'password' => null, // No password - student must set one to gain access
-                    'status' => 'in',
-                    'payment_status' => 'unpaid',
-                ]);
-                
-                $studentCreated = true;
-                
-                // Force update using raw DB query to ensure it persists
-                $updated = DB::table('applications')
-                    ->where('id', $application->id)
-                    ->update([
-                        'status' => 'approved',
-                        'processed_by' => $user->id,
-                        'processed_at' => now(),
-                        'updated_at' => now(),
-                    ]);
-                
-                DB::commit();
-                
-                // Verify the update actually worked
-                $verifyStatus = DB::table('applications')
-                    ->where('id', $application->id)
-                    ->value('status');
-                
-                Log::info('Application approved - committed to database', [
-                    'application_id' => $application->id,
-                    'student_id' => $student->student_id,
-                    'rows_updated' => $updated,
-                    'verified_status' => $verifyStatus
-                ]);
-                
-                if ($verifyStatus !== 'approved') {
-                    throw new \Exception('Application status update failed. Status is still: ' . $verifyStatus);
-                }
-                
-            } catch (\Exception $transactionError) {
-                DB::rollBack();
-                Log::error('Transaction error in application approval', [
-                    'application_id' => $application->id,
-                    'error' => $transactionError->getMessage(),
-                    'trace' => $transactionError->getTraceAsString()
-                ]);
-                throw $transactionError;
+            // Log BEFORE any changes
+            Log::info('BEFORE APPROVAL - Application state', [
+                'application_id' => $application->id,
+                'current_status' => $application->status,
+                'email' => $application->email,
+                'tenant_id' => $application->tenant_id,
+            ]);
+            
+            // Check if student with this email already exists
+            $existingStudent = Student::where('email', $application->email);
+            
+            // Only check archived_at if column exists
+            if (\Schema::hasColumn('students', 'archived_at')) {
+                $existingStudent->whereNull('archived_at');
+            }
+            
+            $existingStudent = $existingStudent->first();
+            
+            if ($existingStudent) {
+                throw new \Exception('A student with this email already exists in the system.');
+            }
+            
+            // Create student record WITHOUT password
+            $student = Student::create([
+                'tenant_id' => $application->tenant_id,
+                'first_name' => $application->first_name,
+                'last_name' => $application->last_name,
+                'email' => $application->email,
+                'phone' => $application->phone,
+                'password' => null, // No password - student must set one to gain access
+                'status' => 'in',
+                'payment_status' => 'unpaid',
+            ]);
+            
+            $studentCreated = true;
+            
+            Log::info('Student created successfully', [
+                'student_id' => $student->student_id,
+                'email' => $student->email,
+            ]);
+            
+            // Update application status using Eloquent
+            $application->status = 'approved';
+            $application->processed_by = $user->id;
+            $application->processed_at = now();
+            
+            Log::info('BEFORE SAVE - About to save application', [
+                'application_id' => $application->id,
+                'new_status' => $application->status,
+                'processed_by' => $application->processed_by,
+            ]);
+            
+            $saved = $application->save();
+            
+            Log::info('SAVE RESULT', [
+                'application_id' => $application->id,
+                'save_returned' => $saved ? 'true' : 'false',
+            ]);
+            
+            // Force refresh from database
+            $application->refresh();
+            
+            Log::info('AFTER REFRESH - Application state from DB', [
+                'application_id' => $application->id,
+                'status_after_refresh' => $application->status,
+                'processed_by' => $application->processed_by,
+                'processed_at' => $application->processed_at,
+            ]);
+            
+            // Double-check with raw query
+            $rawStatus = DB::table('applications')
+                ->where('id', $application->id)
+                ->first(['id', 'status', 'processed_by', 'processed_at']);
+            
+            Log::info('RAW QUERY VERIFICATION', [
+                'raw_query_result' => $rawStatus,
+            ]);
+            
+            if ($application->status !== 'approved') {
+                throw new \Exception('Application status update failed! Status after save: ' . $application->status);
             }
             
             // Skip email sending to avoid timeout - can be sent later
