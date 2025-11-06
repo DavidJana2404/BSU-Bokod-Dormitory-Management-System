@@ -329,45 +329,46 @@ class ApplicationController extends Controller
                 'email' => $student->email,
             ]);
             
-            // Update application status using Eloquent
-            $application->status = 'approved';
-            $application->processed_by = $user->id;
-            $application->processed_at = now();
+            // Use database transaction to ensure consistency
+            DB::beginTransaction();
             
-            Log::info('BEFORE SAVE - About to save application', [
-                'application_id' => $application->id,
-                'new_status' => $application->status,
-                'processed_by' => $application->processed_by,
-            ]);
-            
-            $saved = $application->save();
-            
-            Log::info('SAVE RESULT', [
-                'application_id' => $application->id,
-                'save_returned' => $saved ? 'true' : 'false',
-            ]);
-            
-            // Force refresh from database
-            $application->refresh();
-            
-            Log::info('AFTER REFRESH - Application state from DB', [
-                'application_id' => $application->id,
-                'status_after_refresh' => $application->status,
-                'processed_by' => $application->processed_by,
-                'processed_at' => $application->processed_at,
-            ]);
-            
-            // Double-check with raw query
-            $rawStatus = DB::table('applications')
-                ->where('id', $application->id)
-                ->first(['id', 'status', 'processed_by', 'processed_at']);
-            
-            Log::info('RAW QUERY VERIFICATION', [
-                'raw_query_result' => $rawStatus,
-            ]);
-            
-            if ($application->status !== 'approved') {
-                throw new \Exception('Application status update failed! Status after save: ' . $application->status);
+            try {
+                // Update application status using update method (more reliable)
+                $application->update([
+                    'status' => 'approved',
+                    'processed_by' => $user->id,
+                    'processed_at' => now(),
+                ]);
+                
+                Log::info('Application updated successfully', [
+                    'application_id' => $application->id,
+                    'new_status' => 'approved',
+                    'processed_by' => $user->id,
+                ]);
+                
+                // Commit the transaction
+                DB::commit();
+                
+                // Force refresh from database to verify
+                $application->refresh();
+                
+                Log::info('AFTER COMMIT - Application state verified', [
+                    'application_id' => $application->id,
+                    'status_after_refresh' => $application->status,
+                    'processed_by' => $application->processed_by,
+                    'processed_at' => $application->processed_at,
+                ]);
+                
+                if ($application->status !== 'approved') {
+                    throw new \Exception('Application status update failed! Status after commit: ' . $application->status);
+                }
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('Transaction failed', [
+                    'application_id' => $application->id,
+                    'error' => $e->getMessage()
+                ]);
+                throw $e;
             }
             
             // Skip email sending to avoid timeout - can be sent later

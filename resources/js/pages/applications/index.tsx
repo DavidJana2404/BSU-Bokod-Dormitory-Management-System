@@ -123,6 +123,9 @@ export default function Applications() {
         setSuccess(null);
         
         router.put(`/applications/${pendingApproval.id}/approve`, {}, {
+            preserveState: false,
+            preserveScroll: false,
+            replace: false,
             onSuccess: (page) => {
                 console.log('Approval success response:', page);
                 setSuccess('Application approved successfully!');
