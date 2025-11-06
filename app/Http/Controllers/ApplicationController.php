@@ -320,19 +320,33 @@ class ApplicationController extends Controller
                 
                 $studentCreated = true;
                 
-                // Update application status
-                $application->update([
-                    'status' => 'approved',
-                    'processed_by' => $user->id,
-                    'processed_at' => now(),
-                ]);
+                // Force update using raw DB query to ensure it persists
+                $updated = DB::table('applications')
+                    ->where('id', $application->id)
+                    ->update([
+                        'status' => 'approved',
+                        'processed_by' => $user->id,
+                        'processed_at' => now(),
+                        'updated_at' => now(),
+                    ]);
                 
                 DB::commit();
                 
+                // Verify the update actually worked
+                $verifyStatus = DB::table('applications')
+                    ->where('id', $application->id)
+                    ->value('status');
+                
                 Log::info('Application approved - committed to database', [
                     'application_id' => $application->id,
-                    'student_id' => $student->student_id
+                    'student_id' => $student->student_id,
+                    'rows_updated' => $updated,
+                    'verified_status' => $verifyStatus
                 ]);
+                
+                if ($verifyStatus !== 'approved') {
+                    throw new \Exception('Application status update failed. Status is still: ' . $verifyStatus);
+                }
                 
             } catch (\Exception $transactionError) {
                 DB::rollBack();
