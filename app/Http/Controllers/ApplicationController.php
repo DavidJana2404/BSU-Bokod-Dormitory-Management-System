@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Inertia\Response as InertiaResponse;
 
 class ApplicationController extends Controller
 {
@@ -379,7 +380,7 @@ class ApplicationController extends Controller
                 'application_id' => $application->id
             ];
             
-            // For Inertia.js requests, redirect back with success message
+            // For Inertia.js requests, redirect to applications index
             if (request()->header('X-Inertia')) {
                 return redirect()->route('applications.index')->with('success', $successMessage);
             }

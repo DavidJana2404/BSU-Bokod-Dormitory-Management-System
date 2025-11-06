@@ -127,7 +127,8 @@ export default function Applications() {
         setError(null);
         setSuccess(null);
         
-        router.put(`/applications/${pendingApproval.id}/approve`, {}, {
+        router.visit(`/applications/${pendingApproval.id}/approve`, {
+            method: 'put',
             preserveState: false,
             preserveScroll: false,
             replace: false,
