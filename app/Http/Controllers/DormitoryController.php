@@ -128,22 +128,21 @@ class DormitoryController extends Controller
             ->first();
         
         // Set default address from Boys dorm, or use a fallback from config
-        $data['address'] = $boysDorm ? $boysDorm->address : config('dormitory.default_address');
+        $data['address'] = $boysDorm ? $boysDorm->address : config('dormitory.default_address', 'N/A');
         
-        // Create the dormitory first
+        // Set default contact number from config or use placeholder
+        $data['contact_number'] = config('dormitory.default_contact', 'N/A');
+        
+        // Create the dormitory with all required fields
         $dormitory = Tenant::create($data);
         
-        // Get the manager for this dormitory and set contact to their email
+        // Get the manager for this dormitory and update contact to their email
         $manager = \App\Models\User::where('tenant_id', $dormitory->tenant_id)
             ->where('role', 'manager')
             ->first();
         
         if ($manager) {
             $dormitory->contact_number = $manager->email;
-            $dormitory->save();
-        } else {
-            // If no manager yet, use a placeholder from config
-            $dormitory->contact_number = config('dormitory.default_contact');
             $dormitory->save();
         }
 
