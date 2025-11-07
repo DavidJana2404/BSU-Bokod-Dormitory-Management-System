@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 // Deployment trigger: 2025-01-09 06:27:46 - Force redeploy after timeout
+use App\Mail\PaymentConfirmationMail;
 use App\Models\Student;
 use App\Models\Tenant;
 use App\Models\PaymentRecord;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 
@@ -168,8 +170,42 @@ class CashierDashboardController extends Controller
             // Continue even if payment record creation fails
         }
         
+        // Send payment confirmation email when payment status is 'paid' or 'partial'
+        if (in_array($request->payment_status, ['paid', 'partial'])) {
+            try {
+                $dormitoryName = $studentWithDetails->dormitory_name ?? null;
+                
+                $paymentDetails = [
+                    'amount_paid' => $updateData['amount_paid'],
+                    'payment_date' => $updateData['payment_date'],
+                    'payment_status' => $request->payment_status,
+                    'semester_count' => $studentWithDetails->semester_count ?? null,
+                    'room_number' => $studentWithDetails->room_number ?? null,
+                    'payment_notes' => $paymentNotes,
+                ];
+                
+                @Mail::to($student->email)->send(new PaymentConfirmationMail(
+                    $student,
+                    $paymentDetails,
+                    $dormitoryName
+                ));
+                
+                \Log::info('Payment confirmation email sent', [
+                    'student_id' => $student->student_id,
+                    'email' => $student->email,
+                    'payment_status' => $request->payment_status
+                ]);
+            } catch (\Throwable $e) {
+                \Log::error('Failed to send payment confirmation email', [
+                    'student_id' => $student->student_id,
+                    'error' => $e->getMessage()
+                ]);
+                // Continue regardless of email failure
+            }
+        }
+        
         // Redirect back to the cashier dashboard with a success message
-        return redirect()->route('cashier.dashboard')->with('success', 'Payment status updated successfully');
+        return redirect()->route('cashier.dashboard')->with('success', 'Payment status updated successfully and confirmation email has been sent');
     }
     
     /**

@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\RoomAssignmentMail;
 use App\Models\Booking;
 use App\Models\Student;
 use App\Models\Room;
@@ -286,8 +288,44 @@ class BookingController extends Controller
                 'room_id' => $data['room_id']
             ]);
             
+            // Send room assignment email to the student
+            try {
+                $student = Student::find($data['student_id']);
+                $dormitoryName = null;
+                
+                if ($user->tenant_id) {
+                    $tenant = Tenant::find($user->tenant_id);
+                    $dormitoryName = $tenant ? $tenant->dormitory_name : null;
+                }
+                
+                $roomDetails = [
+                    'room_number' => $room->room_number,
+                    'room_type' => $room->type,
+                    'semester_count' => $data['semester_count'],
+                    'max_capacity' => $room->max_capacity,
+                ];
+                
+                @Mail::to($student->email)->send(new RoomAssignmentMail(
+                    $student,
+                    $roomDetails,
+                    $dormitoryName
+                ));
+                
+                \Log::info('Room assignment email sent', [
+                    'booking_id' => $booking->booking_id,
+                    'student_id' => $student->student_id,
+                    'email' => $student->email
+                ]);
+            } catch (\Throwable $e) {
+                \Log::error('Failed to send room assignment email', [
+                    'booking_id' => $booking->booking_id,
+                    'error' => $e->getMessage()
+                ]);
+                // Continue regardless of email failure
+            }
+            
             return redirect()->route('bookings.index')
-                ->with('success', 'Booking created successfully.');
+                ->with('success', 'Booking created successfully and room assignment email has been sent.');
                 
         } catch (\Exception $e) {
             \Log::error('Booking creation failed', [

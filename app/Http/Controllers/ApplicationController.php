@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplicationFormRequest;
+use App\Mail\ApplicationRejectedMail;
 use App\Mail\StudentWelcomeMail;
 use App\Models\Application;
 use App\Models\Student;
@@ -555,7 +556,34 @@ class ApplicationController extends Controller
                 ]);
             });
             
-            $successMessage = 'Application rejected successfully!';
+            // Send rejection email to the applicant
+            try {
+                // Get dormitory name for the email
+                $dormitoryName = null;
+                if ($application->tenant_id) {
+                    $tenant = Tenant::find($application->tenant_id);
+                    $dormitoryName = $tenant ? $tenant->dormitory_name : null;
+                }
+                
+                @Mail::to($application->email)->send(new ApplicationRejectedMail(
+                    $application,
+                    $validated['rejection_reason'],
+                    $dormitoryName
+                ));
+                
+                Log::info('Rejection email sent to applicant', [
+                    'application_id' => $application->id,
+                    'email' => $application->email
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Failed to send rejection email', [
+                    'application_id' => $application->id,
+                    'error' => $e->getMessage()
+                ]);
+                // Continue regardless of email failure
+            }
+            
+            $successMessage = 'Application rejected successfully! Rejection email has been sent to the applicant.';
             
             // For Inertia.js requests, redirect back with success message
             if (request()->header('X-Inertia')) {
