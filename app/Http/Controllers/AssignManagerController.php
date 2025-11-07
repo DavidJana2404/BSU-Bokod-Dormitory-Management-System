@@ -85,11 +85,11 @@ public function unassign($managerId)
         ->where('id', $managerId)
         ->firstOrFail();
 
-    // Reset dormitory contact number to default when manager is unassigned
+    // Reset dormitory contact number when manager is unassigned
     if ($manager->tenant_id) {
         $dormitory = Tenant::find($manager->tenant_id);
         if ($dormitory) {
-            $dormitory->contact_number = config('dormitory.default_contact', 'N/A');
+            $dormitory->contact_number = 'No manager assigned';
             $dormitory->save();
         }
     }

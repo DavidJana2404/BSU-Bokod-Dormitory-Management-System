@@ -122,29 +122,14 @@ class DormitoryController extends Controller
             'dormitory_name' => 'required|string|max:255',
         ]);
 
-        // Get the Boys dormitory address as default
-        $boysDorm = Tenant::where('dormitory_name', 'LIKE', '%Boys%')
-            ->orWhere('dormitory_name', 'LIKE', '%Boy%')
-            ->first();
+        // Set default address to BSU Bokod Campus
+        $data['address'] = 'BSU Bokod Campus';
         
-        // Set default address from Boys dorm, or use a fallback from config
-        $data['address'] = $boysDorm ? $boysDorm->address : config('dormitory.default_address', 'N/A');
-        
-        // Set default contact number from config or use placeholder
-        $data['contact_number'] = config('dormitory.default_contact', 'N/A');
+        // Set default contact as "No manager assigned"
+        $data['contact_number'] = 'No manager assigned';
         
         // Create the dormitory with all required fields
         $dormitory = Tenant::create($data);
-        
-        // Get the manager for this dormitory and update contact to their email
-        $manager = \App\Models\User::where('tenant_id', $dormitory->tenant_id)
-            ->where('role', 'manager')
-            ->first();
-        
-        if ($manager) {
-            $dormitory->contact_number = $manager->email;
-            $dormitory->save();
-        }
 
         return redirect()->route('dormitories.index');
     }
