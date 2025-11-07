@@ -385,11 +385,33 @@ class ApplicationController extends Controller
                 throw $e;
             }
             
-            // Skip email sending to avoid timeout - can be sent later
-            // Email sending removed to prevent 502 errors
+            // Send welcome email to the approved student
+            try {
+                // Get dormitory name for the email
+                $dormitoryName = null;
+                if ($application->tenant_id) {
+                    $tenant = Tenant::find($application->tenant_id);
+                    $dormitoryName = $tenant ? $tenant->dormitory_name : null;
+                }
+                
+                @Mail::to($student->email)->send(new StudentWelcomeMail($student, $dormitoryName));
+                
+                Log::info('Welcome email sent to approved student', [
+                    'student_id' => $student->student_id,
+                    'email' => $student->email,
+                    'application_id' => $application->id
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Failed to send welcome email to approved student', [
+                    'student_id' => $student->student_id,
+                    'application_id' => $application->id,
+                    'error' => $e->getMessage()
+                ]);
+                // Continue regardless of email failure
+            }
             
             // Prepare response data
-            $successMessage = 'Application approved successfully! Student has been added to the system.';
+            $successMessage = 'Application approved successfully! Student has been added to the system and welcome email has been sent.';
             $responseData = [
                 'message' => $successMessage,
                 'student_id' => $student ? $student->student_id : null,
