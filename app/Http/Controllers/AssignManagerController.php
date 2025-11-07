@@ -69,6 +69,13 @@ class AssignManagerController extends Controller
     $manager->tenant_id = $request->tenant_id;
     $manager->save();
 
+    // Automatically update the dormitory's contact number with manager's email
+    $dormitory = Tenant::find($request->tenant_id);
+    if ($dormitory) {
+        $dormitory->contact_number = $manager->email;
+        $dormitory->save();
+    }
+
     return redirect()->route('assign-manager');
 }
 
@@ -77,6 +84,15 @@ public function unassign($managerId)
     $manager = User::where('role', 'manager')
         ->where('id', $managerId)
         ->firstOrFail();
+
+    // Reset dormitory contact number to default when manager is unassigned
+    if ($manager->tenant_id) {
+        $dormitory = Tenant::find($manager->tenant_id);
+        if ($dormitory) {
+            $dormitory->contact_number = config('dormitory.default_contact', 'N/A');
+            $dormitory->save();
+        }
+    }
 
     $manager->tenant_id = null;
     $manager->save();
