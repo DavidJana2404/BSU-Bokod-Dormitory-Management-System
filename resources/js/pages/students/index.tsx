@@ -13,7 +13,7 @@ import { Head } from '@inertiajs/react';
 import { ReactNode } from 'react';
 import WarningDialog from '@/components/warning-dialog';
 
-const emptyForm = { first_name: '', last_name: '', email: '', phone: '', password: '', password_confirmation: '' };
+const emptyForm = { first_name: '', last_name: '', email: '', phone: '', parent_name: '', parent_phone: '', parent_relationship: '', password: '', password_confirmation: '' };
 
 export default function Students() {
     const { students = [], errors = {}, error = null, show_assignment_notice = false } = usePage().props as {
@@ -52,6 +52,9 @@ export default function Students() {
             last_name: student.last_name,
             email: student.email,
             phone: student.phone,
+            parent_name: student.parent_name || '',
+            parent_phone: student.parent_phone || '',
+            parent_relationship: student.parent_relationship || '',
             password: '',
             password_confirmation: '',
         });
@@ -806,7 +809,45 @@ export default function Students() {
                                 </p>
                             )}
                         </div>
-                        <div>
+                        
+                        {/* Parent/Guardian Emergency Contact */}
+                        <div className="border-t pt-4 mt-2">
+                            <h3 className="text-sm font-semibold mb-3">Parent/Guardian Emergency Contact</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <Label htmlFor="parent_name">Parent/Guardian Name *</Label>
+                                    <Input id="parent_name" name="parent_name" value={form.parent_name} onChange={handleChange} required />
+                                    {(errors as any)?.parent_name && (
+                                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            {(errors as any).parent_name}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="parent_phone">Parent/Guardian Phone *</Label>
+                                    <Input id="parent_phone" name="parent_phone" value={form.parent_phone} onChange={handleChange} required />
+                                    {(errors as any)?.parent_phone && (
+                                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            {(errors as any).parent_phone}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="parent_relationship">Relationship *</Label>
+                                    <Input id="parent_relationship" name="parent_relationship" value={form.parent_relationship} onChange={handleChange} placeholder="e.g., Mother, Father, Guardian" required />
+                                    {(errors as any)?.parent_relationship && (
+                                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            {(errors as any).parent_relationship}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="border-t pt-4">
                             <Label htmlFor="password">
                                 Password {!isEdit ? '(Optional - Required only for dormitorian login access)' : '(Leave blank to keep current password)'}
                             </Label>

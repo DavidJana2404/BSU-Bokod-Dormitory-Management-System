@@ -337,6 +337,9 @@ class ApplicationController extends Controller
                         'last_name' => $application->last_name,
                         'email' => $application->email,
                         'phone' => $application->phone,
+                        'parent_name' => $application->parent_name,
+                        'parent_phone' => $application->parent_phone,
+                        'parent_relationship' => $application->parent_relationship,
                         'password' => Hash::make('Password123'), // Default password: Password123
                         'status' => 'in',
                         'payment_status' => 'unpaid',

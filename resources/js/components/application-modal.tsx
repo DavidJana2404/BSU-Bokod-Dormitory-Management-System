@@ -292,19 +292,20 @@ export default function ApplicationModal({ open, onClose, onSuccess }: Applicati
 
                     {/* Parent/Guardian Contact Information */}
                     <div className="border-t pt-6 mt-6">
-                        <h3 className="text-lg font-semibold mb-4">Parent/Guardian Emergency Contact (Optional)</h3>
+                        <h3 className="text-lg font-semibold mb-4">Parent/Guardian Emergency Contact</h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                            You may provide emergency contact details of a parent or guardian. This information is optional but recommended for safety purposes.
+                            Please provide emergency contact details of a parent or guardian. This information is required for safety purposes.
                         </p>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div className="space-y-2">
-                                <Label htmlFor="parent_name">Parent/Guardian Name</Label>
+                                <Label htmlFor="parent_name">Parent/Guardian Name *</Label>
                                 <Input
                                     id="parent_name"
                                     value={form.parent_name}
                                     onChange={(e) => handleChange('parent_name', e.target.value)}
                                     placeholder="Enter parent/guardian name"
+                                    required
                                 />
                                 {(errors?.parent_name || clientErrors?.parent_name) && (
                                     <p className="text-red-500 text-sm flex items-center">
@@ -315,12 +316,13 @@ export default function ApplicationModal({ open, onClose, onSuccess }: Applicati
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="parent_relationship">Relationship</Label>
+                                <Label htmlFor="parent_relationship">Relationship *</Label>
                                 <Input
                                     id="parent_relationship"
                                     value={form.parent_relationship}
                                     onChange={(e) => handleChange('parent_relationship', e.target.value)}
                                     placeholder="e.g., Mother, Father, Guardian"
+                                    required
                                 />
                                 {(errors?.parent_relationship || clientErrors?.parent_relationship) && (
                                     <p className="text-red-500 text-sm flex items-center">
@@ -332,13 +334,14 @@ export default function ApplicationModal({ open, onClose, onSuccess }: Applicati
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="parent_phone">Parent/Guardian Phone Number</Label>
+                            <Label htmlFor="parent_phone">Parent/Guardian Phone Number *</Label>
                             <Input
                                 id="parent_phone"
                                 type="tel"
                                 value={form.parent_phone}
                                 onChange={(e) => handleChange('parent_phone', e.target.value)}
                                 placeholder="09XX XXX XXXX or +639XX XXX XXXX"
+                                required
                             />
                             <p className="text-xs text-muted-foreground">
                                 Enter a valid Philippine phone number (mobile or landline)

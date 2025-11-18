@@ -44,6 +44,14 @@ class StudentFormRequest extends FormRequest
                 'max:20',
                 new PhilippinePhoneNumber
             ],
+            'parent_name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
+            'parent_phone' => [
+                'required',
+                'string',
+                'max:20',
+                new PhilippinePhoneNumber
+            ],
+            'parent_relationship' => ['required', 'string', 'max:50'],
             'check_in_date' => ['nullable', 'date', 'after_or_equal:today'],
             'check_out_date' => ['nullable', 'date', 'after_or_equal:check_in_date'],
         ];
@@ -75,6 +83,7 @@ class StudentFormRequest extends FormRequest
         return [
             'first_name.regex' => 'The first name may only contain letters, spaces, hyphens, and apostrophes.',
             'last_name.regex' => 'The last name may only contain letters, spaces, hyphens, and apostrophes.',
+            'parent_name.regex' => 'The parent/guardian name may only contain letters, spaces, hyphens, and apostrophes.',
             'email.email' => 'The email must be a valid email address.',
             'email.unique' => 'This email address is already registered.',
             'email.lowercase' => 'The email must be in lowercase.',
@@ -94,6 +103,9 @@ class StudentFormRequest extends FormRequest
             'last_name' => 'last name',
             'email' => 'email address',
             'phone' => 'phone number',
+            'parent_name' => 'parent/guardian name',
+            'parent_phone' => 'parent/guardian phone number',
+            'parent_relationship' => 'relationship to parent/guardian',
             'check_in_date' => 'check-in date',
             'check_out_date' => 'check-out date',
         ];

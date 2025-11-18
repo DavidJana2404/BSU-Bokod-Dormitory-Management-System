@@ -104,7 +104,7 @@ class StudentController extends Controller
         
         // Validation is handled by StudentFormRequest
         
-        $data = $request->only(['first_name', 'last_name', 'email', 'phone']);
+        $data = $request->only(['first_name', 'last_name', 'email', 'phone', 'parent_name', 'parent_phone', 'parent_relationship']);
         $data['tenant_id'] = $user->tenant_id;
         
         // Hash password - use provided password or default to Password123
@@ -229,7 +229,7 @@ class StudentController extends Controller
         
         // Validation is handled by StudentFormRequest
         
-        $data = $request->only(['first_name', 'last_name', 'email', 'phone']);
+        $data = $request->only(['first_name', 'last_name', 'email', 'phone', 'parent_name', 'parent_phone', 'parent_relationship']);
         
         // Track if password was set up (student previously had no password)
         $wasPasswordSetup = false;
