@@ -12,9 +12,18 @@ We are delighted to inform you that your application has been approved! Welcome 
 
 ## Next Steps
 
-Your account has been created successfully. Please **wait for your login credentials** to be set up by our dormitory manager. You will receive another email shortly with your password and login instructions.
+Your account has been created successfully. You can now log in to the system using the following credentials:
 
-Once you receive your login credentials, you will be able to:
+**Login Email:** {{ $student->email }}<br>
+**Default Password:** Password123
+
+<x-mail::button :url="route('login')">
+Log In Now
+</x-mail::button>
+
+**Important:** For security reasons, we recommend changing your password after your first login.
+
+Once you log in, you will be able to:
 - Access your dormitory account
 - View room assignments
 - Make payments

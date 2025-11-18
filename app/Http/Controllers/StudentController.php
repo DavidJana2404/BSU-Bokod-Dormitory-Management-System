@@ -107,11 +107,11 @@ class StudentController extends Controller
         $data = $request->only(['first_name', 'last_name', 'email', 'phone']);
         $data['tenant_id'] = $user->tenant_id;
         
-        // Hash password only if provided
+        // Hash password - use provided password or default to Password123
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
         } else {
-            $data['password'] = null; // Students without passwords cannot login
+            $data['password'] = Hash::make('Password123'); // Default password: Password123
         }
         
         $student = Student::create($data);

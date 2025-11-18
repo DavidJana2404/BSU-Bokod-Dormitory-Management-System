@@ -330,14 +330,14 @@ class ApplicationController extends Controller
                         'email' => $student->email,
                     ]);
                 } else {
-                    // Create new student record WITHOUT password
+                    // Create new student record with default password
                     $student = Student::create([
                         'tenant_id' => $application->tenant_id,
                         'first_name' => $application->first_name,
                         'last_name' => $application->last_name,
                         'email' => $application->email,
                         'phone' => $application->phone,
-                        'password' => null, // No password - student must set one to gain access
+                        'password' => Hash::make('Password123'), // Default password: Password123
                         'status' => 'in',
                         'payment_status' => 'unpaid',
                     ]);
@@ -412,7 +412,7 @@ class ApplicationController extends Controller
             }
             
             // Prepare response data
-            $successMessage = 'Application approved successfully! Student has been added to the system and welcome email has been sent.';
+            $successMessage = 'Application approved successfully! Student has been added to the system with default password "Password123" and welcome email has been sent.';
             $responseData = [
                 'message' => $successMessage,
                 'student_id' => $student ? $student->student_id : null,
@@ -430,7 +430,7 @@ class ApplicationController extends Controller
             }
             
             return redirect()->route('applications.index')
-                ->with('success', $successMessage . ' The student must contact administration to set up their password before they can access the system.');
+                ->with('success', $successMessage);
                 
         } catch (\Exception $e) {
             \Log::error('Fatal error in application approval', [
