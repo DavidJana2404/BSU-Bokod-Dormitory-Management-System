@@ -130,7 +130,7 @@ export default function Students() {
         
         if (student.is_currently_booked && student.current_booking) {
             const roomNumber = student.current_booking.room_number;
-            return `WARNING: ${studentName} has an active booking in Room ${roomNumber}!\n\nArchiving this student will:\n• Keep their booking record but mark the student as archived\n• The room assignment will remain until the booking period ends\n• You can restore the student later from Archive settings\n\nAre you sure you want to archive this booked student?`;
+            return `WARNING: ${studentName} has an active booking in Room ${roomNumber}!\n\nArchiving this student will:\n• Archive the student and remove them from active dormitorians\n• Also archive their booking in Room ${roomNumber}\n• Free up the room for new bookings\n• You can restore both the student and their booking later from Archive settings\n\nAre you sure you want to archive this booked student?`;
         } else {
             return `Are you sure you want to archive ${studentName}?\n\nYou can restore them later from the Archive settings.`;
         }

@@ -230,11 +230,16 @@ class Student extends Authenticatable
     }
     
     /**
-     * Archive this student
+     * Archive this student and their bookings
      */
     public function archive()
     {
         $this->update(['archived_at' => now()]);
+        
+        // Also archive all active bookings for this student
+        $this->bookings()->whereNull('archived_at')->each(function($booking) {
+            $booking->archive();
+        });
     }
     
     /**
@@ -243,6 +248,11 @@ class Student extends Authenticatable
     public function restore()
     {
         $this->update(['archived_at' => null]);
+        
+        // Also restore all archived bookings for this student
+        $this->bookings()->whereNotNull('archived_at')->each(function($booking) {
+            $booking->restore();
+        });
     }
     
     /**
