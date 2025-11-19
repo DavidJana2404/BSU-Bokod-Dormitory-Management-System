@@ -16,7 +16,7 @@ export default function AuthCardLayout({
         <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-muted p-6 md:p-10">
             <div className="flex w-full max-w-md flex-col gap-6">
                 <Link href={home()} className="flex items-center gap-2 self-center font-medium">
-                    <div className="flex h-10 w-10 items-center justify-center bg-blue-600 rounded-lg p-1.5">
+                    <div className="flex h-12 w-12 items-center justify-center bg-blue-600 rounded-lg p-1">
                         <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain" />
                     </div>
                 </Link>

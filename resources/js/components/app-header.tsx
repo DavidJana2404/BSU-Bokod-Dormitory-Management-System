@@ -61,7 +61,7 @@ export function AppHeader({ breadcrumbs = [] }: AppHeaderProps) {
                             <SheetContent side="left" className="flex h-full w-64 flex-col items-stretch justify-between bg-sidebar">
                                 <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
                                 <SheetHeader className="flex justify-start text-left">
-                                    <div className="h-8 w-8 bg-blue-600 rounded-lg p-1 flex items-center justify-center">
+                                    <div className="h-10 w-10 bg-blue-600 rounded-lg p-0.5 flex items-center justify-center">
                                         <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain" />
                                     </div>
                                 </SheetHeader>

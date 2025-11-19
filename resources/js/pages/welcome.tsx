@@ -53,7 +53,7 @@ export default function Welcome() {
                         <nav className="flex items-center justify-between">
                             {/* Logo */}
                             <div className="flex items-center gap-3">
-                                <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-blue-600 p-1">
+                                <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-blue-600 p-0.5">
                                     <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain" />
                                 </div>
                                 <div className="text-xl font-bold text-foreground">
