@@ -4,7 +4,6 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building2, Users, CalendarCheck, ArrowRight, CheckCircle, X } from 'lucide-react';
-import AppLogoIcon from '@/components/app-logo-icon';
 import AppearanceToggleDropdown from '@/components/appearance-dropdown';
 import ApplicationModal from '@/components/application-modal';
 import { useState, useEffect } from 'react';
@@ -54,8 +53,8 @@ export default function Welcome() {
                         <nav className="flex items-center justify-between">
                             {/* Logo */}
                             <div className="flex items-center gap-3">
-                                <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-blue-600 text-white">
-                                    <AppLogoIcon className="size-6 fill-current" />
+                                <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-blue-600 p-1">
+                                    <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain" />
                                 </div>
                                 <div className="text-xl font-bold text-foreground">
                                     DMS
@@ -224,8 +223,8 @@ export default function Welcome() {
                     <div className="container mx-auto px-6">
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
-                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-600 text-white">
-                                    <AppLogoIcon className="size-5 fill-current" />
+                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-blue-600 p-0.5">
+                                    <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain" />
                                 </div>
                                 <div className="font-semibold text-foreground">
                                     Dormitory Management System

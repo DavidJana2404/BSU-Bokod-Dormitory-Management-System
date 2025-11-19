@@ -1,4 +1,3 @@
-import AppLogoIcon from '@/components/app-logo-icon';
 import { home } from '@/routes';
 import { Link } from '@inertiajs/react';
 import { type PropsWithChildren } from 'react';
@@ -31,8 +30,8 @@ export default function AuthSimpleLayout({
                             href={home()} 
                             className="inline-flex flex-col items-center space-y-2 hover:opacity-80"
                         >
-                            <div className="bg-muted p-3 rounded-full">
-                                <AppLogoIcon className="w-8 h-8 fill-current text-foreground" />
+                            <div className="bg-blue-600 p-2 rounded-full">
+                                <img src="/dorm.png" alt="DMS Logo" className="w-8 h-8 object-contain" />
                             </div>
                             <div className="space-y-1">
                                 <h1 className="text-xl font-bold text-foreground">
