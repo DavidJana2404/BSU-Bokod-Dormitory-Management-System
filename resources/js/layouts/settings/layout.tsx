@@ -52,6 +52,14 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                 icon: null,
             },
         ]),
+        // Show backup only for admin
+        ...(userRole === 'admin' ? [
+            {
+                title: 'Backup & Restore',
+                href: '/settings/backup',
+                icon: null,
+            },
+        ] : []),
     ];
 
     return (
