@@ -28,3 +28,23 @@ export function queryParams(options?: RouteQueryOptions): string {
     const queryString = params.toString()
     return queryString ? `?${queryString}` : ''
 }
+
+export function applyUrlDefaults(url: string, defaults?: Record<string, unknown>): string {
+    if (!defaults || Object.keys(defaults).length === 0) {
+        return url
+    }
+    
+    // Replace URL parameters with default values
+    let finalUrl = url
+    Object.entries(defaults).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+            finalUrl = finalUrl.replace(`{${key}}`, String(value))
+            finalUrl = finalUrl.replace(`{${key}?}`, String(value))
+        } else {
+            // Remove optional parameters that are null/undefined
+            finalUrl = finalUrl.replace(`{${key}?}`, '')
+        }
+    })
+    
+    return finalUrl
+}
