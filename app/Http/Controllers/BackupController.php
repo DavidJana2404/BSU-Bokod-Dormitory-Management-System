@@ -43,86 +43,48 @@ class BackupController extends Controller
         }
         
         try {
-            $backupName = 'backup_' . Carbon::now()->format('Y-m-d_His') . '.sql';
-            $backupPath = storage_path('app/backups/' . $backupName);
+            $backupDir = env('BACKUP_DIR', storage_path('app/backups'));
             
             // Create backups directory if it doesn't exist
-            if (!file_exists(storage_path('app/backups'))) {
-                mkdir(storage_path('app/backups'), 0755, true);
+            if (!file_exists($backupDir)) {
+                mkdir($backupDir, 0755, true);
             }
             
-            // Get database configuration
-            $dbHost = config('database.connections.' . config('database.default') . '.host');
-            $dbName = config('database.connections.' . config('database.default') . '.database');
-            $dbUser = config('database.connections.' . config('database.default') . '.username');
-            $dbPass = config('database.connections.' . config('database.default') . '.password');
-            $dbPort = config('database.connections.' . config('database.default') . '.port');
+            // Use the backup script for Render/PostgreSQL
+            $scriptPath = base_path('scripts/backup.sh');
             
-            $connection = config('database.default');
-            
-            // For SQLite
-            if ($connection === 'sqlite') {
-                $dbPath = database_path('database.sqlite');
-                if (file_exists($dbPath)) {
-                    copy($dbPath, $backupPath);
-                    Log::info('SQLite backup created', ['file' => $backupName, 'user' => $user->id]);
-                } else {
-                    throw new \Exception('SQLite database file not found');
-                }
-            }
-            // For PostgreSQL
-            elseif ($connection === 'pgsql') {
+            if (file_exists($scriptPath)) {
+                // Make script executable
+                chmod($scriptPath, 0755);
+                
+                // Set environment variables
+                $databaseUrl = env('INTERNAL_DATABASE_URL') ?: env('DATABASE_URL');
+                
+                // Execute backup script
                 $command = sprintf(
-                    'PGPASSWORD="%s" pg_dump -h %s -p %s -U %s %s > %s 2>&1',
-                    $dbPass,
-                    $dbHost,
-                    $dbPort,
-                    $dbUser,
-                    $dbName,
-                    $backupPath
+                    'export DATABASE_URL="%s" && export BACKUP_DIR="%s" && %s 2>&1',
+                    $databaseUrl,
+                    $backupDir,
+                    $scriptPath
                 );
                 
                 exec($command, $output, $returnCode);
                 
                 if ($returnCode !== 0) {
-                    Log::error('PostgreSQL backup failed', [
+                    Log::error('Backup script failed', [
                         'output' => $output,
                         'return_code' => $returnCode
                     ]);
-                    throw new \Exception('PostgreSQL backup failed: ' . implode("\n", $output));
+                    throw new \Exception('Backup failed: ' . implode("\n", $output));
                 }
                 
-                Log::info('PostgreSQL backup created', ['file' => $backupName, 'user' => $user->id]);
-            }
-            // For MySQL
-            elseif ($connection === 'mysql') {
-                $command = sprintf(
-                    'mysqldump -h %s -P %s -u %s -p"%s" %s > %s 2>&1',
-                    $dbHost,
-                    $dbPort,
-                    $dbUser,
-                    $dbPass,
-                    $dbName,
-                    $backupPath
-                );
+                Log::info('Backup created via script', ['output' => $output, 'user' => $user->id]);
                 
-                exec($command, $output, $returnCode);
-                
-                if ($returnCode !== 0) {
-                    Log::error('MySQL backup failed', [
-                        'output' => $output,
-                        'return_code' => $returnCode
-                    ]);
-                    throw new \Exception('MySQL backup failed: ' . implode("\n", $output));
-                }
-                
-                Log::info('MySQL backup created', ['file' => $backupName, 'user' => $user->id]);
+                return redirect()->route('backup.index')
+                    ->with('success', 'Database backup created successfully!');
             } else {
-                throw new \Exception('Unsupported database type: ' . $connection);
+                throw new \Exception('Backup script not found at: ' . $scriptPath);
             }
-            
-            return redirect()->route('backup.index')
-                ->with('success', 'Database backup created successfully!');
                 
         } catch (\Exception $e) {
             Log::error('Backup creation failed', [
@@ -146,7 +108,8 @@ class BackupController extends Controller
             abort(403, 'Unauthorized access');
         }
         
-        $filePath = storage_path('app/backups/' . $filename);
+        $backupDir = env('BACKUP_DIR', storage_path('app/backups'));
+        $filePath = $backupDir . '/' . $filename;
         
         if (!file_exists($filePath)) {
             return redirect()->route('backup.index')
@@ -169,7 +132,8 @@ class BackupController extends Controller
             abort(403, 'Unauthorized access');
         }
         
-        $filePath = storage_path('app/backups/' . $filename);
+        $backupDir = env('BACKUP_DIR', storage_path('app/backups'));
+        $filePath = $backupDir . '/' . $filename;
         
         if (file_exists($filePath)) {
             unlink($filePath);
@@ -195,89 +159,54 @@ class BackupController extends Controller
         }
         
         try {
-            $filePath = storage_path('app/backups/' . $filename);
+            $backupDir = env('BACKUP_DIR', '/var/data/backups');
+            $filePath = $backupDir . '/' . $filename;
             
             if (!file_exists($filePath)) {
-                throw new \Exception('Backup file not found');
+                throw new \Exception('Backup file not found: ' . $filePath);
             }
             
-            $connection = config('database.default');
+            // Enter maintenance mode during restore
+            try { \Artisan::call('down'); } catch (\Throwable $e) { /* ignore */ }
             
-            // Get database configuration
-            $dbHost = config('database.connections.' . $connection . '.host');
-            $dbName = config('database.connections.' . $connection . '.database');
-            $dbUser = config('database.connections.' . $connection . '.username');
-            $dbPass = config('database.connections.' . $connection . '.password');
-            $dbPort = config('database.connections.' . $connection . '.port');
+            $scriptPath = base_path('scripts/restore_local.sh');
+            if (!file_exists($scriptPath)) {
+                throw new \Exception('Restore script not found at: ' . $scriptPath);
+            }
+            chmod($scriptPath, 0755);
             
-            // For SQLite
-            if ($connection === 'sqlite') {
-                $dbPath = database_path('database.sqlite');
-                
-                // Backup current database before restore
-                $currentBackup = database_path('database_before_restore_' . Carbon::now()->format('Y-m-d_His') . '.sqlite');
-                copy($dbPath, $currentBackup);
-                
-                // Restore from backup
-                copy($filePath, $dbPath);
-                
-                Log::info('SQLite database restored', ['file' => $filename, 'user' => $user->id]);
+            // Environment variables
+            $databaseUrl = env('INTERNAL_DATABASE_URL') ?: env('DATABASE_URL');
+            
+            // Execute restore script
+            $command = sprintf(
+                'export DATABASE_URL="%s" && %s "%s" 2>&1',
+                $databaseUrl,
+                $scriptPath,
+                $filePath
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            // Exit maintenance mode
+            try { \Artisan::call('up'); } catch (\Throwable $e) { /* ignore */ }
+            
+            if ($returnCode !== 0) {
+                Log::error('Restore script failed', [
+                    'output' => $output,
+                    'return_code' => $returnCode
+                ]);
+                throw new \Exception('Restore failed: ' . implode("\n", $output));
             }
-            // For PostgreSQL
-            elseif ($connection === 'pgsql') {
-                $command = sprintf(
-                    'PGPASSWORD="%s" psql -h %s -p %s -U %s %s < %s 2>&1',
-                    $dbPass,
-                    $dbHost,
-                    $dbPort,
-                    $dbUser,
-                    $dbName,
-                    $filePath
-                );
-                
-                exec($command, $output, $returnCode);
-                
-                if ($returnCode !== 0) {
-                    Log::error('PostgreSQL restore failed', [
-                        'output' => $output,
-                        'return_code' => $returnCode
-                    ]);
-                    throw new \Exception('PostgreSQL restore failed: ' . implode("\n", $output));
-                }
-                
-                Log::info('PostgreSQL database restored', ['file' => $filename, 'user' => $user->id]);
-            }
-            // For MySQL
-            elseif ($connection === 'mysql') {
-                $command = sprintf(
-                    'mysql -h %s -P %s -u %s -p"%s" %s < %s 2>&1',
-                    $dbHost,
-                    $dbPort,
-                    $dbUser,
-                    $dbPass,
-                    $dbName,
-                    $filePath
-                );
-                
-                exec($command, $output, $returnCode);
-                
-                if ($returnCode !== 0) {
-                    Log::error('MySQL restore failed', [
-                        'output' => $output,
-                        'return_code' => $returnCode
-                    ]);
-                    throw new \Exception('MySQL restore failed: ' . implode("\n", $output));
-                }
-                
-                Log::info('MySQL database restored', ['file' => $filename, 'user' => $user->id]);
-            } else {
-                throw new \Exception('Unsupported database type: ' . $connection);
-            }
+            
+            Log::info('Database restored via script', ['file' => $filename, 'user' => $user->id]);
             
             return redirect()->route('backup.index')
-                ->with('success', 'Database restored successfully! Please refresh the page.');
+                ->with('success', 'Database restored successfully!');
                 
         } catch (\Exception $e) {
+            try { \Artisan::call('up'); } catch (\Throwable $e2) { /* ignore */ }
+            
             Log::error('Database restore failed', [
                 'error' => $e->getMessage(),
                 'user' => $user->id,
@@ -294,7 +223,7 @@ class BackupController extends Controller
      */
     private function getBackupsList()
     {
-        $backupsPath = storage_path('app/backups');
+        $backupsPath = env('BACKUP_DIR', storage_path('app/backups'));
         
         if (!file_exists($backupsPath)) {
             return [];
