@@ -140,16 +140,6 @@ class BackupController extends Controller
             return redirect()->route('backup.index')
                 ->with('error', 'Failed to create backup: ' . $e->getMessage());
         }
-                
-        } catch (\Exception $e) {
-            Log::error('Backup creation failed', [
-                'error' => $e->getMessage(),
-                'user' => $user->id
-            ]);
-            
-            return redirect()->route('backup.index')
-                ->with('error', 'Failed to create backup: ' . $e->getMessage());
-        }
     }
     
     /**
