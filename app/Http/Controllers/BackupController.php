@@ -86,15 +86,46 @@ class BackupController extends Controller
                 'backup_dir' => $backupDir
             ]);
             
+            // Check if bash is available
+            exec('which bash 2>&1', $bashCheck, $bashCheckCode);
+            $bashPath = $bashCheckCode === 0 && !empty($bashCheck) ? trim($bashCheck[0]) : '/bin/bash';
+            
+            Log::info('Bash path detected', ['bash_path' => $bashPath, 'check_code' => $bashCheckCode]);
+            
             // Execute backup script with bash explicitly
             $command = sprintf(
-                'bash -c "export DATABASE_URL=%s && export BACKUP_DIR=%s && bash %s" 2>&1',
-                escapeshellarg($databaseUrl),
-                escapeshellarg($backupDir),
+                '%s %s 2>&1',
+                $bashPath,
                 escapeshellarg($scriptPath)
             );
             
-            exec($command, $output, $returnCode);
+            // Set environment variables
+            $env = [
+                'DATABASE_URL' => $databaseUrl,
+                'BACKUP_DIR' => $backupDir,
+            ];
+            
+            // Execute with environment variables
+            $descriptorspec = [
+                0 => ['pipe', 'r'],
+                1 => ['pipe', 'w'],
+                2 => ['pipe', 'w'],
+            ];
+            
+            $process = proc_open($command, $descriptorspec, $pipes, null, $env);
+            
+            if (!is_resource($process)) {
+                throw new \Exception('Failed to start backup process');
+            }
+            
+            fclose($pipes[0]);
+            $output = stream_get_contents($pipes[1]);
+            $errorOutput = stream_get_contents($pipes[2]);
+            fclose($pipes[1]);
+            fclose($pipes[2]);
+            
+            $returnCode = proc_close($process);
+            $output = array_filter(explode("\n", $output . "\n" . $errorOutput));
             
             Log::info('Backup script executed', [
                 'return_code' => $returnCode,
@@ -131,14 +162,24 @@ class BackupController extends Controller
                 ->with('success', 'Database backup created successfully!');
                 
         } catch (\Exception $e) {
-            Log::error('Backup creation failed', [
+            $errorDetails = [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'user' => $user->id
-            ]);
+                'user' => $user->id,
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ];
+            
+            Log::error('Backup creation failed', $errorDetails);
+            
+            // Show detailed error in development/staging
+            $errorMessage = 'Failed to create backup: ' . $e->getMessage();
+            if (config('app.debug')) {
+                $errorMessage .= ' (File: ' . $e->getFile() . ' Line: ' . $e->getLine() . ')';
+            }
             
             return redirect()->route('backup.index')
-                ->with('error', 'Failed to create backup: ' . $e->getMessage());
+                ->with('error', $errorMessage);
         }
     }
     
