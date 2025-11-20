@@ -204,38 +204,42 @@ export default function BackupPage({ backups }: BackupProps) {
                                     {backups.map((backup) => (
                                         <div
                                             key={backup.filename}
-                                            className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-5 border rounded-lg border-gray-200 dark:border-gray-700 space-y-4 sm:space-y-0"
+                                            className="flex flex-col p-4 sm:p-5 border rounded-lg border-gray-200 dark:border-gray-700 gap-4"
                                         >
-                                            <div className="flex items-start gap-4 flex-1">
+                                            {/* File Info Section */}
+                                            <div className="flex items-start gap-3 sm:gap-4">
                                                 <div className="p-2.5 rounded-lg bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800 flex-shrink-0">
                                                     <Database className="h-5 w-5" />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
-                                                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-base truncate">
+                                                    <div className="flex flex-col gap-2 mb-2">
+                                                        <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm sm:text-base break-all">
                                                             {backup.filename}
                                                         </h4>
-                                                        <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-800 text-xs flex-shrink-0 w-fit">
-                                                            {backup.size_formatted}
-                                                        </Badge>
-                                                    </div>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-                                                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                            Created {backup.created_at_formatted}
-                                                        </span>
+                                                        <div className="flex flex-wrap items-center gap-2">
+                                                            <Badge variant="outline" className="bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-900/30 dark:text-gray-300 dark:border-gray-800 text-xs flex-shrink-0 w-fit">
+                                                                {backup.size_formatted}
+                                                            </Badge>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <Clock className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                                    {backup.created_at_formatted}
+                                                                </span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                             
-                                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2 w-full sm:w-auto">
+                                            {/* Action Buttons Section */}
+                                            <div className="flex flex-col sm:flex-row gap-2 sm:gap-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={() => handleDownload(backup.filename)}
-                                                    className="h-8 px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 flex-1 sm:flex-initial"
+                                                    className="h-9 px-3 text-xs sm:text-sm border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 flex-1 sm:flex-initial whitespace-nowrap"
                                                 >
-                                                    <Download className="h-3 w-3 mr-1" />
+                                                    <Download className="h-3.5 w-3.5 mr-1.5" />
                                                     Download
                                                 </Button>
                                                 <Button
@@ -243,9 +247,9 @@ export default function BackupPage({ backups }: BackupProps) {
                                                     size="sm"
                                                     onClick={() => handleRestore(backup.filename)}
                                                     disabled={processing[`restore-${backup.filename}`]}
-                                                    className="h-8 px-3 text-xs border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/20 flex-1 sm:flex-initial"
+                                                    className="h-9 px-3 text-xs sm:text-sm border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-950/20 flex-1 sm:flex-initial whitespace-nowrap"
                                                 >
-                                                    <Upload className="h-3 w-3 mr-1" />
+                                                    <Upload className="h-3.5 w-3.5 mr-1.5" />
                                                     {processing[`restore-${backup.filename}`] ? 'Restoring...' : 'Restore'}
                                                 </Button>
                                                 <Button
@@ -253,9 +257,9 @@ export default function BackupPage({ backups }: BackupProps) {
                                                     size="sm"
                                                     onClick={() => handleDelete(backup.filename)}
                                                     disabled={processing[`delete-${backup.filename}`]}
-                                                    className="h-8 px-3 text-xs border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/20 flex-1 sm:flex-initial"
+                                                    className="h-9 px-3 text-xs sm:text-sm border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-950/20 flex-1 sm:flex-initial whitespace-nowrap"
                                                 >
-                                                    <Trash2 className="h-3 w-3 mr-1" />
+                                                    <Trash2 className="h-3.5 w-3.5 mr-1.5" />
                                                     {processing[`delete-${backup.filename}`] ? 'Deleting...' : 'Delete'}
                                                 </Button>
                                             </div>
