@@ -50,17 +50,23 @@ class BackupController extends Controller
                 'user' => $user->id
             ]);
             
-            // Create backups directory if it doesn't exist
+            // Check if backup directory exists
             if (!file_exists($backupDir)) {
-                Log::info('Creating backup directory', ['dir' => $backupDir]);
-                if (!mkdir($backupDir, 0755, true)) {
-                    throw new \Exception('Failed to create backup directory: ' . $backupDir);
+                // For local development, try to create it
+                if (str_starts_with($backupDir, storage_path())) {
+                    Log::info('Creating local backup directory', ['dir' => $backupDir]);
+                    if (!mkdir($backupDir, 0755, true)) {
+                        throw new \Exception('Failed to create backup directory: ' . $backupDir);
+                    }
+                } else {
+                    // For Render persistent disk, it should already exist
+                    throw new \Exception('Backup directory does not exist: ' . $backupDir . '. Please ensure the persistent disk is mounted and the directory is created.');
                 }
             }
             
             // Check if directory is writable
             if (!is_writable($backupDir)) {
-                throw new \Exception('Backup directory is not writable: ' . $backupDir);
+                throw new \Exception('Backup directory is not writable: ' . $backupDir . '. Please check directory permissions.');
             }
             
             // Use the backup script for Render/PostgreSQL
