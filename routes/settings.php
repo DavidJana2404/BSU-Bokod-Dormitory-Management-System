@@ -29,12 +29,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('settings/archive/force-delete/{type}/{id}', [ArchiveController::class, 'forceDelete'])->name('archive.forceDelete');
     Route::delete('settings/archive/clear-all', [ArchiveController::class, 'clearAll'])->name('archive.clearAll');
     
-    // Backup & Restore routes - Admin only
-    Route::middleware('can:admin')->group(function () {
-        Route::get('settings/backup', [BackupController::class, 'index'])->name('backup.index');
-        Route::post('settings/backup/create', [BackupController::class, 'create'])->name('backup.create');
-        Route::get('settings/backup/download/{filename}', [BackupController::class, 'download'])->name('backup.download');
-        Route::post('settings/backup/restore/{filename}', [BackupController::class, 'restore'])->name('backup.restore');
-        Route::delete('settings/backup/delete/{filename}', [BackupController::class, 'destroy'])->name('backup.destroy');
-    });
+    // Backup & Restore routes - Admin only (role check in controller)
+    Route::get('settings/backup', [BackupController::class, 'index'])->name('backup.index');
+    Route::post('settings/backup/create', [BackupController::class, 'create'])->name('backup.create');
+    Route::get('settings/backup/download/{filename}', [BackupController::class, 'download'])->name('backup.download');
+    Route::post('settings/backup/restore/{filename}', [BackupController::class, 'restore'])->name('backup.restore');
+    Route::delete('settings/backup/delete/{filename}', [BackupController::class, 'destroy'])->name('backup.destroy');
 });
