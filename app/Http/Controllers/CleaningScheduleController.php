@@ -28,7 +28,9 @@ class CleaningScheduleController extends Controller
         // Get all active students for individual assignment
         $students = Student::where('tenant_id', $user->tenant_id)
             ->notArchived()
-            ->with('currentBooking.room')
+            ->with(['bookings' => function ($query) {
+                $query->whereNull('archived_at')->with('room');
+            }])
             ->orderBy('last_name')
             ->orderBy('first_name')
             ->get()
