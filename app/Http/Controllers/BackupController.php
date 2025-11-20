@@ -45,46 +45,101 @@ class BackupController extends Controller
         try {
             $backupDir = env('BACKUP_DIR', storage_path('app/backups'));
             
+            Log::info('Starting backup creation', [
+                'backup_dir' => $backupDir,
+                'user' => $user->id
+            ]);
+            
             // Create backups directory if it doesn't exist
             if (!file_exists($backupDir)) {
-                mkdir($backupDir, 0755, true);
+                Log::info('Creating backup directory', ['dir' => $backupDir]);
+                if (!mkdir($backupDir, 0755, true)) {
+                    throw new \Exception('Failed to create backup directory: ' . $backupDir);
+                }
+            }
+            
+            // Check if directory is writable
+            if (!is_writable($backupDir)) {
+                throw new \Exception('Backup directory is not writable: ' . $backupDir);
             }
             
             // Use the backup script for Render/PostgreSQL
             $scriptPath = base_path('scripts/backup.sh');
             
-            if (file_exists($scriptPath)) {
-                // Make script executable
-                chmod($scriptPath, 0755);
-                
-                // Set environment variables
-                $databaseUrl = env('INTERNAL_DATABASE_URL') ?: env('DATABASE_URL');
-                
-                // Execute backup script
-                $command = sprintf(
-                    'export DATABASE_URL="%s" && export BACKUP_DIR="%s" && %s 2>&1',
-                    $databaseUrl,
-                    $backupDir,
-                    $scriptPath
-                );
-                
-                exec($command, $output, $returnCode);
-                
-                if ($returnCode !== 0) {
-                    Log::error('Backup script failed', [
-                        'output' => $output,
-                        'return_code' => $returnCode
-                    ]);
-                    throw new \Exception('Backup failed: ' . implode("\n", $output));
-                }
-                
-                Log::info('Backup created via script', ['output' => $output, 'user' => $user->id]);
-                
-                return redirect()->route('backup.index')
-                    ->with('success', 'Database backup created successfully!');
-            } else {
+            if (!file_exists($scriptPath)) {
+                Log::error('Backup script not found', ['path' => $scriptPath]);
                 throw new \Exception('Backup script not found at: ' . $scriptPath);
             }
+            
+            // Make script executable
+            @chmod($scriptPath, 0755);
+            
+            // Set environment variables
+            $databaseUrl = env('INTERNAL_DATABASE_URL') ?: env('DATABASE_URL');
+            
+            if (!$databaseUrl) {
+                throw new \Exception('DATABASE_URL not configured');
+            }
+            
+            Log::info('Executing backup script', [
+                'script' => $scriptPath,
+                'backup_dir' => $backupDir
+            ]);
+            
+            // Execute backup script with bash explicitly
+            $command = sprintf(
+                'bash -c "export DATABASE_URL=%s && export BACKUP_DIR=%s && bash %s" 2>&1',
+                escapeshellarg($databaseUrl),
+                escapeshellarg($backupDir),
+                escapeshellarg($scriptPath)
+            );
+            
+            exec($command, $output, $returnCode);
+            
+            Log::info('Backup script executed', [
+                'return_code' => $returnCode,
+                'output' => $output
+            ]);
+            
+            if ($returnCode !== 0) {
+                $errorMessage = 'Backup script failed with code ' . $returnCode . ': ' . implode("\n", $output);
+                Log::error('Backup script failed', [
+                    'output' => $output,
+                    'return_code' => $returnCode,
+                    'command' => 'backup script execution'
+                ]);
+                throw new \Exception($errorMessage);
+            }
+            
+            // Verify backup was created
+            $files = scandir($backupDir);
+            $backupFiles = array_filter($files, function($f) use ($backupDir) {
+                return $f !== '.' && $f !== '..' && is_file($backupDir . '/' . $f);
+            });
+            
+            if (empty($backupFiles)) {
+                throw new \Exception('Backup completed but no backup file was created. Output: ' . implode("\n", $output));
+            }
+            
+            Log::info('Backup created successfully', [
+                'output' => $output,
+                'user' => $user->id,
+                'files' => $backupFiles
+            ]);
+            
+            return redirect()->route('backup.index')
+                ->with('success', 'Database backup created successfully!');
+                
+        } catch (\Exception $e) {
+            Log::error('Backup creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user' => $user->id
+            ]);
+            
+            return redirect()->route('backup.index')
+                ->with('error', 'Failed to create backup: ' . $e->getMessage());
+        }
                 
         } catch (\Exception $e) {
             Log::error('Backup creation failed', [

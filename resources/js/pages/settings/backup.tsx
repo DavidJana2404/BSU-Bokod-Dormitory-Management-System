@@ -4,6 +4,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import HeadingSmall from '@/components/heading-small';
 import { type BreadcrumbItem } from '@/types';
 import { 
@@ -18,7 +19,7 @@ import {
     Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import WarningDialog from '@/components/warning-dialog';
 
 interface Backup {
@@ -31,6 +32,10 @@ interface Backup {
 
 interface BackupProps {
     backups: Backup[];
+    flash?: {
+        success?: string;
+        error?: string;
+    };
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -41,10 +46,29 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 export default function BackupPage({ backups }: BackupProps) {
+    const { flash } = usePage<BackupProps>().props;
     const [processing, setProcessing] = useState<{ [key: string]: boolean }>({});
     const [warningDialogOpen, setWarningDialogOpen] = useState(false);
     const [warningAction, setWarningAction] = useState<'restore' | 'delete' | null>(null);
     const [pendingFilename, setPendingFilename] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(flash?.error || null);
+    const [success, setSuccess] = useState<string | null>(flash?.success || null);
+    
+    // Auto-dismiss success messages after 5 seconds
+    useEffect(() => {
+        if (success) {
+            const timer = setTimeout(() => setSuccess(null), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [success]);
+    
+    // Auto-dismiss error messages after 8 seconds
+    useEffect(() => {
+        if (error) {
+            const timer = setTimeout(() => setError(null), 8000);
+            return () => clearTimeout(timer);
+        }
+    }, [error]);
 
     const handleCreateBackup = () => {
         setProcessing(prev => ({ ...prev, create: true }));
@@ -134,6 +158,22 @@ export default function BackupPage({ backups }: BackupProps) {
                         title="Backup & Restore" 
                         description="Create, download, and restore database backups"
                     />
+                    
+                    {/* Success Alert */}
+                    {success && (
+                        <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200">
+                            <CheckCircle2 className="h-4 w-4" />
+                            <AlertDescription>{success}</AlertDescription>
+                        </Alert>
+                    )}
+                    
+                    {/* Error Alert */}
+                    {error && (
+                        <Alert className="border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription>{error}</AlertDescription>
+                        </Alert>
+                    )}
 
                     {/* Info Card */}
                     <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
