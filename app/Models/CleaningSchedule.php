@@ -12,6 +12,7 @@ class CleaningSchedule extends Model
     protected $fillable = [
         'room_id',
         'day_of_week',
+        'type',
     ];
 
     /**
@@ -20,6 +21,19 @@ class CleaningSchedule extends Model
     public function room()
     {
         return $this->belongsTo(Room::class, 'room_id', 'room_id');
+    }
+
+    /**
+     * Get the individual students assigned to this cleaning schedule
+     */
+    public function students()
+    {
+        return $this->belongsToMany(
+            Student::class,
+            'cleaning_schedule_students',
+            'cleaning_schedule_id',
+            'student_id'
+        )->withTimestamps();
     }
 
     /**
@@ -54,5 +68,34 @@ class CleaningSchedule extends Model
     public function scopeForRoom($query, $roomId)
     {
         return $query->where('room_id', $roomId);
+    }
+
+    /**
+     * Check if this is a room-based schedule
+     */
+    public function isRoomBased()
+    {
+        return $this->type === 'room';
+    }
+
+    /**
+     * Check if this is an individual-based schedule
+     */
+    public function isIndividualBased()
+    {
+        return $this->type === 'individual';
+    }
+
+    /**
+     * Get all students assigned to this schedule
+     * Returns students from the room if room-based, or individual students if individual-based
+     */
+    public function getAssignedStudents()
+    {
+        if ($this->isRoomBased() && $this->room) {
+            return $this->room->students;
+        }
+        
+        return $this->students;
     }
 }

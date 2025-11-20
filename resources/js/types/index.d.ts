@@ -106,10 +106,17 @@ export interface Booking {
 
 export interface CleaningSchedule {
     id: number;
-    room_id: number;
+    type: 'room' | 'individual';
+    room_id: number | null;
     day_of_week: 1 | 2 | 3 | 4 | 5 | 6 | 7; // 1 = Monday, 7 = Sunday
     day_name: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
-    room_number?: string;
+    room_number?: string | null;
+    students?: {
+        student_id: number;
+        first_name: string;
+        last_name: string;
+        room_number?: string | null;
+    }[];
     created_at: string;
     updated_at: string;
     room?: Room;
