@@ -43,29 +43,39 @@ class StudentDashboardController extends Controller
         // Get cleaning schedules for the current room (both room-based and individual)
         $cleaningSchedules = [];
         if ($activeBooking && $activeBooking->room) {
-            // Get room-based schedules
-            $roomSchedules = CleaningSchedule::where('room_id', $activeBooking->room->room_id)
-                ->where('type', 'room')
-                ->get();
-            
-            // Get individual schedules for this student
-            $individualSchedules = CleaningSchedule::where('type', 'individual')
-                ->whereHas('students', function ($query) use ($user) {
-                    $query->where('student_id', $user->student_id);
-                })
-                ->get();
-            
-            // Merge both types of schedules
-            $allSchedules = $roomSchedules->merge($individualSchedules);
-            
-            $cleaningSchedules = $allSchedules->map(function ($schedule) {
-                return [
-                    'id' => $schedule->id,
-                    'day_of_week' => $schedule->day_of_week,
-                    'day_name' => $schedule->day_name,
-                    'room_id' => $schedule->room_id,
-                ];
-            })->toArray();
+            try {
+                // Get room-based schedules
+                $roomSchedules = CleaningSchedule::where('room_id', $activeBooking->room->room_id)
+                    ->where(function($query) {
+                        $query->where('type', 'room')->orWhereNull('type');
+                    })
+                    ->get();
+                
+                // Get individual schedules for this student
+                $individualSchedules = CleaningSchedule::where('type', 'individual')
+                    ->whereHas('students', function ($query) use ($user) {
+                        $query->where('student_id', $user->student_id);
+                    })
+                    ->get();
+                
+                // Merge both types of schedules
+                $allSchedules = $roomSchedules->merge($individualSchedules);
+                
+                $cleaningSchedules = $allSchedules->map(function ($schedule) {
+                    return [
+                        'id' => $schedule->id,
+                        'day_of_week' => $schedule->day_of_week,
+                        'day_name' => $schedule->day_name,
+                        'room_id' => $schedule->room_id,
+                    ];
+                })->toArray();
+            } catch (\Exception $e) {
+                \Log::error('Error fetching cleaning schedules for student', [
+                    'student_id' => $user->student_id,
+                    'error' => $e->getMessage()
+                ]);
+                $cleaningSchedules = [];
+            }
         }
         
         // The authenticated user could be either User or Student model
@@ -83,11 +93,11 @@ class StudentDashboardController extends Controller
             'current_booking' => $activeBooking ? [
                 'id' => $activeBooking->booking_id,
                 'semester_count' => $activeBooking->semester_count ?? 0,
-                'total_fee' => $activeBooking->getTotalCost(),
+                'total_fee' => method_exists($activeBooking, 'getTotalCost') ? $activeBooking->getTotalCost() : (($activeBooking->semester_count ?? 0) * 2000),
                 'room' => $activeBooking->room ? [
                     'id' => $activeBooking->room->room_id,
                     'room_number' => $activeBooking->room->room_number,
-                    'room_type' => $activeBooking->room->room_type,
+                    'room_type' => $activeBooking->room->room_type ?? 'Standard',
                 ] : null,
             ] : null,
         ];
