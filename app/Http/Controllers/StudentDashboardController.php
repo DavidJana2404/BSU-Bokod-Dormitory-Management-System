@@ -40,11 +40,25 @@ class StudentDashboardController extends Controller
         // Use current booking if available, otherwise use latest booking
         $activeBooking = $currentBooking ?? $latestBooking;
         
-        // Get cleaning schedules for the current room
+        // Get cleaning schedules for the current room (both room-based and individual)
         $cleaningSchedules = [];
         if ($activeBooking && $activeBooking->room) {
-            $schedules = CleaningSchedule::where('room_id', $activeBooking->room->room_id)->get();
-            $cleaningSchedules = $schedules->map(function ($schedule) {
+            // Get room-based schedules
+            $roomSchedules = CleaningSchedule::where('room_id', $activeBooking->room->room_id)
+                ->where('type', 'room')
+                ->get();
+            
+            // Get individual schedules for this student
+            $individualSchedules = CleaningSchedule::where('type', 'individual')
+                ->whereHas('students', function ($query) use ($user) {
+                    $query->where('student_id', $user->student_id);
+                })
+                ->get();
+            
+            // Merge both types of schedules
+            $allSchedules = $roomSchedules->merge($individualSchedules);
+            
+            $cleaningSchedules = $allSchedules->map(function ($schedule) {
                 return [
                     'id' => $schedule->id,
                     'day_of_week' => $schedule->day_of_week,
@@ -67,9 +81,9 @@ class StudentDashboardController extends Controller
             'status_updated_at' => $user->status_updated_at ?? null,
             // Booking information
             'current_booking' => $activeBooking ? [
-                'id' => $activeBooking->id,
-                'check_in_date' => $activeBooking->check_in_date,
-                'check_out_date' => $activeBooking->check_out_date,
+                'id' => $activeBooking->booking_id,
+                'semester_count' => $activeBooking->semester_count ?? 0,
+                'total_fee' => $activeBooking->getTotalCost(),
                 'room' => $activeBooking->room ? [
                     'id' => $activeBooking->room->room_id,
                     'room_number' => $activeBooking->room->room_number,

@@ -16,11 +16,6 @@ import {
     User, 
     CheckCircle, 
     Clock, 
-    Home,
-    Bell,
-    Shield,
-    Info,
-    Coffee,
     Wifi,
     Car,
     CalendarCheck,
@@ -448,92 +443,33 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
                 <div className="mt-8 space-y-6">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">Dormitory Services & Information</h2>
                     
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Services Card */}
-                        <Card className="bg-white dark:bg-gray-900 border dark:border-gray-700 overflow-hidden">
-                            <div className="bg-yellow-50 dark:bg-yellow-900/30 px-6 py-4 border-b border-yellow-200 dark:border-yellow-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-yellow-100 dark:bg-yellow-800/50 p-2 rounded-lg">
-                                        <Building2 className="text-yellow-600 dark:text-yellow-400" size={20} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Available Services</h3>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">Enjoy our amenities during your stay</p>
-                                    </div>
+                    {/* Services Card */}
+                    <Card className="bg-white dark:bg-gray-900 border dark:border-gray-700 overflow-hidden">
+                        <div className="bg-yellow-50 dark:bg-yellow-900/30 px-6 py-4 border-b border-yellow-200 dark:border-yellow-700">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-yellow-100 dark:bg-yellow-800/50 p-2 rounded-lg">
+                                    <Building2 className="text-yellow-600 dark:text-yellow-400" size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Available Services</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Enjoy our amenities during your stay</p>
                                 </div>
                             </div>
-                            
-                            <div className="p-6">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-                                        <Home className="text-green-600 dark:text-green-400" size={18} />
-                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">24/7 Reception</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                                        <Wifi className="text-blue-600 dark:text-blue-400" size={18} />
-                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Free Wi-Fi</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                                        <Coffee className="text-orange-600 dark:text-orange-400" size={18} />
-                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Breakfast Included</span>
-                                    </div>
-                                    <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                                        <Car className="text-purple-600 dark:text-purple-400" size={18} />
-                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Parking Available</span>
-                                    </div>
+                        </div>
+                        
+                        <div className="p-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <Wifi className="text-blue-600 dark:text-blue-400" size={18} />
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Free Wi-Fi</span>
+                                </div>
+                                <div className="flex items-center gap-3 p-3 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                                    <Car className="text-purple-600 dark:text-purple-400" size={18} />
+                                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Parking Available</span>
                                 </div>
                             </div>
-                        </Card>
-
-                        {/* Support & Contact Card */}
-                        <Card className="bg-white dark:bg-gray-900 border dark:border-gray-700 overflow-hidden">
-                            <div className="bg-indigo-50 dark:bg-indigo-900/30 px-6 py-4 border-b border-indigo-200 dark:border-indigo-700">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-indigo-100 dark:bg-indigo-800/50 p-2 rounded-lg">
-                                        <Phone className="text-indigo-600 dark:text-indigo-400" size={20} />
-                                    </div>
-                                    <div>
-                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Need Assistance?</h3>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400">We're here to help you 24/7</p>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="p-6">
-                                <div className="space-y-4">
-                                    <div className="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
-                                        <div className="bg-red-100 dark:bg-red-800/50 p-2 rounded-lg">
-                                            <Shield className="text-red-600 dark:text-red-400" size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900 dark:text-gray-100">Emergency</p>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">Dial 0 from your room phone</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                                        <div className="bg-blue-100 dark:bg-blue-800/50 p-2 rounded-lg">
-                                            <Bell className="text-blue-600 dark:text-blue-400" size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900 dark:text-gray-100">Room Service</p>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">Available 24/7 for your convenience</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-                                        <div className="bg-green-100 dark:bg-green-800/50 p-2 rounded-lg">
-                                            <Info className="text-green-600 dark:text-green-400" size={16} />
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold text-gray-900 dark:text-gray-100">Concierge</p>
-                                            <p className="text-sm text-gray-600 dark:text-gray-400">Local recommendations & assistance</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
+                        </div>
+                    </Card>
                 </div>
                 
                 {/* Student Status Update Dialog */}
