@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig } from 'vite';
 
+// Only use wayfinder in development, skip during production build
+const isProduction = process.env.NODE_ENV === 'production';
+
 export default defineConfig({
     plugins: [
         laravel({
@@ -13,9 +16,9 @@ export default defineConfig({
         }),
         react(),
         tailwindcss(),
-        wayfinder({
+        ...(!isProduction ? [wayfinder({
             formVariants: true,
-        }),
+        })] : []),
     ],
     esbuild: {
         jsx: 'automatic',
