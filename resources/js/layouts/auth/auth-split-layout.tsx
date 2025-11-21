@@ -1,7 +1,7 @@
 import { home } from '@/routes';
 import { type SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { type PropsWithChildren } from 'react';
+import { type PropsWithChildren, useEffect, useState } from 'react';
 
 interface AuthLayoutProps {
     title?: string;
@@ -10,6 +10,17 @@ interface AuthLayoutProps {
 
 export default function AuthSplitLayout({ children, title, description }: PropsWithChildren<AuthLayoutProps>) {
     const { name, quote } = usePage<SharedData>().props;
+    const [isDark, setIsDark] = useState(false);
+    
+    useEffect(() => {
+        const checkDarkMode = () => {
+            setIsDark(document.documentElement.classList.contains('dark'));
+        };
+        checkDarkMode();
+        const observer = new MutationObserver(checkDarkMode);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => observer.disconnect();
+    }, []);
 
     return (
         <div className="relative grid h-dvh flex-col items-center justify-center px-8 sm:px-0 lg:max-w-none lg:grid-cols-2 lg:px-0">
@@ -34,8 +45,7 @@ export default function AuthSplitLayout({ children, title, description }: PropsW
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <Link href={home()} className="relative z-20 flex items-center justify-center lg:hidden">
                         <div className="h-12 sm:h-14 aspect-square flex items-center justify-center">
-                            <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain dark:hidden" />
-                            <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain hidden dark:block" />
+                            <img src={isDark ? "/dormwhite.png" : "/dorm.png"} alt="DMS Logo" className="w-full h-full object-contain" />
                         </div>
                     </Link>
                     <div className="flex flex-col items-start gap-2 text-left sm:items-center sm:text-center">

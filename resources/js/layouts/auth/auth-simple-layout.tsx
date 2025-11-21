@@ -1,6 +1,6 @@
 import { home } from '@/routes';
 import { Link } from '@inertiajs/react';
-import { type PropsWithChildren } from 'react';
+import { type PropsWithChildren, useEffect, useState } from 'react';
 
 interface AuthLayoutProps {
     name?: string;
@@ -13,6 +13,18 @@ export default function AuthSimpleLayout({
     title, 
     description 
 }: PropsWithChildren<AuthLayoutProps>) {
+    const [isDark, setIsDark] = useState(false);
+    
+    useEffect(() => {
+        const checkDarkMode = () => {
+            setIsDark(document.documentElement.classList.contains('dark'));
+        };
+        checkDarkMode();
+        const observer = new MutationObserver(checkDarkMode);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        return () => observer.disconnect();
+    }, []);
+    
     return (
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 relative flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
             {/* Background decoration - matching welcome page */}
@@ -31,8 +43,7 @@ export default function AuthSimpleLayout({
                             className="inline-flex flex-col items-center space-y-2 hover:opacity-80"
                         >
                             <div className="w-10 h-10 flex items-center justify-center">
-                                <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain dark:hidden" />
-                                <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain hidden dark:block" />
+                                <img src={isDark ? "/dormwhite.png" : "/dorm.png"} alt="DMS Logo" className="w-full h-full object-contain" />
                             </div>
                             <div className="space-y-1">
                                 <h1 className="text-xl font-bold text-foreground">

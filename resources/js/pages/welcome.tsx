@@ -13,6 +13,24 @@ export default function Welcome() {
     const [applicationModalOpen, setApplicationModalOpen] = useState(false);
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);
     const [isAnimating, setIsAnimating] = useState(false);
+    const [isDark, setIsDark] = useState(false);
+    
+    // Detect dark mode
+    useEffect(() => {
+        const checkDarkMode = () => {
+            setIsDark(document.documentElement.classList.contains('dark'));
+        };
+        
+        checkDarkMode();
+        
+        const observer = new MutationObserver(checkDarkMode);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+        
+        return () => observer.disconnect();
+    }, []);
     
     // Listen for application modal trigger
     useEffect(() => {
@@ -54,8 +72,7 @@ export default function Welcome() {
                             {/* Logo */}
                             <div className="flex items-center gap-3">
                                 <div className="flex aspect-square size-10 items-center justify-center">
-                                    <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain dark:hidden" />
-                                    <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain hidden dark:block" />
+                                    <img src={isDark ? "/dormwhite.png" : "/dorm.png"} alt="DMS Logo" className="w-full h-full object-contain" />
                                 </div>
                                 <div className="text-xl font-bold text-foreground">
                                     DMS
@@ -225,8 +242,7 @@ export default function Welcome() {
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
                                 <div className="flex aspect-square size-8 items-center justify-center">
-                                    <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain dark:hidden" />
-                                    <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain hidden dark:block" />
+                                    <img src={isDark ? "/dormwhite.png" : "/dorm.png"} alt="DMS Logo" className="w-full h-full object-contain" />
                                 </div>
                                 <div className="font-semibold text-foreground">
                                     Dormitory Management System

@@ -1,16 +1,35 @@
+import { useEffect, useState } from 'react';
+
 export default function AppLogo() {
+    const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        // Check if dark mode is active
+        const checkDarkMode = () => {
+            const htmlElement = document.documentElement;
+            setIsDark(htmlElement.classList.contains('dark'));
+        };
+
+        // Initial check
+        checkDarkMode();
+
+        // Watch for changes
+        const observer = new MutationObserver(checkDarkMode);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['class']
+        });
+
+        return () => observer.disconnect();
+    }, []);
+
     return (
         <>
             <div className="flex aspect-square size-8 items-center justify-center">
                 <img 
-                    src="/dorm.png" 
+                    src={isDark ? "/dormwhite.png" : "/dorm.png"}
                     alt="Dormitory Logo" 
-                    className="w-full h-full object-contain dark:hidden" 
-                />
-                <img 
-                    src="/dormwhite.png" 
-                    alt="Dormitory Logo" 
-                    className="w-full h-full object-contain hidden dark:block" 
+                    className="w-full h-full object-contain" 
                 />
             </div>
             <div className="ml-1 flex flex-1 items-end">
