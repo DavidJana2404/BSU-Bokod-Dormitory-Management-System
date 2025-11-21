@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     nodejs \
     npm \
     supervisor \
+    postgresql-client \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install pdo_pgsql pgsql mbstring exif pcntl bcmath gd opcache \
     && apt-get clean \
