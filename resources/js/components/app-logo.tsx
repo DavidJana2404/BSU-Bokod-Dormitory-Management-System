@@ -27,7 +27,7 @@ export default function AppLogo() {
         <>
             <div className="flex aspect-square size-8 items-center justify-center">
                 <img 
-                    src={isDark ? "/dormwhite.png" : "/dorm.png"}
+                    src={isDark ? "/dormwhite.png?v=2" : "/dorm.png?v=2"}
                     alt="Dormitory Logo" 
                     className="w-full h-full object-contain" 
                 />

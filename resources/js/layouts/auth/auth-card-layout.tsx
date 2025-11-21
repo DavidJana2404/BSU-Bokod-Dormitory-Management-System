@@ -29,7 +29,7 @@ export default function AuthCardLayout({
             <div className="flex w-full max-w-md flex-col gap-6">
                 <Link href={home()} className="flex items-center gap-2 self-center font-medium">
                     <div className="flex h-12 w-12 items-center justify-center">
-                        <img src={isDark ? "/dormwhite.png" : "/dorm.png"} alt="DMS Logo" className="w-full h-full object-contain" />
+                        <img src={isDark ? "/dormwhite.png?v=2" : "/dorm.png?v=2"} alt="DMS Logo" className="w-full h-full object-contain" />
                     </div>
                 </Link>
 

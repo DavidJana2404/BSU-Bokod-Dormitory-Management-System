@@ -72,7 +72,7 @@ export default function Welcome() {
                             {/* Logo */}
                             <div className="flex items-center gap-3">
                                 <div className="flex aspect-square size-10 items-center justify-center">
-                                    <img src={isDark ? "/dormwhite.png" : "/dorm.png"} alt="DMS Logo" className="w-full h-full object-contain" />
+                                    <img src={isDark ? "/dormwhite.png?v=2" : "/dorm.png?v=2"} alt="DMS Logo" className="w-full h-full object-contain" />
                                 </div>
                                 <div className="text-xl font-bold text-foreground">
                                     DMS
@@ -242,7 +242,7 @@ export default function Welcome() {
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
                                 <div className="flex aspect-square size-8 items-center justify-center">
-                                    <img src={isDark ? "/dormwhite.png" : "/dorm.png"} alt="DMS Logo" className="w-full h-full object-contain" />
+                                    <img src={isDark ? "/dormwhite.png?v=2" : "/dorm.png?v=2"} alt="DMS Logo" className="w-full h-full object-contain" />
                                 </div>
                                 <div className="font-semibold text-foreground">
                                     Dormitory Management System

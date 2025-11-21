@@ -28,7 +28,7 @@ export default function AuthSplitLayout({ children, title, description }: PropsW
                 <div className="absolute inset-0 bg-zinc-900" />
                 <Link href={home()} className="relative z-20 flex items-center text-lg font-medium">
                     <div className="mr-2 size-10 flex items-center justify-center">
-                        <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain" />
+                        <img src="/dormwhite.png?v=2" alt="DMS Logo" className="w-full h-full object-contain" />
                     </div>
                     {name}
                 </Link>
@@ -45,7 +45,7 @@ export default function AuthSplitLayout({ children, title, description }: PropsW
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <Link href={home()} className="relative z-20 flex items-center justify-center lg:hidden">
                         <div className="h-12 sm:h-14 aspect-square flex items-center justify-center">
-                            <img src={isDark ? "/dormwhite.png" : "/dorm.png"} alt="DMS Logo" className="w-full h-full object-contain" />
+                            <img src={isDark ? "/dormwhite.png?v=2" : "/dorm.png?v=2"} alt="DMS Logo" className="w-full h-full object-contain" />
                         </div>
                     </Link>
                     <div className="flex flex-col items-start gap-2 text-left sm:items-center sm:text-center">
