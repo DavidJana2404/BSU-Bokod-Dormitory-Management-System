@@ -16,8 +16,8 @@ export default function AuthSplitLayout({ children, title, description }: PropsW
             <div className="relative hidden h-full flex-col bg-muted p-10 text-white lg:flex dark:border-r">
                 <div className="absolute inset-0 bg-zinc-900" />
                 <Link href={home()} className="relative z-20 flex items-center text-lg font-medium">
-                    <div className="mr-2 size-10 bg-white rounded-lg flex items-center justify-center">
-                        <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-cover" />
+                    <div className="mr-2 size-10 flex items-center justify-center">
+                        <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain" />
                     </div>
                     {name}
                 </Link>
@@ -33,8 +33,9 @@ export default function AuthSplitLayout({ children, title, description }: PropsW
             <div className="w-full lg:p-8">
                 <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
                     <Link href={home()} className="relative z-20 flex items-center justify-center lg:hidden">
-                        <div className="h-12 sm:h-14 aspect-square bg-white rounded-lg flex items-center justify-center">
-                            <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-cover" />
+                        <div className="h-12 sm:h-14 aspect-square flex items-center justify-center">
+                            <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain dark:hidden" />
+                            <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain hidden dark:block" />
                         </div>
                     </Link>
                     <div className="flex flex-col items-start gap-2 text-left sm:items-center sm:text-center">

@@ -53,8 +53,9 @@ export default function Welcome() {
                         <nav className="flex items-center justify-between">
                             {/* Logo */}
                             <div className="flex items-center gap-3">
-                                <div className="flex aspect-square size-10 items-center justify-center rounded-lg bg-white">
-                                    <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-cover" />
+                                <div className="flex aspect-square size-10 items-center justify-center">
+                                    <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain dark:hidden" />
+                                    <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain hidden dark:block" />
                                 </div>
                                 <div className="text-xl font-bold text-foreground">
                                     DMS
@@ -223,8 +224,9 @@ export default function Welcome() {
                     <div className="container mx-auto px-6">
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
-                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-white">
-                                    <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-cover" />
+                                <div className="flex aspect-square size-8 items-center justify-center">
+                                    <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain dark:hidden" />
+                                    <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain hidden dark:block" />
                                 </div>
                                 <div className="font-semibold text-foreground">
                                     Dormitory Management System

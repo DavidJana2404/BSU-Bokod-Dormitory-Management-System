@@ -22,8 +22,8 @@
     </style>
 
     <title inertia>{{ config('app.name', 'Laravel') }}</title>
-    <link rel="icon" type="image/png" href="/dorm.png">
-    <link rel="apple-touch-icon" href="/dorm.png">
+    <link rel="icon" type="image/png" href="/dormwhite.png">
+    <link rel="apple-touch-icon" href="/dormwhite.png">
 
     {{-- Optimized font loading to prevent preload warnings --}}
     <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>

@@ -30,8 +30,9 @@ export default function AuthSimpleLayout({
                             href={home()} 
                             className="inline-flex flex-col items-center space-y-2 hover:opacity-80"
                         >
-                            <div className="bg-white rounded-full w-10 h-10 flex items-center justify-center">
-                                <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-cover" />
+                            <div className="w-10 h-10 flex items-center justify-center">
+                                <img src="/dorm.png" alt="DMS Logo" className="w-full h-full object-contain dark:hidden" />
+                                <img src="/dormwhite.png" alt="DMS Logo" className="w-full h-full object-contain hidden dark:block" />
                             </div>
                             <div className="space-y-1">
                                 <h1 className="text-xl font-bold text-foreground">
