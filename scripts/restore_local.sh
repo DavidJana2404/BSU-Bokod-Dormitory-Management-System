@@ -27,26 +27,29 @@ echo "WARNING: This will replace all current data in the database!"
 
 echo "Parsing DATABASE_URL..."
 
-# Parse the DATABASE_URL
-# Remove postgres:// or postgresql:// prefix
+# Parse the DATABASE_URL using a more reliable method
+# Format: postgres://user:password@host:port/database
 DB_URL="${DATABASE_URL#postgres://}"
 DB_URL="${DB_URL#postgresql://}"
 
-# Extract user and rest
-DB_USER="${DB_URL%%:*}"
-DB_REST="${DB_URL#*:}"
+# Extract credentials (user:password)
+DB_CREDENTIALS="${DB_URL%%@*}"
+DB_USER="${DB_CREDENTIALS%%:*}"
+DB_PASS="${DB_CREDENTIALS#*:}"
 
-# Extract password and rest
-DB_PASS="${DB_REST%%@*}"
-DB_REST="${DB_REST#*@}"
+# Extract host, port, and database (everything after @)
+DB_HOST_PORT_DB="${DB_URL#*@}"
 
-# Extract host and rest
-DB_HOST="${DB_REST%%:*}"
-DB_REST="${DB_REST#*:}"
+# Extract host:port (everything before /)
+DB_HOST_PORT="${DB_HOST_PORT_DB%%/*}"
+DB_HOST="${DB_HOST_PORT%%:*}"
+DB_PORT="${DB_HOST_PORT#*:}"
 
-# Extract port and database
-DB_PORT="${DB_REST%%/*}"
-DB_NAME="${DB_REST#*/}"
+# Extract database name (everything after /)
+DB_NAME="${DB_HOST_PORT_DB#*/}"
+
+# Remove any query parameters from database name
+DB_NAME="${DB_NAME%%\?*}"
 
 echo "Database: $DB_NAME"
 echo "Host: $DB_HOST"
