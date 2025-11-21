@@ -4,8 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useState } from 'react';
-import { Calendar, Plus, Edit3, Trash2, CalendarDays, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Plus, Edit3, Trash2, CalendarDays, CheckCircle, XCircle, Users, Home } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -27,14 +30,21 @@ interface CleaningSchedulesPageProps extends PageProps {
             day_name: string;
         }[];
     }[];
+    students: {
+        student_id: number;
+        first_name: string;
+        last_name: string;
+        room_number: string | null;
+    }[];
     weeklySchedule: {
         [key: number]: {
             id: number;
-            room_id: number;
-            room_number: string;
+            type: 'room' | 'individual';
+            room_id: number | null;
+            room_number: string | null;
             day_of_week: number;
             day_name: string;
-            students: Student[];
+            students: (Student & { room_number?: string })[];
         }[];
     };
     success?: string;
@@ -51,10 +61,10 @@ const DAYS = {
     7: 'Sunday'
 };
 
-const emptyForm = { room_id: '', day_of_week: '' };
+const emptyForm = { type: 'room' as 'room' | 'individual', room_id: '', day_of_week: '', student_ids: [] as number[] };
 
 export default function CleaningSchedules() {
-    const { rooms = [], weeklySchedule = {}, success, error } = usePage<CleaningSchedulesPageProps>().props;
+    const { rooms = [], students = [], weeklySchedule = {}, success, error } = usePage<CleaningSchedulesPageProps>().props;
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState(emptyForm);
     const [isEdit, setIsEdit] = useState(false);
@@ -69,10 +79,12 @@ export default function CleaningSchedules() {
         setOpen(true);
     };
 
-    const handleOpenEdit = (schedule: { id: number; room_id: number; day_of_week: number; }) => {
+    const handleOpenEdit = (schedule: { id: number; type: 'room' | 'individual'; room_id: number | null; day_of_week: number; students?: any[] }) => {
         setForm({
-            room_id: schedule.room_id.toString(),
+            type: schedule.type,
+            room_id: schedule.room_id ? schedule.room_id.toString() : '',
             day_of_week: schedule.day_of_week.toString(),
+            student_ids: schedule.type === 'individual' && schedule.students ? schedule.students.map((s: any) => s.student_id) : [],
         });
         setIsEdit(true);
         setEditId(schedule.id);
@@ -89,10 +101,16 @@ export default function CleaningSchedules() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         
-        const data = {
-            room_id: parseInt(form.room_id),
+        const data: any = {
+            type: form.type,
             day_of_week: parseInt(form.day_of_week),
         };
+        
+        if (form.type === 'room') {
+            data.room_id = parseInt(form.room_id);
+        } else {
+            data.student_ids = form.student_ids;
+        }
         
         if (isEdit && editId) {
             router.put(`/cleaning-schedules/${editId}`, data, {
@@ -250,8 +268,20 @@ export default function CleaningSchedules() {
                                                 key={schedule.id}
                                                 className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2"
                                             >
-                                                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
-                                                    Room {schedule.room_number}
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="font-medium text-sm text-gray-900 dark:text-gray-100">
+                                                        {schedule.type === 'room' && schedule.room_number ? (
+                                                            <span className="flex items-center gap-1">
+                                                                <Home size={14} className="text-blue-600 dark:text-blue-400" />
+                                                                Room {schedule.room_number}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="flex items-center gap-1">
+                                                                <Users size={14} className="text-purple-600 dark:text-purple-400" />
+                                                                Individual
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 {schedule.students && schedule.students.length > 0 ? (
                                                     <div className="space-y-1">
@@ -317,27 +347,100 @@ export default function CleaningSchedules() {
                         </DialogHeader>
 
                         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
-                            <div className="space-y-2">
+                            {/* Assignment Type Selector */}
+                            <div className="space-y-3">
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                    Select Room
+                                    Assignment Type
                                 </label>
-                                <Select 
-                                    value={form.room_id} 
-                                    onValueChange={(v: string) => setForm({ ...form, room_id: v })}
+                                <RadioGroup 
+                                    value={form.type} 
+                                    onValueChange={(v: 'room' | 'individual') => setForm({ ...form, type: v, room_id: '', student_ids: [] })}
+                                    className="flex gap-4"
                                 >
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Choose a room..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {rooms.map(room => (
-                                            <SelectItem key={room.room_id} value={room.room_id.toString()}>
-                                                Room {room.room_number}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="room" id="type-room" />
+                                        <Label htmlFor="type-room" className="flex items-center gap-2 cursor-pointer">
+                                            <Home size={16} className="text-blue-600 dark:text-blue-400" />
+                                            Assign Room
+                                        </Label>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem value="individual" id="type-individual" />
+                                        <Label htmlFor="type-individual" className="flex items-center gap-2 cursor-pointer">
+                                            <Users size={16} className="text-purple-600 dark:text-purple-400" />
+                                            Assign Students
+                                        </Label>
+                                    </div>
+                                </RadioGroup>
                             </div>
 
+                            {/* Room Selector - shown when type is 'room' */}
+                            {form.type === 'room' && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Select Room
+                                    </label>
+                                    <Select 
+                                        value={form.room_id} 
+                                        onValueChange={(v: string) => setForm({ ...form, room_id: v })}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Choose a room..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {rooms.map(room => (
+                                                <SelectItem key={room.room_id} value={room.room_id.toString()}>
+                                                    Room {room.room_number}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+
+                            {/* Student Multi-Select - shown when type is 'individual' */}
+                            {form.type === 'individual' && (
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Select Students
+                                    </label>
+                                    <div className="border border-gray-300 dark:border-gray-600 rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
+                                        {students.map(student => (
+                                            <div key={student.student_id} className="flex items-center space-x-2">
+                                                <Checkbox 
+                                                    id={`student-${student.student_id}`}
+                                                    checked={form.student_ids.includes(student.student_id)}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) {
+                                                            setForm({ ...form, student_ids: [...form.student_ids, student.student_id] });
+                                                        } else {
+                                                            setForm({ ...form, student_ids: form.student_ids.filter(id => id !== student.student_id) });
+                                                        }
+                                                    }}
+                                                />
+                                                <Label 
+                                                    htmlFor={`student-${student.student_id}`}
+                                                    className="text-sm cursor-pointer flex-1"
+                                                >
+                                                    {student.first_name} {student.last_name}
+                                                    {student.room_number && (
+                                                        <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                                                            (Room {student.room_number})
+                                                        </span>
+                                                    )}
+                                                </Label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {form.student_ids.length > 0 && (
+                                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                                            {form.student_ids.length} student{form.student_ids.length !== 1 ? 's' : ''} selected
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Day Selector */}
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                     Select Day
