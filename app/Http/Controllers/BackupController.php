@@ -148,7 +148,7 @@ class BackupController extends Controller
                 throw new \Exception($errorMessage);
             }
             
-            // Verify backup was created
+            // Verify backup was created and check file sizes
             $files = scandir($backupDir);
             $backupFiles = array_filter($files, function($f) use ($backupDir) {
                 return $f !== '.' && $f !== '..' && is_file($backupDir . '/' . $f);
@@ -158,10 +158,51 @@ class BackupController extends Controller
                 throw new \Exception('Backup completed but no backup file was created. Output: ' . implode("\n", $output));
             }
             
+            // Check the most recent backup file size
+            $latestFile = null;
+            $latestTime = 0;
+            foreach ($backupFiles as $file) {
+                $filePath = $backupDir . '/' . $file;
+                $fileTime = filemtime($filePath);
+                if ($fileTime > $latestTime) {
+                    $latestTime = $fileTime;
+                    $latestFile = $filePath;
+                }
+            }
+            
+            if ($latestFile) {
+                $fileSize = filesize($latestFile);
+                Log::info('Checking backup file', [
+                    'file' => basename($latestFile),
+                    'size' => $fileSize,
+                    'size_formatted' => $this->formatBytes($fileSize)
+                ]);
+                
+                // If file is suspiciously small (< 1KB), it's likely an error message
+                if ($fileSize < 1024) {
+                    $errorContent = file_get_contents($latestFile);
+                    // Try to gunzip it to see the error
+                    $unzipped = @gzdecode($errorContent);
+                    $actualError = $unzipped ?: $errorContent;
+                    
+                    Log::error('Backup file too small, contains error', [
+                        'file' => basename($latestFile),
+                        'size' => $fileSize,
+                        'content' => $actualError
+                    ]);
+                    
+                    // Delete the failed backup file
+                    @unlink($latestFile);
+                    
+                    throw new \Exception('Backup failed. Error from pg_dump: ' . $actualError);
+                }
+            }
+            
             Log::info('Backup created successfully', [
                 'output' => $output,
                 'user' => $user->id,
-                'files' => $backupFiles
+                'files' => $backupFiles,
+                'latest_file_size' => isset($fileSize) ? $this->formatBytes($fileSize) : 'unknown'
             ]);
             
             return redirect()->route('backup.index')

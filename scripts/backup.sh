@@ -49,11 +49,26 @@ echo "Starting backup to $BACKUP_FILE..."
 # Set PGPASSWORD environment variable for authentication
 export PGPASSWORD="$DB_PASS"
 
-# Run pg_dump with explicit parameters
-pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" --no-password -Fc | gzip > "$BACKUP_FILE"
+# Run pg_dump with explicit parameters (plain SQL format)
+# Redirect stderr to stdout to capture errors
+pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" --no-password 2>&1 | gzip > "$BACKUP_FILE"
+
+EXIT_CODE=${PIPESTATUS[0]}
 
 # Clear password from environment
 unset PGPASSWORD
+
+# Check if pg_dump failed
+if [ $EXIT_CODE -ne 0 ]; then
+    echo "ERROR: pg_dump failed with exit code $EXIT_CODE"
+    # Show the error from the backup file
+    if [ -f "$BACKUP_FILE" ]; then
+        echo "Error details:"
+        gunzip -c "$BACKUP_FILE" 2>&1 || cat "$BACKUP_FILE"
+        rm -f "$BACKUP_FILE"
+    fi
+    exit $EXIT_CODE
+fi
 
 # Check if backup was successful
 if [ -f "$BACKUP_FILE" ]; then

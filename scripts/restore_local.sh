@@ -25,23 +25,51 @@ fi
 echo "Starting restore from $BACKUP_FILE..."
 echo "WARNING: This will replace all current data in the database!"
 
+echo "Parsing DATABASE_URL..."
+
+# Parse the DATABASE_URL
+# Remove postgres:// or postgresql:// prefix
+DB_URL="${DATABASE_URL#postgres://}"
+DB_URL="${DB_URL#postgresql://}"
+
+# Extract user and rest
+DB_USER="${DB_URL%%:*}"
+DB_REST="${DB_URL#*:}"
+
+# Extract password and rest
+DB_PASS="${DB_REST%%@*}"
+DB_REST="${DB_REST#*@}"
+
+# Extract host and rest
+DB_HOST="${DB_REST%%:*}"
+DB_REST="${DB_REST#*:}"
+
+# Extract port and database
+DB_PORT="${DB_REST%%/*}"
+DB_NAME="${DB_REST#*/}"
+
+echo "Database: $DB_NAME"
+echo "Host: $DB_HOST"
+echo "Port: $DB_PORT"
+echo "User: $DB_USER"
+
+# Set PGPASSWORD for authentication
+export PGPASSWORD="$DB_PASS"
+
 # Create a safety backup before restoring
 BACKUP_DIR="${BACKUP_DIR:-/var/data/backups}"
 SAFETY_BACKUP="$BACKUP_DIR/safety_before_restore_$(date +%Y%m%d_%H%M%S).dump.gz"
 echo "Creating safety backup at $SAFETY_BACKUP..."
-pg_dump "$DATABASE_URL" | gzip > "$SAFETY_BACKUP"
+pg_dump -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" --no-password 2>&1 | gzip > "$SAFETY_BACKUP"
 echo "Safety backup created: $SAFETY_BACKUP"
-
-# Extract database name from DATABASE_URL
-DB_NAME=$(echo "$DATABASE_URL" | sed -n 's|.*\/\([^?]*\).*|\1|p')
 
 # Disconnect all active connections to the database
 echo "Disconnecting active connections..."
-psql "$DATABASE_URL" -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '$DB_NAME' AND pid <> pg_backend_pid();" || true
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" --no-password -c "SELECT pg_terminate_backend(pg_stat_activity.pid) FROM pg_stat_activity WHERE pg_stat_activity.datname = '$DB_NAME' AND pid <> pg_backend_pid();" || true
 
 # Drop all tables and their dependencies
 echo "Cleaning database..."
-psql "$DATABASE_URL" << 'SQL'
+psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" --no-password << 'SQL'
 DO $$ DECLARE
     r RECORD;
 BEGIN
@@ -63,7 +91,10 @@ END $$;
 SQL
 
 echo "Database cleaned. Restoring backup..."
-gunzip -c "$BACKUP_FILE" | psql "$DATABASE_URL"
+gunzip -c "$BACKUP_FILE" | psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" --no-password
+
+# Clear password from environment
+unset PGPASSWORD
 
 echo "Restore completed successfully!"
 echo "Safety backup saved at: $SAFETY_BACKUP"
