@@ -3,7 +3,7 @@ services:
     name: bsu-bokod-dms
     runtime: docker
     plan: free
-    repo: https://github.com/secre159/bsu-bokod-dms.git
+    repo: https://github.com/DavidJana2404/BSU-Bokod-Dormitory-Management-System.git
     region: oregon
     branch: main
     dockerfilePath: ./Dockerfile
