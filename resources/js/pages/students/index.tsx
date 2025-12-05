@@ -152,7 +152,7 @@ export default function Students() {
     };
 
     const handleViewStudent = (student: any) => {
-        router.visit(`/students/${student.student_id}`);
+        router.get(`/students/${student.student_id}`);
     };
     
     const handleUpdateStatus = (student: any) => {
