@@ -52,13 +52,21 @@ class StudentController extends Controller
             $students = collect([]);
             
             try {
-                // Simplified query with basic error handling
-                $studentsData = Student::select([
-                    'student_id', 'tenant_id', 'first_name', 'last_name', 'student_id_number', 'program_year', 'current_address', 'email', 'phone',
-                    'parent_name', 'parent_phone', 'parent_relationship',
+                // Build column list dynamically based on what exists
+                $baseColumns = ['student_id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone',
                     'payment_status', 'payment_date', 'amount_paid', 'payment_notes',
-                    'status', 'leave_reason', 'status_updated_at', 'password', 'archived_at'
-                ])
+                    'status', 'leave_reason', 'status_updated_at', 'password', 'archived_at'];
+                
+                // Check for new columns and add them if they exist
+                $optionalColumns = ['student_id_number', 'program_year', 'current_address', 'parent_name', 'parent_phone', 'parent_relationship'];
+                foreach ($optionalColumns as $column) {
+                    if (\Schema::hasColumn('students', $column)) {
+                        $baseColumns[] = $column;
+                    }
+                }
+                
+                // Simplified query with basic error handling
+                $studentsData = Student::select($baseColumns)
                 ->where('tenant_id', $user->tenant_id)
                 ->whereNull('archived_at')
                 ->orderBy('first_name')
@@ -159,14 +167,22 @@ class StudentController extends Controller
                     ->with('error', 'Unauthorized access.');
             }
             
-            // Load student with simplified query
-            $student = Student::select([
-                'student_id', 'tenant_id', 'first_name', 'last_name', 'student_id_number', 'program_year', 'current_address', 'email', 'phone',
-                'parent_name', 'parent_phone', 'parent_relationship',
+            // Build column list dynamically
+            $baseColumns = ['student_id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone',
                 'payment_status', 'payment_date', 'amount_paid', 'payment_notes',
                 'status', 'leave_reason', 'status_updated_at', 'password', 'archived_at',
-                'created_at', 'updated_at'
-            ])
+                'created_at', 'updated_at'];
+            
+            // Check for new columns
+            $optionalColumns = ['student_id_number', 'program_year', 'current_address', 'parent_name', 'parent_phone', 'parent_relationship'];
+            foreach ($optionalColumns as $column) {
+                if (\Schema::hasColumn('students', $column)) {
+                    $baseColumns[] = $column;
+                }
+            }
+            
+            // Load student with simplified query
+            $student = Student::select($baseColumns)
             ->where('student_id', $id)
             ->where('tenant_id', $user->tenant_id)
             ->whereNull('archived_at')
@@ -493,21 +509,21 @@ class StudentController extends Controller
             'student_id' => $student->student_id,
             'first_name' => $student->first_name,
             'last_name' => $student->last_name,
-            'student_id_number' => $student->student_id_number,
-            'program_year' => $student->program_year,
-            'current_address' => $student->current_address,
+            'student_id_number' => $student->student_id_number ?? null,
+            'program_year' => $student->program_year ?? null,
+            'current_address' => $student->current_address ?? null,
             'email' => $student->email,
             'phone' => $student->phone,
-            'parent_name' => $student->parent_name,
-            'parent_phone' => $student->parent_phone,
-            'parent_relationship' => $student->parent_relationship,
+            'parent_name' => $student->parent_name ?? null,
+            'parent_phone' => $student->parent_phone ?? null,
+            'parent_relationship' => $student->parent_relationship ?? null,
             'payment_status' => $student->payment_status ?? 'unpaid',
-            'payment_date' => $student->payment_date,
-            'amount_paid' => $student->amount_paid,
-            'payment_notes' => $student->payment_notes,
+            'payment_date' => $student->payment_date ?? null,
+            'amount_paid' => $student->amount_paid ?? null,
+            'payment_notes' => $student->payment_notes ?? null,
             'status' => $student->status ?? 'in',
-            'leave_reason' => $student->leave_reason,
-            'status_updated_at' => $student->status_updated_at,
+            'leave_reason' => $student->leave_reason ?? null,
+            'status_updated_at' => $student->status_updated_at ?? null,
             'status_history' => $statusHistory,
             'password' => $hasPassword,
             'tenant_id' => $student->tenant_id,

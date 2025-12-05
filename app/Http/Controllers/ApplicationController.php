@@ -69,13 +69,21 @@ class ApplicationController extends Controller
             }
             
             try {
-                // Get applications based on user role with optimized query
-                $applicationsQuery = Application::select([
-                    'id', 'tenant_id', 'first_name', 'last_name', 'student_id', 'program_year', 'current_address', 'email', 'phone', 
-                    'parent_name', 'parent_phone', 'parent_relationship',
+                // Build column list dynamically based on what exists
+                $baseColumns = ['id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone', 
                     'additional_info', 'status', 'rejection_reason', 'processed_by', 
-                    'processed_at', 'created_at'
-                ]);
+                    'processed_at', 'created_at'];
+                
+                // Check for new columns and add them if they exist
+                $optionalColumns = ['student_id', 'program_year', 'current_address', 'parent_name', 'parent_phone', 'parent_relationship'];
+                foreach ($optionalColumns as $column) {
+                    if (\Schema::hasColumn('applications', $column)) {
+                        $baseColumns[] = $column;
+                    }
+                }
+                
+                // Get applications based on user role with optimized query
+                $applicationsQuery = Application::select($baseColumns);
                 
                 // Only exclude archived if column exists (safety check for production)
                 if (\Schema::hasColumn('applications', 'archived_at')) {
@@ -139,19 +147,19 @@ class ApplicationController extends Controller
                             ]);
                         }
                         
-                        // Transform to array with safe fallbacks
+                        // Transform to array with safe fallbacks for missing columns
                         return [
                             'id' => $application->id,
                             'first_name' => $application->first_name,
                             'last_name' => $application->last_name,
-                            'student_id' => $application->student_id,
-                            'program_year' => $application->program_year,
-                            'current_address' => $application->current_address,
+                            'student_id' => $application->student_id ?? null,
+                            'program_year' => $application->program_year ?? null,
+                            'current_address' => $application->current_address ?? null,
                             'email' => $application->email,
                             'phone' => $application->phone,
-                            'parent_name' => $application->parent_name,
-                            'parent_phone' => $application->parent_phone,
-                            'parent_relationship' => $application->parent_relationship,
+                            'parent_name' => $application->parent_name ?? null,
+                            'parent_phone' => $application->parent_phone ?? null,
+                            'parent_relationship' => $application->parent_relationship ?? null,
                             'additional_info' => $application->additional_info,
                             'status' => $application->status,
                             'rejection_reason' => $application->rejection_reason,
@@ -173,21 +181,21 @@ class ApplicationController extends Controller
                         // Return application with fallback values
                         return [
                             'id' => $application->id,
-                            'first_name' => $application->first_name,
-                            'last_name' => $application->last_name,
-                            'student_id' => $application->student_id,
-                            'program_year' => $application->program_year,
-                            'current_address' => $application->current_address,
-                            'email' => $application->email,
-                            'phone' => $application->phone,
-                            'parent_name' => $application->parent_name,
-                            'parent_phone' => $application->parent_phone,
-                            'parent_relationship' => $application->parent_relationship,
-                            'additional_info' => $application->additional_info,
-                            'status' => $application->status,
-                            'rejection_reason' => $application->rejection_reason,
-                            'created_at' => $application->created_at,
-                            'processed_at' => $application->processed_at,
+                            'first_name' => $application->first_name ?? null,
+                            'last_name' => $application->last_name ?? null,
+                            'student_id' => $application->student_id ?? null,
+                            'program_year' => $application->program_year ?? null,
+                            'current_address' => $application->current_address ?? null,
+                            'email' => $application->email ?? null,
+                            'phone' => $application->phone ?? null,
+                            'parent_name' => $application->parent_name ?? null,
+                            'parent_phone' => $application->parent_phone ?? null,
+                            'parent_relationship' => $application->parent_relationship ?? null,
+                            'additional_info' => $application->additional_info ?? null,
+                            'status' => $application->status ?? 'pending',
+                            'rejection_reason' => $application->rejection_reason ?? null,
+                            'created_at' => $application->created_at ?? null,
+                            'processed_at' => $application->processed_at ?? null,
                             'tenant' => [
                                 'dormitory_name' => 'Unknown Dormitory'
                             ],
