@@ -143,6 +143,8 @@ php artisan config:clear 2>/dev/null || echo "Config clear failed (might be ok)"
 php artisan route:clear 2>/dev/null || echo "Route clear failed (might be ok)"
 php artisan view:clear 2>/dev/null || echo "View clear failed (might be ok)"
 php artisan cache:clear 2>/dev/null || echo "Cache clear failed (might be ok)"
+php artisan event:clear 2>/dev/null || echo "Event clear failed (might be ok)"
+php artisan optimize:clear 2>/dev/null || echo "Optimize clear failed (might be ok)"
 
 echo "Testing basic Laravel functionality..."
 # Test if Laravel can load properly
