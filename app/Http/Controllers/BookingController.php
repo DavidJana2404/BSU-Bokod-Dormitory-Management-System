@@ -10,6 +10,7 @@ use App\Models\Booking;
 use App\Models\Student;
 use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\CashierNotification;
 use Inertia\Inertia;
 
 class BookingController extends Controller
@@ -73,7 +74,7 @@ class BookingController extends Controller
                     'student:student_id,first_name,last_name,email,tenant_id',
                     'room:room_id,room_number,type,max_capacity,tenant_id'
                 ])
-                ->select(['booking_id', 'tenant_id', 'student_id', 'room_id', 'semester_count', 'archived_at'])
+                ->select(['booking_id', 'tenant_id', 'student_id', 'room_id', 'semester_count', 'booked_at', 'archived_at'])
                 ->where('tenant_id', $user->tenant_id)
                 ->whereNull('archived_at')
                 ->orderBy('booking_id', 'desc')
@@ -87,6 +88,7 @@ class BookingController extends Controller
                         'student_id' => $booking->student_id,
                         'room_id' => $booking->room_id,
                         'semester_count' => $booking->semester_count,
+                        'booked_at' => $booking->booked_at ? \Carbon\Carbon::parse($booking->booked_at)->toIso8601String() : null,
                         'student' => $booking->student ? [
                             'student_id' => $booking->student->student_id,
                             'first_name' => $booking->student->first_name,
@@ -242,6 +244,7 @@ class BookingController extends Controller
             ]);
             
             $data['tenant_id'] = $user->tenant_id;
+            $data['booked_at'] = now();
             
             // Check if student already has booking
             $existingBooking = Booking::where('student_id', $data['student_id'])
@@ -461,6 +464,50 @@ class BookingController extends Controller
             // Verify booking belongs to user's tenant
             if ($booking->tenant_id !== $user->tenant_id) {
                 return back()->withErrors(['error' => 'Unauthorized access to this booking.']);
+            }
+            
+            // Create notification for cashier with stay duration and cost
+            try {
+                $student = $booking->student;
+                $room = $booking->room;
+                if ($student) {
+                    // Calculate days stayed
+                    $bookedAt = $booking->booked_at ? \Carbon\Carbon::parse($booking->booked_at) : null;
+                    $archivedAt = now();
+                    $daysStayed = $bookedAt ? (int)$bookedAt->diffInDays($archivedAt) : 0;
+                    
+                    // Calculate cost: ₱400 per month
+                    // 1-30 days = 1 month (₱400)
+                    // 31-60 days = 2 months (₱800)
+                    // 61-90 days = 3 months (₱1,200), etc.
+                    // Any partial month counts as full month
+                    $monthsStayed = $daysStayed > 0 ? max(1, (int)ceil($daysStayed / 30)) : 0;
+                    $calculatedCost = $monthsStayed * 400;
+                    
+                    $totalSemesters = $booking->semester_count ?? 1;
+                    $roomNumber = $room ? $room->room_number : 'N/A';
+                    
+                    CashierNotification::create([
+                        'tenant_id' => $user->tenant_id,
+                        'type' => 'booking_archived',
+                        'student_id' => $student->student_id,
+                        'booking_id' => $booking->booking_id,
+                        'student_name' => $student->first_name . ' ' . $student->last_name,
+                        'message' => "Booking for {$student->first_name} {$student->last_name} has been archived by manager. Stayed for {$monthsStayed} month" . ($monthsStayed != 1 ? 's' : '') . " ({$daysStayed} days).",
+                        'booked_at' => $bookedAt,
+                        'archived_at' => $archivedAt,
+                        'days_stayed' => $daysStayed,
+                        'months_stayed' => $monthsStayed,
+                        'calculated_cost' => round($calculatedCost, 2),
+                        'total_semesters' => $totalSemesters,
+                        'room_number' => $roomNumber,
+                    ]);
+                }
+            } catch (\Exception $e) {
+                \Log::error('Failed to create cashier notification for booking archive', [
+                    'error' => $e->getMessage(),
+                    'booking_id' => $booking->booking_id
+                ]);
             }
             
             // Archive the booking

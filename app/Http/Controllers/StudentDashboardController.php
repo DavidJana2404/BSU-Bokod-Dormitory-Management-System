@@ -40,42 +40,92 @@ class StudentDashboardController extends Controller
         // Use current booking if available, otherwise use latest booking
         $activeBooking = $currentBooking ?? $latestBooking;
         
+        // Get all dormitorians in the same dormitory (tenant), excluding current student
+        $dormitorians = [];
+        try {
+            $dormitorians = \App\Models\Student::where('tenant_id', $user->tenant_id)
+                ->where('student_id', '!=', $user->student_id) // Exclude current student
+                ->notArchived()
+                ->orderBy('last_name')
+                ->orderBy('first_name')
+                ->get()
+                ->map(function ($student) {
+                    return [
+                        'student_id' => $student->student_id,
+                        'first_name' => $student->first_name,
+                        'last_name' => $student->last_name,
+                    ];
+                })->toArray();
+        } catch (\Exception $e) {
+            \Log::error('Error fetching dormitorians for student', [
+                'student_id' => $user->student_id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
         // Get cleaning schedules for the current room (both room-based and individual)
         $cleaningSchedules = [];
-        if ($activeBooking && $activeBooking->room) {
-            try {
-                // Get room-based schedules
+        
+        // Debug logging
+        \Log::info('Fetching schedules for student', [
+            'student_id' => $user->student_id,
+            'has_active_booking' => !is_null($activeBooking),
+            'has_room' => $activeBooking && $activeBooking->room ? true : false,
+            'room_id' => $activeBooking && $activeBooking->room ? $activeBooking->room->room_id : null,
+        ]);
+        
+        try {
+            $roomSchedules = collect();
+            
+            // Get room-based schedules only if student has a room
+            if ($activeBooking && $activeBooking->room) {
                 $roomSchedules = CleaningSchedule::where('room_id', $activeBooking->room->room_id)
                     ->where(function($query) {
                         $query->where('type', 'room')->orWhereNull('type');
                     })
                     ->get();
                 
-                // Get individual schedules for this student
-                $individualSchedules = CleaningSchedule::where('type', 'individual')
-                    ->whereHas('students', function ($query) use ($user) {
-                        $query->where('student_id', $user->student_id);
-                    })
-                    ->get();
-                
-                // Merge both types of schedules
-                $allSchedules = $roomSchedules->merge($individualSchedules);
-                
-                $cleaningSchedules = $allSchedules->map(function ($schedule) {
-                    return [
-                        'id' => $schedule->id,
-                        'day_of_week' => $schedule->day_of_week,
-                        'day_name' => $schedule->day_name,
-                        'room_id' => $schedule->room_id,
-                    ];
-                })->toArray();
-            } catch (\Exception $e) {
-                \Log::error('Error fetching cleaning schedules for student', [
-                    'student_id' => $user->student_id,
-                    'error' => $e->getMessage()
+                \Log::info('Room schedules found', [
+                    'count' => $roomSchedules->count(),
+                    'schedules' => $roomSchedules->toArray()
                 ]);
-                $cleaningSchedules = [];
             }
+            
+            // ALWAYS get individual schedules for this student, regardless of booking status
+            $individualSchedules = CleaningSchedule::where('type', 'individual')
+                ->whereHas('students', function ($query) use ($user) {
+                    $query->where('students.student_id', $user->student_id);
+                })
+                ->get();
+            
+            \Log::info('Individual schedules found', [
+                'count' => $individualSchedules->count(),
+                'schedules' => $individualSchedules->toArray()
+            ]);
+            
+            // Merge both types of schedules
+            $allSchedules = $roomSchedules->merge($individualSchedules);
+            
+            $cleaningSchedules = $allSchedules->map(function ($schedule) {
+                return [
+                    'id' => $schedule->id,
+                    'day_of_week' => $schedule->day_of_week,
+                    'day_name' => $schedule->day_name,
+                    'room_id' => $schedule->room_id,
+                ];
+            })->toArray();
+            
+            \Log::info('Final schedules', [
+                'count' => count($cleaningSchedules),
+                'schedules' => $cleaningSchedules
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching cleaning schedules for student', [
+                'student_id' => $user->student_id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            $cleaningSchedules = [];
         }
         
         // The authenticated user could be either User or Student model
@@ -105,6 +155,7 @@ class StudentDashboardController extends Controller
         return Inertia::render('student/dashboard', [
             'student' => $studentData,
             'cleaningSchedules' => $cleaningSchedules,
+            'dormitorians' => $dormitorians,
             'auth' => ['student' => $studentData] // Pass student data for sidebar component
         ]);
     }

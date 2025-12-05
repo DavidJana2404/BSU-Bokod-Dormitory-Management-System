@@ -1,4 +1,4 @@
-import AppLayout from '@/layouts/app-layout';
+﻿import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
 import type { PageProps } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import WarningDialog from '@/components/warning-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Users, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, Mail, Phone, Edit3, RefreshCw } from 'lucide-react';
+import { Users, DollarSign, TrendingUp, Clock, CheckCircle, XCircle, AlertCircle, Mail, Phone, Edit3, RefreshCw, History, Calendar } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import PaymentHistoryDialog from '@/components/payment-history-dialog';
 
 interface Student {
     student_id: number;
@@ -47,10 +48,11 @@ interface CashierDashboardProps extends PageProps {
     stats: Stats;
     success?: string;
     error?: string;
+    currentSchoolYear?: string | null;
 }
 
 export default function CashierDashboard() {
-    const { students, stats, success, error } = usePage<CashierDashboardProps>().props;
+    const { students, stats, success, error, currentSchoolYear } = usePage<CashierDashboardProps>().props;
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState('');
@@ -60,6 +62,12 @@ export default function CashierDashboard() {
     const [searchTerm, setSearchTerm] = useState('');
     const [newSemesterDialogOpen, setNewSemesterDialogOpen] = useState(false);
     const [resettingPayments, setResettingPayments] = useState(false);
+    const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+    const [historyStudentId, setHistoryStudentId] = useState<number | null>(null);
+    const [historyStudentName, setHistoryStudentName] = useState<string | null>(null);
+    const [schoolYearDialogOpen, setSchoolYearDialogOpen] = useState(false);
+    const [startYear, setStartYear] = useState('');
+    const [endYear, setEndYear] = useState('');
 
     // Filter students based on search term and status filter
     const filteredStudents = students.filter(student => {
@@ -80,24 +88,32 @@ export default function CashierDashboard() {
         setIsDialogOpen(true);
     };
     
-    // Automatically set amount when payment status changes
+    const openHistoryDialog = (student: Student) => {
+        setHistoryStudentId(student.student_id);
+        setHistoryStudentName(student.full_name);
+        setHistoryDialogOpen(true);
+    };
+    
+    // Clear amount when status changes to unpaid
     useEffect(() => {
-        if (selectedStudent && paymentStatus === 'paid') {
-            // Set the full amount from the total semester fee (only if student has a booking)
-            if (selectedStudent.has_booking && selectedStudent.total_fee) {
-                setAmountPaid(selectedStudent.total_fee.toString());
-            } else {
-                setAmountPaid('0');
-            }
-        } else if (paymentStatus === 'unpaid') {
+        if (paymentStatus === 'unpaid') {
             // Clear amount for unpaid status
             setAmountPaid('');
         }
-        // For partial payments, let the user enter manually
-    }, [paymentStatus, selectedStudent]);
+        // For paid and partial payments, let the user enter manually
+    }, [paymentStatus]);
 
     const handleUpdatePayment = () => {
-        if (!selectedStudent) return;
+        if (!selectedStudent) {
+            console.error('No student selected');
+            return;
+        }
+
+        console.log('Updating payment for:', selectedStudent.student_id, {
+            payment_status: paymentStatus,
+            amount_paid: paymentStatus === 'unpaid' ? null : parseFloat(amountPaid) || 0,
+            payment_notes: paymentNotes,
+        });
 
         router.put(`/cashier/students/${selectedStudent.student_id}/payment`, {
             payment_status: paymentStatus,
@@ -105,11 +121,13 @@ export default function CashierDashboard() {
             payment_notes: paymentNotes,
         }, {
             onSuccess: () => {
+                console.log('Payment updated successfully');
                 setIsDialogOpen(false);
                 setSelectedStudent(null);
             },
             onError: (errors) => {
                 console.error('Error updating payment:', errors);
+                alert('Failed to update payment. Check console for details.');
             }
         });
     };
@@ -125,6 +143,36 @@ export default function CashierDashboard() {
             onError: (errors) => {
                 console.error('Error resetting payments:', errors);
                 setResettingPayments(false);
+            }
+        });
+    };
+    
+    const handleSetSchoolYear = () => {
+        if (!startYear || !endYear) {
+            alert('Please enter both start and end years');
+            return;
+        }
+        
+        const start = parseInt(startYear);
+        const end = parseInt(endYear);
+        
+        if (end <= start) {
+            alert('End year must be greater than start year');
+            return;
+        }
+        
+        router.post('/cashier/set-school-year', {
+            start_year: start,
+            end_year: end,
+        }, {
+            onSuccess: () => {
+                setSchoolYearDialogOpen(false);
+                setStartYear('');
+                setEndYear('');
+            },
+            onError: (errors) => {
+                console.error('Error setting school year:', errors);
+                alert('Failed to set school year. Please try again.');
             }
         });
     };
@@ -151,7 +199,7 @@ export default function CashierDashboard() {
                         </div>
                         <h1 className="text-3xl font-bold text-foreground">Cashier Dashboard</h1>
                     </div>
-                    <p className="text-muted-foreground mb-8">Manage student payments and track payment status across all dormitories</p>
+                    <p className="text-muted-foreground mb-8">Manage dormitorian payments and track payment status across all dormitories</p>
                 </div>
 
                 {/* Flash Messages */}
@@ -175,7 +223,7 @@ export default function CashierDashboard() {
                         <div className="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full w-fit mx-auto mb-4">
                             <Users className="text-blue-600 dark:text-blue-400" size={28} />
                         </div>
-                        <div className="text-lg font-semibold mb-2 text-blue-800 dark:text-blue-200">Total Students</div>
+                        <div className="text-lg font-semibold mb-2 text-blue-800 dark:text-blue-200">Total Dormitorians</div>
                         <div className="text-3xl font-bold text-blue-900 dark:text-blue-100">{stats.total_students}</div>
                     </Card>
 
@@ -183,7 +231,7 @@ export default function CashierDashboard() {
                         <div className="p-3 bg-green-100 dark:bg-green-900/50 rounded-full w-fit mx-auto mb-4">
                             <CheckCircle className="text-green-600 dark:text-green-400" size={28} />
                         </div>
-                        <div className="text-lg font-semibold mb-2 text-green-800 dark:text-green-200">Paid Students</div>
+                        <div className="text-lg font-semibold mb-2 text-green-800 dark:text-green-200">Paid Dormitorians</div>
                         <div className="text-3xl font-bold text-green-900 dark:text-green-100">{stats.paid_students}</div>
                     </Card>
 
@@ -191,7 +239,7 @@ export default function CashierDashboard() {
                         <div className="p-3 bg-red-100 dark:bg-red-900/50 rounded-full w-fit mx-auto mb-4">
                             <XCircle className="text-red-600 dark:text-red-400" size={28} />
                         </div>
-                        <div className="text-lg font-semibold mb-2 text-red-800 dark:text-red-200">Unpaid Students</div>
+                        <div className="text-lg font-semibold mb-2 text-red-800 dark:text-red-200">UnPaid Dormitorians</div>
                         <div className="text-3xl font-bold text-red-900 dark:text-red-100">{stats.unpaid_students}</div>
                     </Card>
 
@@ -208,7 +256,7 @@ export default function CashierDashboard() {
                 <Card className="p-6">
                     <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center">
                         <div className="flex-1">
-                            <Label htmlFor="search">Search Students</Label>
+                            <Label htmlFor="search">Search Dormitorians</Label>
                             <Input
                                 id="search"
                                 placeholder="Search by name, email, or dormitory..."
@@ -224,7 +272,7 @@ export default function CashierDashboard() {
                                     <SelectValue placeholder="Select status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="all">All Students</SelectItem>
+                                    <SelectItem value="all">All Dormitorians</SelectItem>
                                     <SelectItem value="paid">Paid</SelectItem>
                                     <SelectItem value="unpaid">Unpaid</SelectItem>
                                     <SelectItem value="partial">Partial</SelectItem>
@@ -233,7 +281,7 @@ export default function CashierDashboard() {
                         </div>
                         <div className="flex items-end gap-2 pt-6 lg:pt-0">
                             <div className="text-sm text-muted-foreground">
-                                Showing {filteredStudents.length} of {students.length} students
+                                Showing {filteredStudents.length} of {students.length} dormitorians
                             </div>
                         </div>
                     </div>
@@ -242,23 +290,37 @@ export default function CashierDashboard() {
                 {/* Student Payment Management */}
                 <div className="space-y-6">
                     {/* Section Header */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-lg">
                                 <DollarSign className="text-green-600 dark:text-green-400" size={24} />
                             </div>
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Student Payment Management</h2>
+                                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Dormitorian Payment Management</h2>
                                 <p className="text-gray-600 dark:text-gray-400">Individual payment tracking and management</p>
+                                {currentSchoolYear && (
+                                    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1 font-medium">
+                                        School Year: {currentSchoolYear}
+                                    </p>
+                                )}
                             </div>
                         </div>
-                        <Button 
-                            onClick={() => setNewSemesterDialogOpen(true)} 
-                            className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
-                        >
-                            <RefreshCw size={18} />
-                            New Semester
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button 
+                                onClick={() => setSchoolYearDialogOpen(true)} 
+                                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                                <Calendar size={18} />
+                                Set School Year
+                            </Button>
+                            <Button 
+                                onClick={() => setNewSemesterDialogOpen(true)} 
+                                className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+                            >
+                                <RefreshCw size={18} />
+                                New Semester
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Students Cards - Wrapped in Card with scrollable container */}
@@ -353,8 +415,8 @@ export default function CashierDashboard() {
                                                     </div>
                                                 </div>
                                                 
-                                                {/* Action Button */}
-                                                <div className="flex flex-col justify-start flex-shrink-0">
+                                                {/* Action Buttons */}
+                                                <div className="flex flex-col justify-start flex-shrink-0 gap-2">
                                                     <Button 
                                                         size="sm" 
                                                         variant="outline" 
@@ -363,6 +425,15 @@ export default function CashierDashboard() {
                                                     >
                                                         <Edit3 size={12} className="mr-1" />
                                                         Update
+                                                    </Button>
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => openHistoryDialog(student)}
+                                                        className="h-8 px-3 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-950/20 dark:hover:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800"
+                                                    >
+                                                        <History size={12} className="mr-1" />
+                                                        History
                                                     </Button>
                                                 </div>
                                             </div>
@@ -509,7 +580,7 @@ export default function CashierDashboard() {
 
                                                 {/* Actions - Compact */}
                                                 <div className="col-span-2 xl:col-span-4">
-                                                    <div className="flex justify-end">
+                                                    <div className="flex justify-end gap-2">
                                                         <Button 
                                                             size="sm" 
                                                             variant="outline" 
@@ -518,6 +589,15 @@ export default function CashierDashboard() {
                                                         >
                                                             <Edit3 size={12} className="mr-1" />
                                                             Update
+                                                        </Button>
+                                                        <Button 
+                                                            size="sm" 
+                                                            variant="outline" 
+                                                            onClick={() => openHistoryDialog(student)}
+                                                            className="h-8 px-3 text-xs bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-300 dark:bg-purple-950/20 dark:hover:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800"
+                                                        >
+                                                            <History size={12} className="mr-1" />
+                                                            History
                                                         </Button>
                                                     </div>
                                                 </div>
@@ -544,8 +624,8 @@ export default function CashierDashboard() {
                                     <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
                                         <DollarSign className="text-gray-400" size={32} />
                                     </div>
-                                    <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No students found</h3>
-                                    <p className="text-gray-500 dark:text-gray-500">No students match your search criteria or payment status filter.</p>
+                                    <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">No booked dormitorians found</h3>
+                                    <p className="text-gray-500 dark:text-gray-500">No booked dormitorians match your search criteria or payment status filter.</p>
                                 </div>
                             )}
                         </CardContent>
@@ -562,59 +642,51 @@ export default function CashierDashboard() {
                             </DialogDescription>
                         </DialogHeader>
                         <div className="space-y-4">
+                            {/* Show total fee if student has booking */}
+                            {selectedStudent?.has_booking && selectedStudent.total_fee && (
+                                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                                    <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                        Total Fee: ₱{selectedStudent.total_fee.toLocaleString()}
+                                    </div>
+                                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                        {selectedStudent.semester_count} semester{selectedStudent.semester_count !== 1 ? 's' : ''} × ₱2,000/semester
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Amount input - FIRST - always visible */}
+                            <div>
+                                <Label htmlFor="amount-paid">Amount Paid (₱)</Label>
+                                <Input
+                                    id="amount-paid"
+                                    type="number"
+                                    step="0.01"
+                                    value={amountPaid}
+                                    onChange={(e) => setAmountPaid(e.target.value)}
+                                    placeholder="Enter amount received (0 for unpaid)"
+                                    className="mt-1"
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Enter the exact amount received from the dormitorian
+                                </p>
+                            </div>
+                            
+                            {/* Payment Status Selection - SECOND */}
                             <div>
                                 <Label htmlFor="payment-status">Payment Status</Label>
                                 <Select value={paymentStatus} onValueChange={setPaymentStatus}>
-                                    <SelectTrigger>
-                                        <SelectValue />
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue placeholder="Select payment status" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="unpaid">Unpaid</SelectItem>
-                                        <SelectItem value="partial">Partial Payment</SelectItem>
-                                        <SelectItem value="paid">Fully Paid</SelectItem>
+                                        <SelectItem value="unpaid">Unpaid - No payment received</SelectItem>
+                                        <SelectItem value="partial">Partial Payment - Paid some amount</SelectItem>
+                                        <SelectItem value="paid">Fully Paid - Paid in full</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                             
-                            {paymentStatus === 'partial' && (
-                                <div>
-                                    <Label htmlFor="amount-paid">Amount Paid (₱)</Label>
-                                    <Input
-                                        id="amount-paid"
-                                        type="number"
-                                        step="0.01"
-                                        value={amountPaid}
-                                        onChange={(e) => setAmountPaid(e.target.value)}
-                                        placeholder="0.00"
-                                    />
-                                </div>
-                            )}
-                            
-                            {paymentStatus === 'paid' && selectedStudent && (
-                                <div>
-                                    <Label htmlFor="amount-display">Amount Paid (₱)</Label>
-                                    {selectedStudent.has_booking && selectedStudent.total_fee ? (
-                                        <div className="p-3 bg-muted rounded-md border">
-                                            <div className="text-sm font-medium">
-                                                ₱{selectedStudent.total_fee.toLocaleString()}
-                                            </div>
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                                Full payment for {selectedStudent.semester_count} semester{selectedStudent.semester_count !== 1 ? 's' : ''} (₱2,000/semester)
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
-                                            <div className="text-sm font-medium text-orange-800 dark:text-orange-200">
-                                                Student has no active booking
-                                            </div>
-                                            <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                                                Cannot process payment without a room booking
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                            
+                            {/* Notes */}
                             <div>
                                 <Label htmlFor="payment-notes">Notes (Optional)</Label>
                                 <Input
@@ -622,6 +694,7 @@ export default function CashierDashboard() {
                                     value={paymentNotes}
                                     onChange={(e) => setPaymentNotes(e.target.value)}
                                     placeholder="Add any notes about this payment..."
+                                    className="mt-1"
                                 />
                             </div>
                         </div>
@@ -649,6 +722,78 @@ export default function CashierDashboard() {
                     confirmText={resettingPayments ? 'Resetting...' : 'Reset All Payments'}
                     isDestructive={true}
                 />
+                
+                {/* Payment History Dialog */}
+                <PaymentHistoryDialog
+                    open={historyDialogOpen}
+                    onClose={() => {
+                        setHistoryDialogOpen(false);
+                        setHistoryStudentId(null);
+                        setHistoryStudentName(null);
+                    }}
+                    studentId={historyStudentId}
+                    studentName={historyStudentName}
+                />
+                
+                {/* School Year Dialog */}
+                <Dialog open={schoolYearDialogOpen} onOpenChange={setSchoolYearDialogOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Set School Year</DialogTitle>
+                            <DialogDescription>
+                                Set the current school year for tracking purposes
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <Label htmlFor="start-year">Start Year</Label>
+                                    <Input
+                                        id="start-year"
+                                        type="number"
+                                        min="2000"
+                                        max="2100"
+                                        value={startYear}
+                                        onChange={(e) => setStartYear(e.target.value)}
+                                        placeholder="2025"
+                                        className="mt-1"
+                                    />
+                                </div>
+                                <div>
+                                    <Label htmlFor="end-year">End Year</Label>
+                                    <Input
+                                        id="end-year"
+                                        type="number"
+                                        min="2000"
+                                        max="2100"
+                                        value={endYear}
+                                        onChange={(e) => setEndYear(e.target.value)}
+                                        placeholder="2026"
+                                        className="mt-1"
+                                    />
+                                </div>
+                            </div>
+                            {startYear && endYear && (
+                                <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                                    <div className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                        School Year: {startYear}-{endYear}
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                                Example: For school year 2025-2026, enter 2025 as start year and 2026 as end year.
+                            </p>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setSchoolYearDialogOpen(false)}>
+                                Cancel
+                            </Button>
+                            <Button onClick={handleSetSchoolYear} className="bg-blue-600 hover:bg-blue-700">
+                                Set School Year
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

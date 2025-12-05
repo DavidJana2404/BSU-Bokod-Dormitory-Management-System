@@ -41,7 +41,7 @@ interface StayStatus {
     description: string;
 }
 
-export default function StudentDashboard({ student, cleaningSchedules }: StudentDashboardProps) {
+export default function StudentDashboard({ student, cleaningSchedules, dormitorians = [] }: StudentDashboardProps & { dormitorians?: { student_id: number; first_name: string; last_name: string; }[] }) {
 
 
     /**
@@ -436,7 +436,136 @@ export default function StudentDashboard({ student, cleaningSchedules }: Student
                     <StudentCleaningScheduleComponent 
                         schedules={cleaningSchedules}
                         roomNumber={student.current_booking?.room?.room_number}
+                        studentId={student.student_id}
+                        dormitorians={dormitorians}
                     />
+                </div>
+
+                {/* Cleaning Penalties and Mop Schedule */}
+                <div className="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Cleaning Penalties Card */}
+                    <Card className="bg-white dark:bg-gray-900 border dark:border-gray-700 overflow-hidden">
+                        <div className="bg-red-50 dark:bg-red-900/30 px-6 py-4 border-b border-red-200 dark:border-red-700">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-red-100 dark:bg-red-800/50 p-2 rounded-lg">
+                                    <AlertCircle className="text-red-600 dark:text-red-400" size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Cleaning Penalties</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Fines for not completing assigned cleaning duties</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="p-6">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-red-100 dark:bg-red-900/50 rounded-full w-8 h-8 flex items-center justify-center">
+                                            <span className="text-sm font-bold text-red-600 dark:text-red-400">1st</span>
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">First Offense</span>
+                                    </div>
+                                    <span className="text-lg font-bold text-red-600 dark:text-red-400">₱50</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-red-100 dark:bg-red-900/50 rounded-full w-8 h-8 flex items-center justify-center">
+                                            <span className="text-sm font-bold text-red-600 dark:text-red-400">2nd</span>
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Second Offense</span>
+                                    </div>
+                                    <span className="text-lg font-bold text-red-600 dark:text-red-400">₱100</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-red-100 dark:bg-red-900/50 rounded-full w-8 h-8 flex items-center justify-center">
+                                            <span className="text-sm font-bold text-red-600 dark:text-red-400">3rd</span>
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Third Offense</span>
+                                    </div>
+                                    <span className="text-lg font-bold text-red-600 dark:text-red-400">₱200</span>
+                                </div>
+                                
+                                <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <div className="bg-orange-100 dark:bg-orange-900/50 rounded-full w-8 h-8 flex items-center justify-center">
+                                            <AlertCircle className="text-orange-600 dark:text-orange-400" size={16} />
+                                        </div>
+                                        <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Continuous Violation</span>
+                                    </div>
+                                    <span className="text-sm font-bold text-orange-600 dark:text-orange-400">Community Service</span>
+                                </div>
+                            </div>
+                            
+                            <Alert className="mt-4 border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950/30 dark:text-yellow-400">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertDescription className="text-xs">
+                                    Please complete your assigned cleaning duties on time to avoid penalties.
+                                </AlertDescription>
+                            </Alert>
+                        </div>
+                    </Card>
+                    
+                    {/* Mop Schedule Card */}
+                    <Card className="bg-white dark:bg-gray-900 border dark:border-gray-700 overflow-hidden">
+                        <div className="bg-blue-50 dark:bg-blue-900/30 px-6 py-4 border-b border-blue-200 dark:border-blue-700">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-blue-100 dark:bg-blue-800/50 p-2 rounded-lg">
+                                    <Calendar className="text-blue-600 dark:text-blue-400" size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Mop Schedule</h3>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Monthly mopping rotation schedule</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="p-6">
+                            <div className="space-y-3">
+                                <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">Week 1</span>
+                                        <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">MWF</Badge>
+                                    </div>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">Monday, Wednesday, Friday</p>
+                                </div>
+                                
+                                <div className="p-4 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-semibold text-green-700 dark:text-green-400">Week 2</span>
+                                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">TThSa</Badge>
+                                    </div>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">Tuesday, Thursday, Saturday</p>
+                                </div>
+                                
+                                <div className="p-4 bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-semibold text-purple-700 dark:text-purple-400">Week 3</span>
+                                        <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">MWF</Badge>
+                                    </div>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">Monday, Wednesday, Friday</p>
+                                </div>
+                                
+                                <div className="p-4 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-semibold text-orange-700 dark:text-orange-400">Week 4</span>
+                                        <Badge className="bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300">TThSu</Badge>
+                                    </div>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400">Tuesday, Thursday, Sunday</p>
+                                </div>
+                            </div>
+                            
+                            <Alert className="mt-4 border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                                <Calendar className="h-4 w-4" />
+                                <AlertDescription className="text-xs">
+                                    Follow the weekly rotation to ensure all areas are properly cleaned.
+                                </AlertDescription>
+                            </Alert>
+                        </div>
+                    </Card>
                 </div>
 
                 {/* Dormitory Services & Information */}

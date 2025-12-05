@@ -1,11 +1,25 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Calendar, CalendarDays, CheckCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Calendar, CalendarDays, CheckCircle, AlertTriangle, Flag, X, CheckCircle2 } from 'lucide-react';
 import { StudentCleaningSchedule } from '@/types';
+import { useForm } from '@inertiajs/react';
+import React, { useState } from 'react';
 
 interface StudentCleaningScheduleProps {
     schedules: StudentCleaningSchedule[];
     roomNumber?: string;
+    studentId?: number;
+    dormitorians?: {
+        student_id: number;
+        first_name: string;
+        last_name: string;
+    }[];
 }
 
 const DAYS = {
@@ -44,12 +58,56 @@ const getDayTextColor = (day: number) => {
     return colors[day as keyof typeof colors] || colors[1];
 };
 
-export default function StudentCleaningScheduleComponent({ schedules, roomNumber }: StudentCleaningScheduleProps) {
+export default function StudentCleaningScheduleComponent({ schedules, roomNumber, studentId, dormitorians = [] }: StudentCleaningScheduleProps) {
+    // Report dialog state
+    const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+    const [selectedSchedule, setSelectedSchedule] = useState<StudentCleaningSchedule | null>(null);
+    const [showSuccess, setShowSuccess] = useState(false);
+    
+    // Report form
+    const { data, setData, post, processing, errors, reset } = useForm({
+        cleaning_schedule_id: 0,
+        student_id: 0,
+        scheduled_date: '',
+        reason: '',
+    });
+    
     // Create a map of schedules by day for easy lookup
     const scheduleMap = schedules.reduce((map, schedule) => {
         map[schedule.day_of_week] = schedule;
         return map;
     }, {} as Record<number, StudentCleaningSchedule>);
+    
+    /**
+     * Open report dialog
+     */
+    const openReportDialog = (schedule: StudentCleaningSchedule) => {
+        setSelectedSchedule(schedule);
+        setData({
+            cleaning_schedule_id: schedule.id,
+            student_id: 0,
+            scheduled_date: '',
+            reason: '',
+        });
+        setIsReportDialogOpen(true);
+    };
+    
+    /**
+     * Handle report submission
+     */
+    const handleReportSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        
+        post('/student/cleaning-reports', {
+            onSuccess: () => {
+                setIsReportDialogOpen(false);
+                reset();
+                setShowSuccess(true);
+                // Hide success message after 5 seconds
+                setTimeout(() => setShowSuccess(false), 5000);
+            }
+        });
+    };
 
     if (schedules.length === 0) {
         return (
@@ -69,20 +127,184 @@ export default function StudentCleaningScheduleComponent({ schedules, roomNumber
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-8 text-center">
-                    <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                        <Calendar className="text-gray-400" size={32} />
+                <CardContent className="p-8">
+                    <div className="text-center mb-6">
+                        <div className="bg-gray-100 dark:bg-gray-800 rounded-lg w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                            <Calendar className="text-gray-400" size={32} />
+                        </div>
+                        <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
+                            No cleaning schedule assigned
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-500">
+                            {roomNumber 
+                                ? "Your room doesn't have any cleaning days assigned yet." 
+                                : "You need to be assigned to a room to see cleaning schedules."
+                            }
+                        </p>
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-600 dark:text-gray-400 mb-2">
-                        No cleaning schedule assigned
-                    </h3>
-                    <p className="text-gray-500 dark:text-gray-500">
-                        {roomNumber 
-                            ? "Your room doesn't have any cleaning days assigned yet." 
-                            : "You need to be assigned to a room to see cleaning schedules."
-                        }
-                    </p>
+                    
+                    {/* Success Alert */}
+                    {showSuccess && (
+                        <div className="mt-6">
+                            <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
+                                <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                <AlertDescription className="text-sm text-green-700 dark:text-green-300">
+                                    Report submitted successfully! The manager will review it.
+                                </AlertDescription>
+                            </Alert>
+                        </div>
+                    )}
+                    
+                    {/* Report Missed Cleaning Section */}
+                    <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20">
+                            <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                            <AlertDescription className="text-sm text-gray-700 dark:text-gray-300">
+                                <div className="flex items-center justify-between">
+                                    <span>
+                                        {dormitorians.length > 0 
+                                            ? "Report a dormitorian who missed their cleaning day."
+                                            : "Report a missed cleaning day to the manager."
+                                        }
+                                    </span>
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            // Create a dummy schedule to open dialog
+                                            setData({
+                                                cleaning_schedule_id: 0,
+                                                student_id: 0,
+                                                scheduled_date: '',
+                                                reason: '',
+                                            });
+                                            setIsReportDialogOpen(true);
+                                        }}
+                                        className="ml-4 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700"
+                                    >
+                                        <Flag size={14} className="mr-1" />
+                                        Report Missed Cleaning
+                                    </Button>
+                                </div>
+                            </AlertDescription>
+                        </Alert>
+                    </div>
                 </CardContent>
+                
+                {/* Report Dialog */}
+                <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <Flag className="text-yellow-600" size={20} />
+                                Report Missed Cleaning
+                            </DialogTitle>
+                            <DialogDescription>
+                                Report a dormitorian who did not complete their assigned cleaning day. This will be reviewed by the manager.
+                            </DialogDescription>
+                        </DialogHeader>
+                        
+                        <form onSubmit={handleReportSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="student_id">Select Dormitorian</Label>
+                                <Select
+                                    value={data.student_id.toString()}
+                                    onValueChange={(value) => setData('student_id', parseInt(value))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Choose a dormitorian" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {dormitorians.length > 0 ? (
+                                            dormitorians.map((dormitorian) => (
+                                                <SelectItem key={dormitorian.student_id} value={dormitorian.student_id.toString()}>
+                                                    {dormitorian.first_name} {dormitorian.last_name}
+                                                </SelectItem>
+                                            ))
+                                        ) : (
+                                            <SelectItem value="0" disabled>
+                                                No dormitorians found
+                                            </SelectItem>
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                {errors.student_id && (
+                                    <p className="text-sm text-red-600 dark:text-red-400">{errors.student_id}</p>
+                                )}
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="scheduled_date">Cleaning Date</Label>
+                                <input
+                                    type="date"
+                                    id="scheduled_date"
+                                    value={data.scheduled_date}
+                                    onChange={(e) => setData('scheduled_date', e.target.value)}
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    max={new Date().toISOString().split('T')[0]}
+                                />
+                                {errors.scheduled_date && (
+                                    <p className="text-sm text-red-600 dark:text-red-400">{errors.scheduled_date}</p>
+                                )}
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <Label htmlFor="reason">Reason (Optional)</Label>
+                                <Textarea
+                                    id="reason"
+                                    placeholder="Provide additional details about why the cleaning was missed..."
+                                    value={data.reason}
+                                    onChange={(e) => setData('reason', e.target.value)}
+                                    rows={3}
+                                />
+                                {errors.reason && (
+                                    <p className="text-sm text-red-600 dark:text-red-400">{errors.reason}</p>
+                                )}
+                            </div>
+                            
+                            <Alert className="border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                                <AlertTriangle className="h-4 w-4" />
+                                <AlertDescription className="text-xs">
+                                    This report will be sent to the manager for review. Make sure all information is accurate.
+                                </AlertDescription>
+                            </Alert>
+                        </form>
+                        
+                        <DialogFooter>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => {
+                                    setIsReportDialogOpen(false);
+                                    reset();
+                                }}
+                                disabled={processing}
+                            >
+                                <X size={16} className="mr-1" />
+                                Cancel
+                            </Button>
+                            <Button
+                                type="submit"
+                                onClick={handleReportSubmit}
+                                disabled={processing || !data.student_id || !data.scheduled_date}
+                                className="bg-yellow-600 hover:bg-yellow-700"
+                            >
+                                {processing ? (
+                                    <>
+                                        <Calendar className="mr-2 h-4 w-4 animate-spin" />
+                                        Submitting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Flag className="mr-2 h-4 w-4" />
+                                        Submit Report
+                                    </>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </Card>
         );
     }
@@ -203,7 +425,160 @@ export default function StudentCleaningScheduleComponent({ schedules, roomNumber
                         </div>
                     </div>
                 </div>
+                
+                {/* Success Alert */}
+                {showSuccess && (
+                    <div className="mt-6">
+                        <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20">
+                            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <AlertDescription className="text-sm text-green-700 dark:text-green-300">
+                                Report submitted successfully! The manager will review it.
+                            </AlertDescription>
+                        </Alert>
+                    </div>
+                )}
+                
+                {/* Report Missed Cleaning Section */}
+                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/20">
+                        <AlertTriangle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                        <AlertDescription className="text-sm text-gray-700 dark:text-gray-300">
+                                <div className="flex items-center justify-between">
+                                    <span>
+                                        {dormitorians.length > 0 
+                                            ? "Report a dormitorian who missed their cleaning day."
+                                            : "Report a missed cleaning day to the manager."
+                                        }
+                                    </span>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => schedules.length > 0 && openReportDialog(schedules[0])}
+                                    className="ml-4 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 border-yellow-300 dark:bg-yellow-900/30 dark:hover:bg-yellow-900/50 dark:text-yellow-300 dark:border-yellow-700"
+                                >
+                                    <Flag size={14} className="mr-1" />
+                                    Report Missed Cleaning
+                                </Button>
+                            </div>
+                        </AlertDescription>
+                    </Alert>
+                </div>
             </CardContent>
+            
+            {/* Report Dialog */}
+            <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <Flag className="text-yellow-600" size={20} />
+                            Report Missed Cleaning
+                        </DialogTitle>
+                        <DialogDescription>
+                            Report a dormitorian who did not complete their assigned cleaning day. This will be reviewed by the manager.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <form onSubmit={handleReportSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="student_id">Select Dormitorian</Label>
+                            <Select
+                                value={data.student_id.toString()}
+                                onValueChange={(value) => setData('student_id', parseInt(value))}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Choose a dormitorian" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {dormitorians.length > 0 ? (
+                                        dormitorians.map((dormitorian) => (
+                                            <SelectItem key={dormitorian.student_id} value={dormitorian.student_id.toString()}>
+                                                {dormitorian.first_name} {dormitorian.last_name}
+                                            </SelectItem>
+                                        ))
+                                    ) : (
+                                        <SelectItem value="0" disabled>
+                                            No dormitorians found
+                                        </SelectItem>
+                                    )}
+                                </SelectContent>
+                            </Select>
+                            {errors.student_id && (
+                                <p className="text-sm text-red-600 dark:text-red-400">{errors.student_id}</p>
+                            )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="scheduled_date">Cleaning Date</Label>
+                            <input
+                                type="date"
+                                id="scheduled_date"
+                                value={data.scheduled_date}
+                                onChange={(e) => setData('scheduled_date', e.target.value)}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                max={new Date().toISOString().split('T')[0]}
+                            />
+                            {errors.scheduled_date && (
+                                <p className="text-sm text-red-600 dark:text-red-400">{errors.scheduled_date}</p>
+                            )}
+                        </div>
+                        
+                        <div className="space-y-2">
+                            <Label htmlFor="reason">Reason (Optional)</Label>
+                            <Textarea
+                                id="reason"
+                                placeholder="Provide additional details about why the cleaning was missed..."
+                                value={data.reason}
+                                onChange={(e) => setData('reason', e.target.value)}
+                                rows={3}
+                            />
+                            {errors.reason && (
+                                <p className="text-sm text-red-600 dark:text-red-400">{errors.reason}</p>
+                            )}
+                        </div>
+                        
+                        <Alert className="border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-400">
+                            <AlertTriangle className="h-4 w-4" />
+                            <AlertDescription className="text-xs">
+                                This report will be sent to the manager for review. Make sure all information is accurate.
+                            </AlertDescription>
+                        </Alert>
+                    </form>
+                    
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                                setIsReportDialogOpen(false);
+                                reset();
+                            }}
+                            disabled={processing}
+                        >
+                            <X size={16} className="mr-1" />
+                            Cancel
+                        </Button>
+                        <Button
+                            type="submit"
+                            onClick={handleReportSubmit}
+                            disabled={processing || !data.student_id || !data.scheduled_date}
+                            className="bg-yellow-600 hover:bg-yellow-700"
+                        >
+                            {processing ? (
+                                <>
+                                    <Calendar className="mr-2 h-4 w-4 animate-spin" />
+                                    Submitting...
+                                </>
+                            ) : (
+                                <>
+                                    <Flag className="mr-2 h-4 w-4" />
+                                    Submit Report
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </Card>
     );
 }

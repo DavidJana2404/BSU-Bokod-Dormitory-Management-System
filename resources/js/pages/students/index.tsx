@@ -4,16 +4,19 @@ import AppLayout from '@/layouts/app-layout';
 import { usePage, router, Link } from '@inertiajs/react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { useState } from 'react';
-import { CheckCircle, XCircle, AlertCircle, Users, Plus, Edit3, Archive, Mail, Phone, Shield, DollarSign, Plane, CheckCircle2, ChevronDown, Bed, Calendar, Eye, Search } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, Users, Plus, Edit3, Archive, Mail, Phone, Shield, DollarSign, Plane, CheckCircle2, ChevronDown, Bed, Calendar, Eye, Search, Clock } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import { ReactNode } from 'react';
 import WarningDialog from '@/components/warning-dialog';
+import DormitorianStatusDialog from '@/components/dormitorian-status-dialog';
 
-const emptyForm = { first_name: '', last_name: '', email: '', phone: '', parent_name: '', parent_phone: '', parent_relationship: '', password: '', password_confirmation: '' };
+const emptyForm = { first_name: '', last_name: '', student_id: '', program_year: '', current_address: '', email: '', phone: '', parent_name: '', parent_phone: '', parent_relationship: '', password: '', password_confirmation: '' };
 
 export default function Students() {
     const { students = [], errors = {}, error = null, show_assignment_notice = false } = usePage().props as {
@@ -32,6 +35,8 @@ export default function Students() {
     const [pendingArchiveStudent, setPendingArchiveStudent] = useState<any>(null);
     const [viewModalOpen, setViewModalOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+    const [statusStudent, setStatusStudent] = useState<any>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [studentsPage, setStudentsPage] = useState(1);
     const STUDENTS_PER_PAGE = 10;
@@ -50,6 +55,9 @@ export default function Students() {
         setForm({
             first_name: student.first_name,
             last_name: student.last_name,
+            student_id: student.student_id_number || '',
+            program_year: student.program_year || '',
+            current_address: student.current_address || '',
             email: student.email,
             phone: student.phone,
             parent_name: student.parent_name || '',
@@ -130,7 +138,7 @@ export default function Students() {
         
         if (student.is_currently_booked && student.current_booking) {
             const roomNumber = student.current_booking.room_number;
-            return `WARNING: ${studentName} has an active booking in Room ${roomNumber}!\n\nArchiving this student will:\n• Archive the student and remove them from active dormitorians\n• Also archive their booking in Room ${roomNumber}\n• Free up the room for new bookings\n• You can restore both the student and their booking later from Archive settings\n\nAre you sure you want to archive this booked student?`;
+            return `WARNING: ${studentName} has an active booking in Room ${roomNumber}!\n\nArchiving this dormitorian will:\n• Archive the dormitorian and remove them from active dormitorians\n• Also archive their booking in Room ${roomNumber}\n• Free up the room for new bookings\n• You can restore both the dormitorian and their booking later from Archive settings\n\nAre you sure you want to archive this booked dormitorian?`;
         } else {
             return `Are you sure you want to archive ${studentName}?\n\nYou can restore them later from the Archive settings.`;
         }
@@ -144,8 +152,12 @@ export default function Students() {
     };
 
     const handleViewStudent = (student: any) => {
-        setSelectedStudent(student);
-        setViewModalOpen(true);
+        router.visit(`/students/${student.student_id}`);
+    };
+    
+    const handleUpdateStatus = (student: any) => {
+        setStatusStudent(student);
+        setStatusDialogOpen(true);
     };
 
     const studentList = Array.isArray(students) ? students : [];
@@ -222,7 +234,7 @@ export default function Students() {
                             <div 
                                 className={`rounded-lg p-2 cursor-pointer hover:scale-105 transition-transform ${activeFilter === 'all' ? 'bg-blue-700' : 'bg-blue-600'} text-white`}
                                 onClick={() => setActiveFilter('all')}
-                                title="All Students"
+                                title="All Dormitorians"
                             >
                                 <Users size={20} />
                             </div>
@@ -483,6 +495,15 @@ export default function Students() {
                                                 <Button 
                                                     size="sm" 
                                                     variant="outline" 
+                                                    onClick={() => handleUpdateStatus(student)}
+                                                    className="h-8 px-3 text-xs border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-950/20 w-full"
+                                                >
+                                                    <Clock size={12} className="mr-1" />
+                                                    Status
+                                                </Button>
+                                                <Button 
+                                                    size="sm" 
+                                                    variant="outline" 
                                                     onClick={() => handleViewStudent(student)}
                                                     className="h-8 px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 w-full"
                                                 >
@@ -493,7 +514,7 @@ export default function Students() {
                                                     size="sm" 
                                                     variant="outline" 
                                                     onClick={() => handleOpenEdit(student)}
-                                                    className="h-8 px-3 text-xs"
+                                                    className="h-8 px-3 text-xs w-full"
                                                 >
                                                     <Edit3 size={12} className="mr-1" />
                                                     Edit
@@ -502,7 +523,7 @@ export default function Students() {
                                                     size="sm" 
                                                     variant="outline" 
                                                     onClick={() => handleArchive(student)}
-                                                    className="h-8 px-3 text-xs border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/20"
+                                                    className="h-8 px-3 text-xs border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/20 w-full"
                                                 >
                                                     <Archive size={12} className="mr-1" />
                                                     Archive
@@ -587,9 +608,15 @@ export default function Students() {
 
                                             {/* Status Badges - 4 columns on lg, 6 on xl */}
                                             <div className="col-span-4 xl:col-span-6 grid grid-cols-1 lg:grid-cols-4 gap-3">
-                                                {/* Student Status */}
+                                                {/* Dormitorian Status */}
                                                 <div className="space-y-1">
-                                                    <div className="text-xs text-gray-500 dark:text-gray-400">Student Status</div>
+                                                    <button 
+                                                        onClick={() => handleUpdateStatus(student)}
+                                                        className="text-xs text-gray-500 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-colors cursor-pointer text-left flex items-center gap-1"
+                                                    >
+                                                        Dormitorian Status
+                                                        <Clock size={10} className="opacity-60" />
+                                                    </button>
                                                     {student.status === 'on_leave' && student.leave_reason ? (
                                                         <button
                                                             onClick={() => toggleLeaveReason(student.student_id)}
@@ -686,33 +713,46 @@ export default function Students() {
 
                                             {/* Actions - 2 columns on lg, 4 on xl */}
                                             <div className="col-span-2 xl:col-span-4">
-                                                <div className="flex gap-2 justify-end">
+                                                <div className="flex flex-wrap gap-2 justify-end">
+                                                    <Button 
+                                                        size="sm" 
+                                                        variant="outline" 
+                                                        onClick={() => handleUpdateStatus(student)}
+                                                        className="h-8 px-2.5 lg:px-3 text-xs border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-950/20 flex-shrink-0"
+                                                        title="Update Status"
+                                                    >
+                                                        <Clock size={12} className="lg:mr-1" />
+                                                        <span className="hidden lg:inline">Status</span>
+                                                    </Button>
                                                     <Button 
                                                         size="sm" 
                                                         variant="outline" 
                                                         onClick={() => handleViewStudent(student)}
-                                                        className="h-8 px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20"
+                                                        className="h-8 px-2.5 lg:px-3 text-xs border-green-300 text-green-700 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-950/20 flex-shrink-0"
+                                                        title="View Details"
                                                     >
-                                                        <Eye size={12} className="mr-1" />
-                                                        View
+                                                        <Eye size={12} className="lg:mr-1" />
+                                                        <span className="hidden lg:inline">View</span>
                                                     </Button>
                                                     <Button 
                                                         size="sm" 
                                                         variant="outline" 
                                                         onClick={() => handleOpenEdit(student)}
-                                                        className="h-8 px-3 text-xs"
+                                                        className="h-8 px-2.5 lg:px-3 text-xs flex-shrink-0"
+                                                        title="Edit Dormitorian"
                                                     >
-                                                        <Edit3 size={12} className="mr-1" />
-                                                        Edit
+                                                        <Edit3 size={12} className="lg:mr-1" />
+                                                        <span className="hidden lg:inline">Edit</span>
                                                     </Button>
                                                     <Button 
                                                         size="sm" 
                                                         variant="outline" 
                                                         onClick={() => handleArchive(student)}
-                                                        className="h-8 px-3 text-xs border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/20"
+                                                        className="h-8 px-2.5 lg:px-3 text-xs border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-950/20 flex-shrink-0"
+                                                        title="Archive Dormitorian"
                                                     >
-                                                        <Archive size={12} className="mr-1" />
-                                                        Archive
+                                                        <Archive size={12} className="lg:mr-1" />
+                                                        <span className="hidden lg:inline">Archive</span>
                                                     </Button>
                                                 </div>
                                             </div>
@@ -789,25 +829,101 @@ export default function Students() {
                                 </p>
                             )}
                         </div>
-                        <div>
-                            <Label htmlFor="email">Email</Label>
-                            <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} required />
-                            {(errors as any)?.email && (
-                                <p className="text-red-500 text-sm mt-1 flex items-center">
-                                    <AlertCircle className="h-4 w-4 mr-1" />
-                                    {(errors as any).email}
-                                </p>
-                            )}
+                        
+                        {/* Student Information */}
+                        <div className="border-t pt-4 mt-2">
+                            <h3 className="text-sm font-semibold mb-3">Student Information</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <Label htmlFor="student_id">Student ID No. *</Label>
+                                    <Input 
+                                        id="student_id" 
+                                        name="student_id" 
+                                        value={form.student_id} 
+                                        onChange={handleChange} 
+                                        placeholder="Enter student ID number"
+                                        required 
+                                    />
+                                    {(errors as any)?.student_id && (
+                                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            {(errors as any).student_id}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="program_year">Program & Year Level *</Label>
+                                    <Input 
+                                        id="program_year" 
+                                        name="program_year" 
+                                        value={form.program_year} 
+                                        onChange={(e) => {
+                                            const uppercased = e.target.value.toUpperCase();
+                                            setForm({ ...form, program_year: uppercased });
+                                        }}
+                                        placeholder="e.g., BSIT 4, BIT 1, BSE 3"
+                                        required 
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        Format: Program Year (e.g., BSIT 4, BIT 1)
+                                    </p>
+                                    {(errors as any)?.program_year && (
+                                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            {(errors as any).program_year}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="current_address">Current Address *</Label>
+                                    <Textarea 
+                                        id="current_address" 
+                                        name="current_address" 
+                                        value={form.current_address} 
+                                        onChange={handleChange} 
+                                        placeholder="Enter complete current address"
+                                        rows={3}
+                                        maxLength={500}
+                                        required 
+                                    />
+                                    <p className="text-xs text-muted-foreground text-right mt-1">
+                                        {form.current_address.length}/500 characters
+                                    </p>
+                                    {(errors as any)?.current_address && (
+                                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            {(errors as any).current_address}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <Label htmlFor="phone">Phone</Label>
-                            <Input id="phone" name="phone" value={form.phone} onChange={handleChange} required />
-                            {(errors as any)?.phone && (
-                                <p className="text-red-500 text-sm mt-1 flex items-center">
-                                    <AlertCircle className="h-4 w-4 mr-1" />
-                                    {(errors as any).phone}
-                                </p>
-                            )}
+                        
+                        {/* Contact Information */}
+                        <div className="border-t pt-4 mt-2">
+                            <h3 className="text-sm font-semibold mb-3">Contact Information</h3>
+                            <div className="space-y-4">
+                                <div>
+                                    <Label htmlFor="email">Email *</Label>
+                                    <Input id="email" name="email" type="email" value={form.email} onChange={handleChange} required />
+                                    {(errors as any)?.email && (
+                                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            {(errors as any).email}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="phone">Phone *</Label>
+                                    <Input id="phone" name="phone" value={form.phone} onChange={handleChange} required />
+                                    {(errors as any)?.phone && (
+                                        <p className="text-red-500 text-sm mt-1 flex items-center">
+                                            <AlertCircle className="h-4 w-4 mr-1" />
+                                            {(errors as any).phone}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         
                         {/* Parent/Guardian Emergency Contact */}
@@ -836,7 +952,22 @@ export default function Students() {
                                 </div>
                                 <div>
                                     <Label htmlFor="parent_relationship">Relationship *</Label>
-                                    <Input id="parent_relationship" name="parent_relationship" value={form.parent_relationship} onChange={handleChange} placeholder="e.g., Mother, Father, Guardian" required />
+                                    <Select value={form.parent_relationship} onValueChange={(value) => setForm({ ...form, parent_relationship: value })} required>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select relationship" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Mother">Mother</SelectItem>
+                                            <SelectItem value="Father">Father</SelectItem>
+                                            <SelectItem value="Guardian">Guardian</SelectItem>
+                                            <SelectItem value="Grandmother">Grandmother</SelectItem>
+                                            <SelectItem value="Grandfather">Grandfather</SelectItem>
+                                            <SelectItem value="Aunt">Aunt</SelectItem>
+                                            <SelectItem value="Uncle">Uncle</SelectItem>
+                                            <SelectItem value="Sibling">Sibling</SelectItem>
+                                            <SelectItem value="Other">Other</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     {(errors as any)?.parent_relationship && (
                                         <p className="text-red-500 text-sm mt-1 flex items-center">
                                             <AlertCircle className="h-4 w-4 mr-1" />
@@ -1050,6 +1181,16 @@ export default function Students() {
                     message={getArchiveWarningMessage(pendingArchiveStudent)}
                     confirmText="Archive Student"
                     isDestructive={true}
+                />
+                
+                {/* Dormitorian Status Update Dialog */}
+                <DormitorianStatusDialog
+                    open={statusDialogOpen}
+                    onClose={() => {
+                        setStatusDialogOpen(false);
+                        setStatusStudent(null);
+                    }}
+                    student={statusStudent}
                 />
             </div>
         </AppLayout>

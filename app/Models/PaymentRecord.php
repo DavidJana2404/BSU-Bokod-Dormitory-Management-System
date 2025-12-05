@@ -9,6 +9,7 @@ class PaymentRecord extends Model
     protected $fillable = [
         'student_id',
         'processed_by_user_id',
+        'school_year_id',
         'payment_status',
         'amount_paid',
         'payment_notes',
@@ -43,6 +44,14 @@ class PaymentRecord extends Model
     public function processedBy()
     {
         return $this->belongsTo(User::class, 'processed_by_user_id');
+    }
+
+    /**
+     * Get the school year for this payment record
+     */
+    public function schoolYear()
+    {
+        return $this->belongsTo(SchoolYear::class, 'school_year_id');
     }
 
     /**

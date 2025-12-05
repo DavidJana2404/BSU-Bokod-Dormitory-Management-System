@@ -30,6 +30,9 @@ class ApplicationFormRequest extends FormRequest
             'tenant_id' => ['required', 'exists:tenants,tenant_id'],
             'first_name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
             'last_name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
+            'student_id' => ['required', 'string', 'max:50'],
+            'program_year' => ['required', 'string', 'max:50', 'regex:/^[A-Z]{2,5}\s+[1-4]$/'],
+            'current_address' => ['required', 'string', 'max:500'],
             'email' => [
                 'required',
                 'string',
@@ -75,6 +78,7 @@ class ApplicationFormRequest extends FormRequest
             'first_name.regex' => 'The first name may only contain letters, spaces, hyphens, and apostrophes.',
             'last_name.regex' => 'The last name may only contain letters, spaces, hyphens, and apostrophes.',
             'parent_name.regex' => 'The parent/guardian name may only contain letters, spaces, hyphens, and apostrophes.',
+            'program_year.regex' => 'The program & year level format must be like: BSIT 4, BIT 1, BSE 3.',
             'email.email' => 'The email must be a valid email address.',
             'email.unique' => 'This email address has already been used for an application.',
             'email.lowercase' => 'The email must be in lowercase.',
@@ -91,6 +95,9 @@ class ApplicationFormRequest extends FormRequest
         return [
             'first_name' => 'first name',
             'last_name' => 'last name',
+            'student_id' => 'student ID',
+            'program_year' => 'program & year level',
+            'current_address' => 'current address',
             'email' => 'email address',
             'phone' => 'phone number',
             'parent_name' => 'parent/guardian name',

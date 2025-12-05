@@ -5,12 +5,13 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Http\Requests\StudentFormRequest;
 use App\Mail\PasswordSetupMail;
-use App\Mail\StudentWelcomeMail;
-use App\Models\Student;
-use App\Models\Tenant;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use App\Models\Student;
+use App\Models\Tenant;
+use App\Models\CashierNotification;
+use App\Mail\StudentWelcomeMail;
 
 
 class StudentController extends Controller
@@ -53,7 +54,8 @@ class StudentController extends Controller
             try {
                 // Simplified query with basic error handling
                 $studentsData = Student::select([
-                    'student_id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone',
+                    'student_id', 'tenant_id', 'first_name', 'last_name', 'student_id_number', 'program_year', 'current_address', 'email', 'phone',
+                    'parent_name', 'parent_phone', 'parent_relationship',
                     'payment_status', 'payment_date', 'amount_paid', 'payment_notes',
                     'status', 'leave_reason', 'status_updated_at', 'password', 'archived_at'
                 ])
@@ -107,6 +109,11 @@ class StudentController extends Controller
         $data = $request->only(['first_name', 'last_name', 'email', 'phone', 'parent_name', 'parent_phone', 'parent_relationship']);
         $data['tenant_id'] = $user->tenant_id;
         
+        // Map student_id to student_id_number in database
+        $data['student_id_number'] = $request->input('student_id');
+        $data['program_year'] = $request->input('program_year');
+        $data['current_address'] = $request->input('current_address');
+        
         // Hash password - use provided password or default to Password123
         if ($request->filled('password')) {
             $data['password'] = Hash::make($request->password);
@@ -154,7 +161,8 @@ class StudentController extends Controller
             
             // Load student with simplified query
             $student = Student::select([
-                'student_id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone',
+                'student_id', 'tenant_id', 'first_name', 'last_name', 'student_id_number', 'program_year', 'current_address', 'email', 'phone',
+                'parent_name', 'parent_phone', 'parent_relationship',
                 'payment_status', 'payment_date', 'amount_paid', 'payment_notes',
                 'status', 'leave_reason', 'status_updated_at', 'password', 'archived_at',
                 'created_at', 'updated_at'
@@ -231,6 +239,11 @@ class StudentController extends Controller
         
         $data = $request->only(['first_name', 'last_name', 'email', 'phone', 'parent_name', 'parent_phone', 'parent_relationship']);
         
+        // Map student_id to student_id_number in database
+        $data['student_id_number'] = $request->input('student_id');
+        $data['program_year'] = $request->input('program_year');
+        $data['current_address'] = $request->input('current_address');
+        
         // Track if password was set up (student previously had no password)
         $wasPasswordSetup = false;
         $plainPassword = null;
@@ -274,6 +287,23 @@ class StudentController extends Controller
     {
         $user = $request->user();
         $student = Student::findOrFail($id);
+        
+        // Create notification for cashier
+        try {
+            CashierNotification::create([
+                'tenant_id' => $user->tenant_id,
+                'type' => 'student_archived',
+                'student_id' => $student->student_id,
+                'student_name' => $student->first_name . ' ' . $student->last_name,
+                'message' => "Dormitorian {$student->first_name} {$student->last_name} has been archived by manager.",
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Failed to create cashier notification', [
+                'error' => $e->getMessage(),
+                'student_id' => $student->student_id
+            ]);
+        }
+        
         $student->archive();
         
         return redirect()->route('students.index')
@@ -434,12 +464,43 @@ class StudentController extends Controller
             ]);
         }
         
+        // Load status history
+        $statusHistory = [];
+        try {
+            $history = $student->statusHistory()->with('changedBy')->limit(10)->get();
+            $statusHistory = $history->map(function($record) {
+                return [
+                    'id' => $record->id,
+                    'status' => $record->status,
+                    'effective_date' => $record->effective_date?->format('Y-m-d'),
+                    'end_date' => $record->end_date?->format('Y-m-d'),
+                    'reason' => $record->reason,
+                    'changed_by' => $record->changedBy ? [
+                        'id' => $record->changedBy->id,
+                        'name' => $record->changedBy->name,
+                    ] : null,
+                    'created_at' => $record->created_at?->format('Y-m-d H:i:s'),
+                ];
+            })->toArray();
+        } catch (\Exception $e) {
+            \Log::warning('Failed to load status history for student', [
+                'student_id' => $student->student_id,
+                'error' => $e->getMessage()
+            ]);
+        }
+        
         return [
             'student_id' => $student->student_id,
             'first_name' => $student->first_name,
             'last_name' => $student->last_name,
+            'student_id_number' => $student->student_id_number,
+            'program_year' => $student->program_year,
+            'current_address' => $student->current_address,
             'email' => $student->email,
             'phone' => $student->phone,
+            'parent_name' => $student->parent_name,
+            'parent_phone' => $student->parent_phone,
+            'parent_relationship' => $student->parent_relationship,
             'payment_status' => $student->payment_status ?? 'unpaid',
             'payment_date' => $student->payment_date,
             'amount_paid' => $student->amount_paid,
@@ -447,6 +508,7 @@ class StudentController extends Controller
             'status' => $student->status ?? 'in',
             'leave_reason' => $student->leave_reason,
             'status_updated_at' => $student->status_updated_at,
+            'status_history' => $statusHistory,
             'password' => $hasPassword,
             'tenant_id' => $student->tenant_id,
             'current_booking' => $currentBooking,

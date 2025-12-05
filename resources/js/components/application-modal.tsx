@@ -24,6 +24,9 @@ const emptyForm = {
     tenant_id: '',
     first_name: '',
     last_name: '',
+    student_id: '',
+    program_year: '',
+    current_address: '',
     email: '',
     phone: '',
     parent_name: '',
@@ -120,6 +123,14 @@ export default function ApplicationModal({ open, onClose, onSuccess }: Applicati
         
         const phoneError = validateField('phone', form.phone);
         if (phoneError) validationErrors.phone = phoneError;
+        
+        // Validate new fields
+        if (!form.student_id) validationErrors.student_id = 'Student ID is required';
+        if (!form.program_year) validationErrors.program_year = 'Program & Year Level is required';
+        if (form.program_year && !/^[A-Z]{2,5}\s+[1-4]$/.test(form.program_year)) {
+            validationErrors.program_year = 'Format must be like: BSIT 4, BIT 1, BSE 3';
+        }
+        if (!form.current_address) validationErrors.current_address = 'Current address is required';
         
         // Check if there are any validation errors
         if (Object.keys(validationErrors).length > 0) {
@@ -236,6 +247,69 @@ export default function ApplicationModal({ open, onClose, onSuccess }: Applicati
                         </div>
                     </div>
 
+                    {/* Student Information */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="student_id">Student ID No. *</Label>
+                            <Input
+                                id="student_id"
+                                value={form.student_id}
+                                onChange={(e) => handleChange('student_id', e.target.value)}
+                                placeholder="Enter your student ID number"
+                                required
+                            />
+                            {(errors?.student_id || clientErrors?.student_id) && (
+                                <p className="text-red-500 text-sm flex items-center">
+                                    <AlertCircle className="h-4 w-4 mr-1" />
+                                    {errors.student_id || clientErrors.student_id}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="program_year">Program & Year Level *</Label>
+                            <Input
+                                id="program_year"
+                                value={form.program_year}
+                                onChange={(e) => handleChange('program_year', e.target.value.toUpperCase())}
+                                placeholder="e.g., BSIT 4, BIT 1, BSE 3"
+                                required
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Format: Program Year (e.g., BSIT 4, BIT 1)
+                            </p>
+                            {(errors?.program_year || clientErrors?.program_year) && (
+                                <p className="text-red-500 text-sm flex items-center">
+                                    <AlertCircle className="h-4 w-4 mr-1" />
+                                    {errors.program_year || clientErrors.program_year}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Current Address */}
+                    <div className="space-y-2">
+                        <Label htmlFor="current_address">Current Address *</Label>
+                        <Textarea
+                            id="current_address"
+                            value={form.current_address}
+                            onChange={(e) => handleChange('current_address', e.target.value)}
+                            placeholder="Enter your complete current address"
+                            rows={3}
+                            maxLength={500}
+                            required
+                        />
+                        <p className="text-xs text-muted-foreground text-right">
+                            {form.current_address.length}/500 characters
+                        </p>
+                        {(errors?.current_address || clientErrors?.current_address) && (
+                            <p className="text-red-500 text-sm flex items-center">
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                {errors.current_address || clientErrors.current_address}
+                            </p>
+                        )}
+                    </div>
+
                     {/* Contact Information */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -317,13 +391,22 @@ export default function ApplicationModal({ open, onClose, onSuccess }: Applicati
 
                             <div className="space-y-2">
                                 <Label htmlFor="parent_relationship">Relationship *</Label>
-                                <Input
-                                    id="parent_relationship"
-                                    value={form.parent_relationship}
-                                    onChange={(e) => handleChange('parent_relationship', e.target.value)}
-                                    placeholder="e.g., Mother, Father, Guardian"
-                                    required
-                                />
+                                <Select value={form.parent_relationship} onValueChange={(value) => handleChange('parent_relationship', value)} required>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select relationship" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Mother">Mother</SelectItem>
+                                        <SelectItem value="Father">Father</SelectItem>
+                                        <SelectItem value="Guardian">Guardian</SelectItem>
+                                        <SelectItem value="Grandmother">Grandmother</SelectItem>
+                                        <SelectItem value="Grandfather">Grandfather</SelectItem>
+                                        <SelectItem value="Aunt">Aunt</SelectItem>
+                                        <SelectItem value="Uncle">Uncle</SelectItem>
+                                        <SelectItem value="Sibling">Sibling</SelectItem>
+                                        <SelectItem value="Other">Other</SelectItem>
+                                    </SelectContent>
+                                </Select>
                                 {(errors?.parent_relationship || clientErrors?.parent_relationship) && (
                                     <p className="text-red-500 text-sm flex items-center">
                                         <AlertCircle className="h-4 w-4 mr-1" />

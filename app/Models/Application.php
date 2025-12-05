@@ -14,6 +14,9 @@ class Application extends Model
         'tenant_id',
         'first_name',
         'last_name',
+        'student_id',
+        'program_year',
+        'current_address',
         'email',
         'phone',
         'parent_name',
@@ -57,6 +60,9 @@ class Application extends Model
             'tenant_id' => 'required|exists:tenants,tenant_id',
             'first_name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
             'last_name' => ['required', 'string', 'max:255', 'regex:/^[a-zA-Z\s\-\']+$/'],
+            'student_id' => ['required', 'string', 'max:50'],
+            'program_year' => ['required', 'string', 'max:50', 'regex:/^[A-Z]{2,5}\s+[1-4]$/'], // Format: BSIT 4, BIT 1, BSE 3
+            'current_address' => ['required', 'string', 'max:500'],
             'email' => [
                 'required',
                 'email:rfc,dns',

@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useState } from 'react';
-import { Calendar, Plus, Edit3, Trash2, CalendarDays, CheckCircle, XCircle, Users, Home } from 'lucide-react';
+import { Calendar, Plus, Edit3, Trash2, CalendarDays, CheckCircle, XCircle, Users, Home, FileText } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -190,9 +190,18 @@ export default function CleaningSchedules() {
                         </div>
                     </div>
                     
-                    <Button onClick={handleOpenAdd} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
-                        <Plus size={18} /> Add Schedule
-                    </Button>
+                    <div className="flex gap-3">
+                        <Button 
+                            onClick={() => router.visit('/cleaning-schedules/reports')} 
+                            variant="outline" 
+                            className="gap-2 border-green-600 text-green-700 hover:bg-green-50 dark:border-green-600 dark:text-green-400 dark:hover:bg-green-950/20"
+                        >
+                            <FileText size={18} /> Reports
+                        </Button>
+                        <Button onClick={handleOpenAdd} className="gap-2 bg-blue-600 hover:bg-blue-700 text-white">
+                            <Plus size={18} /> Add Schedule
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Flash Messages */}

@@ -35,8 +35,14 @@ interface Application {
     id: number;
     first_name: string;
     last_name: string;
+    student_id?: string;
+    program_year?: string;
+    current_address?: string;
     email: string;
     phone: string;
+    parent_name?: string;
+    parent_phone?: string;
+    parent_relationship?: string;
     additional_info?: string;
     status: 'pending' | 'approved' | 'rejected';
     rejection_reason?: string;
@@ -933,32 +939,93 @@ export default function Applications() {
                         </DialogHeader>
                         {selectedApplication && (
                             <div className="space-y-6">
-                                {/* Applicant Information */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">First Name</Label>
-                                        <p className="text-base font-semibold">{selectedApplication.first_name}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Name</Label>
-                                        <p className="text-base font-semibold">{selectedApplication.last_name}</p>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</Label>
-                                        <p className="text-base">{selectedApplication.email}</p>
-                                    </div>
-                                    <div>
-                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</Label>
-                                        <p className="text-base">{selectedApplication.phone}</p>
-                                    </div>
-                                </div>
-
+                                {/* Personal Information */}
                                 <div>
-                                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Dormitory</Label>
-                                    <p className="text-base font-semibold">{selectedApplication.tenant.dormitory_name}</p>
+                                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b">Personal Information</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">First Name</Label>
+                                            <p className="text-base font-semibold">{selectedApplication.first_name}</p>
+                                        </div>
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Last Name</Label>
+                                            <p className="text-base font-semibold">{selectedApplication.last_name}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Student Information */}
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b">Student Information</h3>
+                                    <div className="space-y-3">
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Student ID</Label>
+                                            <p className="text-base font-mono">{selectedApplication.student_id || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Program & Year Level</Label>
+                                            <p className="text-base font-semibold">{selectedApplication.program_year || 'N/A'}</p>
+                                        </div>
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Address</Label>
+                                            <div className="mt-1 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                                <p className="text-sm">{selectedApplication.current_address || 'N/A'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Contact Information */}
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b">Contact Information</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Email</Label>
+                                            <p className="text-base break-all">{selectedApplication.email}</p>
+                                        </div>
+                                        <div>
+                                            <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone</Label>
+                                            <p className="text-base">{selectedApplication.phone}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Parent/Guardian Emergency Contact */}
+                                {(selectedApplication.parent_name || selectedApplication.parent_phone || selectedApplication.parent_relationship) && (
+                                    <div>
+                                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b">Parent/Guardian Emergency Contact</h3>
+                                        <div className="space-y-3">
+                                            {selectedApplication.parent_name && (
+                                                <div>
+                                                    <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Parent/Guardian Name</Label>
+                                                    <p className="text-base">{selectedApplication.parent_name}</p>
+                                                </div>
+                                            )}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {selectedApplication.parent_phone && (
+                                                    <div>
+                                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone Number</Label>
+                                                        <p className="text-base">{selectedApplication.parent_phone}</p>
+                                                    </div>
+                                                )}
+                                                {selectedApplication.parent_relationship && (
+                                                    <div>
+                                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Relationship</Label>
+                                                        <p className="text-base">{selectedApplication.parent_relationship}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Dormitory */}
+                                <div>
+                                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 pb-2 border-b">Dormitory Preference</h3>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Selected Dormitory</Label>
+                                        <p className="text-base font-semibold">{selectedApplication.tenant.dormitory_name}</p>
+                                    </div>
                                 </div>
 
                                 {selectedApplication.additional_info && (

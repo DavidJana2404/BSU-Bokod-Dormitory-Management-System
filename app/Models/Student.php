@@ -17,6 +17,9 @@ class Student extends Authenticatable
         'tenant_id',
         'first_name',
         'last_name',
+        'student_id_number',
+        'program_year',
+        'current_address',
         'email',
         'phone',
         'parent_name',
@@ -173,6 +176,33 @@ class Student extends Authenticatable
         }
         
         return $currentRoom->cleaningSchedules;
+    }
+    
+    /**
+     * Get the status history for this dormitorian.
+     */
+    public function statusHistory()
+    {
+        return $this->hasMany(DormitorianStatusHistory::class, 'student_id', 'student_id')
+                    ->orderBy('effective_date', 'desc');
+    }
+    
+    /**
+     * Get the current effective status based on history.
+     */
+    public function getCurrentEffectiveStatus()
+    {
+        $today = now()->toDateString();
+        
+        $currentStatus = $this->statusHistory()
+            ->where('effective_date', '<=', $today)
+            ->where(function($query) use ($today) {
+                $query->whereNull('end_date')
+                      ->orWhere('end_date', '>=', $today);
+            })
+            ->first();
+        
+        return $currentStatus ? $currentStatus->status : $this->status;
     }
     
     /**

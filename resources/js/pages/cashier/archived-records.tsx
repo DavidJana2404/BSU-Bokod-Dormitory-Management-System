@@ -1,4 +1,4 @@
-import AppLayout from '@/layouts/app-layout';
+﻿import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
 import { Head, usePage, router } from '@inertiajs/react';
 import type { PageProps } from '@/types';
@@ -114,7 +114,7 @@ export default function ArchivedPaymentRecords() {
                             <Label htmlFor="search">Search Archived Records</Label>
                             <Input
                                 id="search"
-                                placeholder="Search by student name, email, or dormitory..."
+                                placeholder="Search by Dormitorian Name, email, or dormitory..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="mt-1"
@@ -181,7 +181,7 @@ export default function ArchivedPaymentRecords() {
                                                 <div className="lg:col-span-2 text-center">
                                                     <div className="text-xs text-gray-500 dark:text-gray-400">Amount</div>
                                                     <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                                        {record.amount_paid ? `₱${record.amount_paid.toLocaleString()}` : 'N/A'}
+                                                        {record.amount_paid ? `â‚±${record.amount_paid.toLocaleString()}` : 'N/A'}
                                                     </div>
                                                 </div>
 

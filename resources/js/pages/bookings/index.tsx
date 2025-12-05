@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
-import { Calendar, Plus, Edit3, Archive, Bed, DollarSign, Clock, AlertCircle, User, Search } from 'lucide-react';
+import { Calendar, Plus, Edit3, Archive, Bed, DollarSign, Clock, AlertCircle, User, Search, CalendarCheck } from 'lucide-react';
 import { Head } from '@inertiajs/react';
 import WarningDialog from '@/components/warning-dialog';
 import { useEffect } from 'react';
+import { format } from 'date-fns';
 
 const emptyForm = { student_id: '', room_id: '', semester_count: 1 };
 
@@ -463,6 +464,21 @@ export default function Bookings() {
                                                         </div>
                                                     </div>
                                                 </div>
+                                                
+                                                {booking.booked_at && (
+                                                    <div className="flex items-center gap-3 text-gray-600 dark:text-gray-400">
+                                                        <CalendarCheck size={16} className="text-blue-500 flex-shrink-0" />
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400">Booked Date</div>
+                                                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                                                                {format(new Date(booking.booked_at), 'MMM dd, yyyy')}
+                                                            </div>
+                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                {format(new Date(booking.booked_at), 'h:mm a')}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
 
                                             {/* Actions */}
@@ -524,15 +540,30 @@ export default function Bookings() {
                                                 </div>
                                             </div>
 
-                                            {/* Duration - 2 columns */}
-                                            <div className="col-span-2">
+                                            {/* Duration - 1.5 columns */}
+                                            <div className="col-span-1">
                                                 <div className="text-xs">
                                                     <div className="text-gray-500 dark:text-gray-400">Duration</div>
                                                     <div className="font-medium text-gray-900 dark:text-gray-100">
-                                                        {semesters} semester{semesters !== 1 ? 's' : ''}
+                                                        {semesters} sem
                                                     </div>
                                                 </div>
                                             </div>
+                                            
+                                            {/* Booked Date - 2.5 columns */}
+                                            {booking.booked_at && (
+                                                <div className="col-span-2">
+                                                    <div className="flex items-center gap-2 text-xs">
+                                                        <CalendarCheck size={14} className="text-blue-500 flex-shrink-0" />
+                                                        <div>
+                                                            <div className="text-gray-500 dark:text-gray-400">Booked</div>
+                                                            <div className="font-medium text-gray-900 dark:text-gray-100">
+                                                                {format(new Date(booking.booked_at), 'MMM dd, yyyy')}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
 
                                             {/* Rate - 2 columns */}
                                             <div className="col-span-2">

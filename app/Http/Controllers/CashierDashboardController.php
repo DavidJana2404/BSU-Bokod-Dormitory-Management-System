@@ -8,6 +8,8 @@ use App\Mail\PaymentConfirmationMail;
 use App\Models\Student;
 use App\Models\Tenant;
 use App\Models\PaymentRecord;
+use App\Models\SchoolYear;
+use App\Models\CashierNotification;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -26,9 +28,9 @@ class CashierDashboardController extends Controller
             return redirect()->route('dashboard');
         }
         
-        // Get all students with their payment status, dormitory information, and semester-based booking details
+        // Get only students with active bookings (booked dormitorians)
         $students = Student::join('tenants', 'students.tenant_id', '=', 'tenants.tenant_id')
-            ->leftJoin('bookings', function($join) {
+            ->join('bookings', function($join) {
                 $join->on('students.student_id', '=', 'bookings.student_id')
                      ->whereNull('bookings.archived_at'); // Only get active bookings
             })
@@ -40,21 +42,20 @@ class CashierDashboardController extends Controller
                 'rooms.room_number',
                 'rooms.price_per_semester',
                 'bookings.semester_count',
-                'bookings.booking_id',
-                DB::raw("CONCAT(students.first_name, ' ', students.last_name) as full_name")
+                'bookings.booking_id'
             )
             ->orderBy('students.payment_status')
             ->orderBy('students.first_name')
             ->get()
             ->map(function ($student) {
-                // Only calculate fees for students who actually have bookings
-                $hasBooking = !is_null($student->booking_id);
-                $semesterCount = $hasBooking ? ($student->semester_count ?? 1) : null;
-                $totalFee = $hasBooking ? ($semesterCount * 2000) : null; // ₱2000 per semester
+                // All students in this query have bookings
+                $hasBooking = true;
+                $semesterCount = $student->semester_count ?? 1;
+                $totalFee = $semesterCount * 2000; // ₱2000 per semester
                 
                 return [
                     'student_id' => $student->student_id,
-                    'full_name' => $student->full_name,
+                    'full_name' => $student->first_name . ' ' . $student->last_name,
                     'first_name' => $student->first_name,
                     'last_name' => $student->last_name,
                     'email' => $student->email,
@@ -82,6 +83,9 @@ class CashierDashboardController extends Controller
         $totalRevenue = $students->where('payment_status', 'paid')->sum('amount_paid') + 
                        $students->where('payment_status', 'partial')->sum('amount_paid');
         
+        // Get current school year
+        $currentSchoolYear = SchoolYear::current();
+        
         return Inertia::render('cashier/dashboard', [
             'students' => $students,
             'stats' => [
@@ -91,7 +95,8 @@ class CashierDashboardController extends Controller
                 'partial_students' => $partialStudents,
                 'total_revenue' => $totalRevenue,
                 'payment_rate' => $totalStudents > 0 ? round(($paidStudents / $totalStudents) * 100, 2) : 0,
-            ]
+            ],
+            'currentSchoolYear' => $currentSchoolYear ? $currentSchoolYear->year_label : null,
         ]);
     }
     
@@ -152,9 +157,13 @@ class CashierDashboardController extends Controller
                 )
                 ->first();
             
+            // Get current school year
+            $currentSchoolYear = \App\Models\SchoolYear::where('is_current', true)->first();
+            
             PaymentRecord::create([
                 'student_id' => $student->student_id,
                 'processed_by_user_id' => $user->id,
+                'school_year_id' => $currentSchoolYear ? $currentSchoolYear->id : null,
                 'payment_status' => $request->payment_status,
                 'amount_paid' => $updateData['amount_paid'] ?? null,
                 'payment_notes' => $paymentNotes,
@@ -233,6 +242,211 @@ class CashierDashboardController extends Controller
         } catch (\Exception $e) {
             \Log::error('Error resetting payments', ['error' => $e->getMessage()]);
             return redirect()->route('cashier.dashboard')->with('error', 'Failed to reset payments. Please try again.');
+        }
+    }
+    
+    /**
+     * Get payment history for a specific student
+     */
+    public function paymentHistory(Request $request, $studentId)
+    {
+        $user = $request->user();
+        
+        // Verify user is a cashier
+        if ($user->role !== 'cashier') {
+            return response()->json(['error' => 'Unauthorized access'], 403);
+        }
+        
+        try {
+            $paymentHistory = PaymentRecord::where('student_id', $studentId)
+                ->with(['processedBy:id,name', 'schoolYear'])
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->map(function ($record) {
+                    return [
+                        'id' => $record->id,
+                        'payment_status' => $record->payment_status,
+                        'amount_paid' => $record->amount_paid,
+                        'payment_notes' => $record->payment_notes,
+                        'payment_date' => $record->payment_date,
+                        'school_year' => $record->schoolYear ? $record->schoolYear->year_label : 'N/A',
+                        'processed_by' => $record->processedBy ? $record->processedBy->name : 'Unknown',
+                        'created_at' => $record->created_at,
+                        'archived_at' => $record->archived_at,
+                    ];
+                });
+            
+            return response()->json($paymentHistory);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching payment history', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Failed to fetch payment history'], 500);
+        }
+    }
+    
+    /**
+     * Set the current school year
+     */
+    public function setSchoolYear(Request $request)
+    {
+        $user = $request->user();
+        
+        // Verify user is a cashier
+        if ($user->role !== 'cashier') {
+            return redirect()->route('dashboard')->with('error', 'Unauthorized access');
+        }
+        
+        $request->validate([
+            'start_year' => 'required|integer|min:2000|max:2100',
+            'end_year' => 'required|integer|min:2000|max:2100|gt:start_year',
+        ]);
+        
+        try {
+            $yearLabel = $request->start_year . '-' . $request->end_year;
+            
+            // Check if this school year already exists
+            $existingYear = SchoolYear::where('year_label', $yearLabel)->first();
+            
+            if ($existingYear) {
+                // If it exists, just make it current
+                $existingYear->makeCurrent();
+            } else {
+                // Create new school year
+                $schoolYear = SchoolYear::create([
+                    'year_label' => $yearLabel,
+                    'start_year' => $request->start_year,
+                    'end_year' => $request->end_year,
+                    'is_current' => false,
+                    'set_at' => now(),
+                    'set_by_user_id' => $user->id,
+                ]);
+                
+                // Set it as current
+                $schoolYear->makeCurrent();
+            }
+            
+            return redirect()->route('cashier.dashboard')->with('success', "School year {$yearLabel} has been set successfully");
+        } catch (\Exception $e) {
+            \Log::error('Error setting school year', ['error' => $e->getMessage()]);
+            return redirect()->route('cashier.dashboard')->with('error', 'Failed to set school year. Please try again.');
+        }
+    }
+    
+    /**
+     * Display notifications for the cashier
+     */
+    public function notifications(Request $request)
+    {
+        $user = $request->user();
+        
+        // Verify user is a cashier
+        if ($user->role !== 'cashier') {
+            return redirect()->route('dashboard');
+        }
+        
+        // Get user's tenant from first student they have access to
+        $firstStudent = Student::whereNull('archived_at')->first();
+        $tenantId = $firstStudent ? $firstStudent->tenant_id : null;
+        
+        if (!$tenantId) {
+            return Inertia::render('cashier/notifications', [
+                'notifications' => [],
+                'unreadCount' => 0,
+            ]);
+        }
+        
+        // Get only booking_archived notifications for this tenant
+        $notifications = CashierNotification::where('tenant_id', $tenantId)
+            ->where('type', 'booking_archived')
+            ->with('student:student_id,first_name,last_name,email,archived_at')
+            ->orderBy('is_read', 'asc')
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($notification) {
+                return [
+                    'id' => $notification->id,
+                    'type' => $notification->type,
+                    'student_id' => $notification->student_id,
+                    'student_name' => $notification->student_name,
+                    'message' => $notification->message,
+                    'is_read' => $notification->is_read,
+                    'created_at' => $notification->created_at,
+                    'booked_at' => $notification->booked_at,
+                    'archived_at' => $notification->archived_at,
+                    'days_stayed' => $notification->days_stayed,
+                    'months_stayed' => $notification->months_stayed,
+                    'calculated_cost' => $notification->calculated_cost,
+                    'total_semesters' => $notification->total_semesters,
+                    'room_number' => $notification->room_number,
+                    'student' => $notification->student ? [
+                        'student_id' => $notification->student->student_id,
+                        'first_name' => $notification->student->first_name,
+                        'last_name' => $notification->student->last_name,
+                        'email' => $notification->student->email,
+                        'is_archived' => !is_null($notification->student->archived_at),
+                    ] : null,
+                ];
+            });
+        
+        $unreadCount = $notifications->where('is_read', false)->count();
+        
+        return Inertia::render('cashier/notifications', [
+            'notifications' => $notifications,
+            'unreadCount' => $unreadCount,
+        ]);
+    }
+    
+    /**
+     * Mark a notification as read
+     */
+    public function markNotificationAsRead(Request $request, $notificationId)
+    {
+        $user = $request->user();
+        
+        if ($user->role !== 'cashier') {
+            return redirect()->route('cashier.notifications')->with('error', 'Unauthorized');
+        }
+        
+        try {
+            $notification = CashierNotification::findOrFail($notificationId);
+            $notification->update([
+                'is_read' => true,
+                'read_at' => now(),
+            ]);
+            
+            return redirect()->back();
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to mark notification as read');
+        }
+    }
+    
+    /**
+     * Mark all notifications as read
+     */
+    public function markAllNotificationsAsRead(Request $request)
+    {
+        $user = $request->user();
+        
+        if ($user->role !== 'cashier') {
+            return redirect()->route('cashier.notifications')->with('error', 'Unauthorized');
+        }
+        
+        try {
+            // Get user's tenant
+            $firstStudent = Student::whereNull('archived_at')->first();
+            $tenantId = $firstStudent ? $firstStudent->tenant_id : null;
+            
+            if ($tenantId) {
+                CashierNotification::where('tenant_id', $tenantId)
+                    ->where('is_read', false)
+                    ->update([
+                        'is_read' => true,
+                        'read_at' => now(),
+                    ]);
+            }
+            
+            return redirect()->back()->with('success', 'All notifications marked as read');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to mark notifications as read');
         }
     }
 }

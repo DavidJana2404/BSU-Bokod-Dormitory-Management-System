@@ -1,4 +1,4 @@
-import AppLayout from '@/layouts/app-layout';
+﻿import AppLayout from '@/layouts/app-layout';
 import { Head, usePage, router } from '@inertiajs/react';
 import type { PageProps } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -115,7 +115,7 @@ export default function PaymentRecords() {
                             <Label htmlFor="search">Search Records</Label>
                             <Input
                                 id="search"
-                                placeholder="Search by student name, email, or dormitory..."
+                                placeholder="Search by Dormitorian Name, email, or dormitory..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="mt-1"
@@ -182,7 +182,7 @@ export default function PaymentRecords() {
                                                 <div className="lg:col-span-2 text-center">
                                                     <div className="text-xs text-gray-500 dark:text-gray-400">Amount</div>
                                                     <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                                        {record.amount_paid ? `₱${record.amount_paid.toLocaleString()}` : 'N/A'}
+                                                        {record.amount_paid ? `â‚±${record.amount_paid.toLocaleString()}` : 'N/A'}
                                                     </div>
                                                 </div>
 
@@ -223,7 +223,7 @@ export default function PaymentRecords() {
                                 <div className="text-center py-12">
                                     <FileText className="mx-auto text-gray-400" size={48} />
                                     <h3 className="mt-4 text-lg font-semibold text-gray-600 dark:text-gray-400">No records found</h3>
-                                    <p className="text-gray-500 dark:text-gray-500">No payment records match your search criteria.</p>
+                                    <p className="text-gray-500 dark:text-gray-500">No Payment Records match your search criteria.</p>
                                 </div>
                             )}
                         </div>

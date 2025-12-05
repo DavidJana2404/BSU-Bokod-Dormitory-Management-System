@@ -15,12 +15,14 @@ class Booking extends Model
         'student_id',
         'room_id',
         'semester_count',
+        'booked_at',
         'archived_at',
     ];
 
     public $timestamps = false;
 
     protected $dates = [
+        'booked_at',
         'archived_at',
     ];
 

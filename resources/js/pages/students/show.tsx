@@ -33,8 +33,14 @@ interface Student {
     student_id: string;
     first_name: string;
     last_name: string;
+    student_id_number?: string;
+    program_year?: string;
+    current_address?: string;
     email: string;
     phone: string;
+    parent_name?: string;
+    parent_phone?: string;
+    parent_relationship?: string;
     payment_status: string;
     payment_date?: string;
     amount_paid?: number;
@@ -290,6 +296,14 @@ export default function StudentShow() {
                                         <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Dormitorian ID</label>
                                         <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{student.student_id}</p>
                                     </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Student ID</label>
+                                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{student.student_id_number || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Program & Year Level</label>
+                                        <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">{student.program_year || 'N/A'}</p>
+                                    </div>
                                 </div>
                                 <div className="space-y-4">
                                     <div>
@@ -318,6 +332,55 @@ export default function StudentShow() {
                                 </div>
                             </div>
 
+                            {/* Current Address */}
+                            {student.current_address && (
+                                <div>
+                                    <Separator />
+                                    <div>
+                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Current Address</label>
+                                        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-md">
+                                            <p className="text-sm text-gray-900 dark:text-gray-100">{student.current_address}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Parent/Guardian Emergency Contact */}
+                            {(student.parent_name || student.parent_phone || student.parent_relationship) && (
+                                <div>
+                                    <Separator />
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                                            <Users size={18} className="text-orange-600" />
+                                            Parent/Guardian Emergency Contact
+                                        </h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            {student.parent_name && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Name</label>
+                                                    <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{student.parent_name}</p>
+                                                </div>
+                                            )}
+                                            {student.parent_phone && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Phone Number</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <Phone size={16} className="text-green-500" />
+                                                        <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{student.parent_phone}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {student.parent_relationship && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Relationship</label>
+                                                    <p className="text-base font-semibold text-gray-900 dark:text-gray-100">{student.parent_relationship}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Leave Reason (if on leave) */}
                             {student.status === 'on_leave' && student.leave_reason && (
                                 <div className="bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
@@ -335,6 +398,55 @@ export default function StudentShow() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Payment Information Section */}
+                            <Separator />
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                                    <DollarSign size={18} className="text-green-600" />
+                                    Payment Information
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Status</label>
+                                            <div className="mt-1">
+                                                {getPaymentStatusBadge(student.payment_status)}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Amount Paid</label>
+                                            {student.amount_paid ? (
+                                                <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                                                    ₱{Number(student.amount_paid).toLocaleString()}
+                                                </p>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 italic">Not yet set by cashier</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        {student.payment_date && (
+                                            <div>
+                                                <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Date</label>
+                                                <p className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                                                    {formatDate(student.payment_date)}
+                                                </p>
+                                            </div>
+                                        )}
+                                        <div>
+                                            <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Notes (from Cashier)</label>
+                                            {student.payment_notes ? (
+                                                <p className="text-sm text-gray-600 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 rounded mt-1">
+                                                    {student.payment_notes}
+                                                </p>
+                                            ) : (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400 italic">No notes added</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -391,54 +503,11 @@ export default function StudentShow() {
                                             <XCircle className="text-gray-400" size={24} />
                                         </div>
                                         <p className="text-gray-500 dark:text-gray-400 font-medium">No Current Booking</p>
-                                        <p className="text-gray-400 dark:text-gray-500 text-sm">Student is not assigned to any room</p>
+                                        <p className="text-gray-400 dark:text-gray-500 text-sm">Dormitorian is not assigned to any room</p>
                                     </div>
                                 </CardContent>
                             </Card>
                         )}
-
-                        {/* Payment Information */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <DollarSign size={20} />
-                                    Payment Information
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div>
-                                    <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Status</label>
-                                    {getPaymentStatusBadge(student.payment_status)}
-                                </div>
-                                
-                                {student.amount_paid && (
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Amount Paid</label>
-                                        <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                                            ${student.amount_paid.toLocaleString()}
-                                        </p>
-                                    </div>
-                                )}
-                                
-                                {student.payment_date && (
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Date</label>
-                                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                                            {formatDate(student.payment_date)}
-                                        </p>
-                                    </div>
-                                )}
-                                
-                                {student.payment_notes && (
-                                    <div>
-                                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Payment Notes</label>
-                                        <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-2 rounded">
-                                            {student.payment_notes}
-                                        </p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
                     </div>
                 </div>
 

@@ -6,7 +6,7 @@ import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import type { SharedData } from '@/types';
 import { Link, usePage } from '@inertiajs/react';
-import { Bed, Building2, CalendarCheck, LayoutGrid, Users, FileText, Calendar } from 'lucide-react';
+import { Bed, Building2, CalendarCheck, LayoutGrid, Users, FileText, Calendar, Bell } from 'lucide-react';
 import AppLogo from './app-logo';
 
 const managerNavItems: NavItem[] = [
@@ -89,6 +89,11 @@ const cashierNavItems: NavItem[] = [
         title: 'Records',
         href: '/cashier/records',
         icon: FileText,
+    },
+    {
+        title: 'Notifications',
+        href: '/cashier/notifications',
+        icon: Bell,
     },
 ];
 

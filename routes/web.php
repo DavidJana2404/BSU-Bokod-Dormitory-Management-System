@@ -221,19 +221,27 @@ Route::post('/api/student/check', [App\Http\Controllers\Student\InitialPasswordC
 Route::middleware(['auth:student', 'ensure.student.guard'])->group(function () {
     Route::get('student/dashboard', [StudentDashboardController::class, 'index'])->name('student.dashboard');
     Route::put('student/status', [StudentStatusController::class, 'updateStatus'])->name('student.status.update')->middleware('throttle:6,1');
+    Route::post('student/cleaning-reports', [CleaningScheduleController::class, 'storeReport'])->name('student.cleaning-reports.store')->middleware('throttle:10,1');
 });
 
 // Cashier routes - require auth and cashier role
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('cashier/dashboard', [CashierDashboardController::class, 'index'])->name('cashier.dashboard')->middleware('throttle:60,1');
     Route::put('cashier/students/{student}/payment', [CashierDashboardController::class, 'updatePaymentStatus'])->name('cashier.students.payment.update')->middleware('throttle:10,1');
+    Route::get('cashier/students/{student}/payment-history', [CashierDashboardController::class, 'paymentHistory'])->name('cashier.students.payment.history')->middleware('throttle:60,1');
     Route::post('cashier/reset-payments', [CashierDashboardController::class, 'resetPayments'])->name('cashier.reset-payments')->middleware('throttle:2,1');
+    Route::post('cashier/set-school-year', [CashierDashboardController::class, 'setSchoolYear'])->name('cashier.set-school-year')->middleware('throttle:10,1');
     
     // Payment records routes
     Route::get('cashier/records', [PaymentRecordsController::class, 'index'])->name('cashier.records');
     Route::post('cashier/records/{record}/archive', [PaymentRecordsController::class, 'archive'])->name('cashier.records.archive');
     Route::get('cashier/archived-records', [PaymentRecordsController::class, 'archived'])->name('cashier.archived-records');
     Route::post('cashier/records/{record}/restore', [PaymentRecordsController::class, 'restore'])->name('cashier.records.restore');
+    
+    // Notification routes
+    Route::get('cashier/notifications', [CashierDashboardController::class, 'notifications'])->name('cashier.notifications');
+    Route::post('cashier/notifications/{notification}/read', [CashierDashboardController::class, 'markNotificationAsRead'])->name('cashier.notifications.read');
+    Route::post('cashier/notifications/read-all', [CashierDashboardController::class, 'markAllNotificationsAsRead'])->name('cashier.notifications.read-all');
 });
 
 
@@ -248,6 +256,9 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     Route::post('/users/{id}/toggle-active', [AssignManagerController::class, 'toggleActive'])->name('users.toggleActive');
     Route::resource('rooms', RoomController::class)->except(['create', 'edit']);
     Route::resource('students', StudentController::class)->except(['create', 'edit']);
+    
+    // Manager student status update with dates
+    Route::put('/students/{student}/status', [StudentStatusController::class, 'managerUpdateStatus'])->name('students.status.update');
     
     // Applications routes - for managers to view and process applications
     Route::get('/applications', [ApplicationController::class, 'index'])
@@ -344,6 +355,9 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
     
     // Cleaning schedules routes
     Route::resource('/cleaning-schedules', CleaningScheduleController::class)->except(['create', 'edit', 'show']);
+    Route::get('/cleaning-schedules/reports', [CleaningScheduleController::class, 'reports'])->name('cleaning-schedules.reports');
+    Route::put('/cleaning-schedules/reports/{id}', [CleaningScheduleController::class, 'updateReportStatus'])->name('cleaning-schedules.reports.update');
+    Route::delete('/cleaning-schedules/reports/{id}', [CleaningScheduleController::class, 'deleteReport'])->name('cleaning-schedules.reports.delete');
     
     // Admin Users Management routes
     Route::get('/admin/users', [AdminUsersController::class, 'index'])->name('admin.users.index');
