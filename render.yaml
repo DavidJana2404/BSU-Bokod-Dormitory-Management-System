@@ -50,7 +50,7 @@ services:
       - key: MAIL_MAILER
         value: log
       - key: LOG_CHANNEL
-        value: stack
+        value: stderr
       - key: LOG_LEVEL
         value: error
       - key: BCRYPT_ROUNDS

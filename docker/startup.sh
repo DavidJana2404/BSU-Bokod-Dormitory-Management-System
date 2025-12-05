@@ -8,20 +8,26 @@ echo "Current user: $(whoami)"
 echo "PHP version: $(php -v | head -n1)"
 echo "Working directory: $(pwd)"
 
-# Create necessary directories
+# Create necessary directories with proper permissions
 mkdir -p /var/log/supervisor
 mkdir -p /run/php
 mkdir -p /var/www/html/storage/logs
 mkdir -p /var/www/html/storage/framework/cache
 mkdir -p /var/www/html/storage/framework/sessions
 mkdir -p /var/www/html/storage/framework/views
+mkdir -p /var/www/html/storage/app/public
 mkdir -p /var/www/html/bootstrap/cache
 
-# Fix permissions
+# Fix permissions - CRITICAL: Must run BEFORE any Laravel commands
 chown -R www-data:www-data /var/www/html/storage
 chown -R www-data:www-data /var/www/html/bootstrap/cache
 chmod -R 775 /var/www/html/storage
 chmod -R 775 /var/www/html/bootstrap/cache
+
+# Ensure log file exists and is writable
+touch /var/www/html/storage/logs/laravel.log
+chown www-data:www-data /var/www/html/storage/logs/laravel.log
+chmod 664 /var/www/html/storage/logs/laravel.log
 
 echo "Checking Laravel configuration..."
 echo "APP_KEY set: $([ -n "$APP_KEY" ] && echo 'Yes' || echo 'No')"
