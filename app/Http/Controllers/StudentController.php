@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Http\Requests\StudentFormRequest;
+use App\Http\Traits\SafeColumnSelection;
 use App\Mail\PasswordSetupMail;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +17,7 @@ use App\Mail\StudentWelcomeMail;
 
 class StudentController extends Controller
 {
+    use SafeColumnSelection;
     public function index(Request $request)
     {
         try {
@@ -167,22 +169,11 @@ class StudentController extends Controller
                     ->with('error', 'Unauthorized access.');
             }
             
-            // Build column list dynamically
-            $baseColumns = ['student_id', 'tenant_id', 'first_name', 'last_name', 'email', 'phone',
-                'payment_status', 'payment_date', 'amount_paid', 'payment_notes',
-                'status', 'leave_reason', 'status_updated_at', 'password', 'archived_at',
-                'created_at', 'updated_at'];
-            
-            // Check for new columns
-            $optionalColumns = ['student_id_number', 'program_year', 'current_address', 'parent_name', 'parent_phone', 'parent_relationship'];
-            foreach ($optionalColumns as $column) {
-                if (\Schema::hasColumn('students', $column)) {
-                    $baseColumns[] = $column;
-                }
-            }
+            // Use safe columns to avoid selecting non-existent columns in production
+            $columns = $this->getSafeStudentColumns();
             
             // Load student with simplified query
-            $student = Student::select($baseColumns)
+            $student = Student::select($columns)
             ->where('student_id', $id)
             ->where('tenant_id', $user->tenant_id)
             ->whereNull('archived_at')
@@ -238,11 +229,31 @@ class StudentController extends Controller
         } catch (\Exception $e) {
             \Log::error('Fatal error in student show', [
                 'student_id' => $id ?? 'unknown',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
             
-            return redirect()->route('students.index')
-                ->with('error', 'Unable to load dormitorian details. Please try again later.');
+            // Render show page with minimal fallback instead of redirecting (prevents refresh loop)
+            return Inertia::render('students/show', [
+                'student' => [
+                    'student_id' => (string)$id,
+                    'first_name' => 'Unavailable',
+                    'last_name' => '',
+                    'email' => '',
+                    'phone' => '',
+                    'payment_status' => 'unpaid',
+                    'status' => 'in',
+                    'has_booking' => false,
+                    'booking_count' => 0,
+                    'tenant_id' => $request->user()->tenant_id ?? null,
+                    'all_bookings' => [],
+                    'is_currently_booked' => false,
+                    'created_at' => null,
+                    'updated_at' => null,
+                ],
+                'tenant_id' => $request->user()->tenant_id ?? null,
+                'error' => 'Unable to load full details. Please try again later.'
+            ]);
         }
     }
 
