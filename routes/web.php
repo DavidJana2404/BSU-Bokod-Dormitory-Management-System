@@ -400,3 +400,4 @@ Route::middleware(['auth', 'verified', 'ensure.user.role'])->group(function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/student-settings.php';
 require __DIR__.'/auth.php';
+require __DIR__.'/debug.php';
