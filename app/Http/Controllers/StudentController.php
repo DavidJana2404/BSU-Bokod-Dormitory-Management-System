@@ -451,8 +451,9 @@ class StudentController extends Controller
      */
     private function mapStudentDataSimple($student)
     {
-        // Basic data mapping without complex relationships
-        $hasPassword = !empty($student->password);
+        try {
+            // Basic data mapping without complex relationships
+            $hasPassword = !empty($student->password);
         
         // Simple booking check without complex queries
         $isCurrentlyBooked = false;
@@ -505,31 +506,65 @@ class StudentController extends Controller
             ]);
         }
         
-        return [
-            'student_id' => $student->student_id,
-            'first_name' => $student->first_name,
-            'last_name' => $student->last_name,
-            'student_id_number' => $student->student_id_number ?? null,
-            'program_year' => $student->program_year ?? null,
-            'current_address' => $student->current_address ?? null,
-            'email' => $student->email,
-            'phone' => $student->phone,
-            'parent_name' => $student->parent_name ?? null,
-            'parent_phone' => $student->parent_phone ?? null,
-            'parent_relationship' => $student->parent_relationship ?? null,
-            'payment_status' => $student->payment_status ?? 'unpaid',
-            'payment_date' => $student->payment_date ?? null,
-            'amount_paid' => $student->amount_paid ?? null,
-            'payment_notes' => $student->payment_notes ?? null,
-            'status' => $student->status ?? 'in',
-            'leave_reason' => $student->leave_reason ?? null,
-            'status_updated_at' => $student->status_updated_at ?? null,
-            'status_history' => $statusHistory,
-            'password' => $hasPassword,
-            'tenant_id' => $student->tenant_id,
-            'current_booking' => $currentBooking,
-            'is_currently_booked' => $isCurrentlyBooked,
-        ];
+            return [
+                'student_id' => $student->student_id,
+                'first_name' => $student->first_name,
+                'last_name' => $student->last_name,
+                'student_id_number' => $student->student_id_number ?? null,
+                'program_year' => $student->program_year ?? null,
+                'current_address' => $student->current_address ?? null,
+                'email' => $student->email,
+                'phone' => $student->phone,
+                'parent_name' => $student->parent_name ?? null,
+                'parent_phone' => $student->parent_phone ?? null,
+                'parent_relationship' => $student->parent_relationship ?? null,
+                'payment_status' => $student->payment_status ?? 'unpaid',
+                'payment_date' => $student->payment_date ?? null,
+                'amount_paid' => $student->amount_paid ?? null,
+                'payment_notes' => $student->payment_notes ?? null,
+                'status' => $student->status ?? 'in',
+                'leave_reason' => $student->leave_reason ?? null,
+                'status_updated_at' => $student->status_updated_at ?? null,
+                'status_history' => $statusHistory,
+                'password' => $hasPassword,
+                'tenant_id' => $student->tenant_id,
+                'current_booking' => $currentBooking,
+                'is_currently_booked' => $isCurrentlyBooked,
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Fatal error in mapStudentDataSimple', [
+                'student_id' => $student->student_id ?? 'unknown',
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            // Return minimal safe data
+            return [
+                'student_id' => $student->student_id,
+                'first_name' => $student->first_name,
+                'last_name' => $student->last_name,
+                'student_id_number' => $student->student_id_number ?? null,
+                'program_year' => $student->program_year ?? null,
+                'current_address' => $student->current_address ?? null,
+                'email' => $student->email,
+                'phone' => $student->phone,
+                'parent_name' => $student->parent_name ?? null,
+                'parent_phone' => $student->parent_phone ?? null,
+                'parent_relationship' => $student->parent_relationship ?? null,
+                'payment_status' => $student->payment_status ?? 'unpaid',
+                'payment_date' => null,
+                'amount_paid' => null,
+                'payment_notes' => null,
+                'status' => $student->status ?? 'in',
+                'leave_reason' => null,
+                'status_updated_at' => null,
+                'status_history' => [],
+                'password' => !empty($student->password),
+                'tenant_id' => $student->tenant_id,
+                'current_booking' => null,
+                'is_currently_booked' => false,
+            ];
+        }
     }
     
     /**
