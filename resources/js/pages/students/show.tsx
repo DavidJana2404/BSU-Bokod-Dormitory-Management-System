@@ -82,6 +82,28 @@ interface Student {
 export default function StudentShow() {
     const { student } = usePage<{ student: Student }>().props;
     
+    // Safety: if student is missing, show a friendly fallback instead of a blank page
+    if (!student) {
+        return (
+            <AppLayout breadcrumbs={[{ title: 'Dormitorians', href: '/students' }] }>
+                <Head title="Dormitorian Details" />
+                <div className="p-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Dormitorian not found</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                                The dormitorian details could not be loaded. They may have been archived or you may not have access.
+                            </p>
+                            <Button onClick={() => router.get('/students')} variant="outline">Back to Dormitorians</Button>
+                        </CardContent>
+                    </Card>
+                </div>
+            </AppLayout>
+        );
+    }
+    
     const handleEdit = () => {
         // Navigate back to students index page and trigger edit modal
         router.get('/students', {}, {
