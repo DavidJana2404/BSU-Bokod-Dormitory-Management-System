@@ -36,8 +36,14 @@ class AdminUsersController extends Controller
             });
 
         // Get all students with their related data
-        $students = Student::whereNull('archived_at')
-            ->get()
+        $studentsQuery = Student::query();
+        
+        // Only filter by archived_at if the column exists
+        if (Schema::hasColumn('students', 'archived_at')) {
+            $studentsQuery->whereNull('archived_at');
+        }
+        
+        $students = $studentsQuery->get()
             ->map(function ($student) {
                 try {
                     // Get current active booking with error handling
