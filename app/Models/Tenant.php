@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Schema;
 
 class Tenant extends Model
 {
@@ -77,7 +78,10 @@ class Tenant extends Model
      */
     public function archive()
     {
-        $this->update(['archived_at' => now()]);
+        // Only update archived_at if the column exists
+        if (Schema::hasColumn('tenants', 'archived_at')) {
+            $this->update(['archived_at' => now()]);
+        }
     }
     
     /**
@@ -85,7 +89,10 @@ class Tenant extends Model
      */
     public function restore()
     {
-        $this->update(['archived_at' => null]);
+        // Only update archived_at if the column exists
+        if (Schema::hasColumn('tenants', 'archived_at')) {
+            $this->update(['archived_at' => null]);
+        }
     }
     
     /**
