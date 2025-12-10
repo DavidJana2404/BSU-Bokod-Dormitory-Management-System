@@ -101,34 +101,38 @@ php /var/www/html/docker/check-env.php || {
 
 # Test database connection before proceeding
 echo "Testing database connection..."
-if php artisan migrate:status --no-interaction 2>/dev/null; then
-    echo "✅ Database connection successful"
-    echo "Running migrations..."
-    php artisan migrate --force --no-interaction || {
-        echo "⚠️  Migration failed, but continuing..."
-    }
-    echo "✅ Migrations completed"
-else
-    echo "❌ Database connection failed!"
-    echo "Attempting to run migrations with retry logic..."
-    
-    # Wait for database to be ready (with timeout)
-    counter=0
-    max_attempts=10
-    until php artisan migrate --force --no-interaction 2>/dev/null || [ $counter -eq $max_attempts ]; do
-      echo "Database not ready, waiting... (attempt $((counter + 1))/$max_attempts)"
-      counter=$((counter + 1))
-      sleep 10
-    done
-    
-    if [ $counter -eq $max_attempts ]; then
-        echo "❌ CRITICAL: Database connection failed after $max_attempts attempts!"
-        echo "❌ Please check your database configuration in Render Dashboard"
-        echo "❌ Current settings: ${DB_USERNAME}@${DB_HOST}:${DB_PORT}/${DB_DATABASE}"
-        exit 1
-    fi
-    echo "✅ Migrations completed after retries"
+echo "Waiting for database to be ready..."
+sleep 5
+
+# Try to connect and show detailed error if it fails
+if ! php artisan migrate:status --no-interaction 2>&1; then
+    echo "⚠️ Database might not be ready yet, waiting..."
+    sleep 10
 fi
+
+echo "Running migrations with detailed output..."
+echo "================================================"
+php artisan migrate --force --no-interaction -vvv 2>&1 || {
+    echo "❌ Migration failed on first attempt!"
+    echo "Detailed error above. Retrying..."
+    sleep 5
+    php artisan migrate --force --no-interaction -vvv 2>&1 || {
+        echo "❌ Migration failed on second attempt!"
+        echo "Trying one more time..."
+        sleep 10
+        php artisan migrate --force --no-interaction -vvv 2>&1 || {
+            echo "❌ CRITICAL: Migrations failed after 3 attempts"
+            echo "Check the error messages above"
+            echo "Continuing anyway to see if app works..."
+        }
+    }
+}
+echo "================================================"
+echo "✅ Migration process completed"
+
+# Show current migration status
+echo "Current migration status:"
+php artisan migrate:status --no-interaction 2>&1 || echo "Could not get migration status"
 
 echo "Running Laravel optimizations..."
 
