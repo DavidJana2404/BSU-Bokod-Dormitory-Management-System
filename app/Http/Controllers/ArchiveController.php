@@ -25,11 +25,9 @@ class ArchiveController extends Controller
         
         if ($user->role === 'admin') {
             // Admin can see archived dormitories (system-wide)
-            $archivedDormitoriesQuery = Tenant::query();
             if (Schema::hasColumn('tenants', 'archived_at')) {
-                $archivedDormitoriesQuery->whereNotNull('archived_at');
-            }
-            $archivedDormitories = $archivedDormitoriesQuery->get()
+                $archivedDormitoriesQuery = Tenant::whereNotNull('archived_at');
+                $archivedDormitories = $archivedDormitoriesQuery->get()
                 ->map(function ($dormitory) {
                     return [
                         'id' => $dormitory->tenant_id,
@@ -40,6 +38,10 @@ class ArchiveController extends Controller
                         'data' => $dormitory,
                     ];
                 });
+            } else {
+                // If column doesn't exist, show no dormitories
+                $archivedDormitories = collect();
+            }
             
             // Admin can see archived staff users (managers and cashiers)
             $archivedUsersQuery = User::whereIn('role', ['manager', 'cashier']);
@@ -71,11 +73,9 @@ class ArchiveController extends Controller
             $archivedUsers = collect();
             
             // Manager can only see rooms from their own tenant
-            $archivedRoomsQuery = Room::where('tenant_id', $user->tenant_id);
             if (Schema::hasColumn('rooms', 'archived_at')) {
-                $archivedRoomsQuery->whereNotNull('archived_at');
-            }
-            $archivedRooms = $archivedRoomsQuery->get()
+                $archivedRoomsQuery = Room::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at');
+                $archivedRooms = $archivedRoomsQuery->get()
                 ->map(function ($room) {
                     return [
                         'id' => $room->room_id,
@@ -86,17 +86,19 @@ class ArchiveController extends Controller
                         'data' => $room,
                     ];
                 });
+            } else {
+                // If column doesn't exist, show no rooms
+                $archivedRooms = collect();
+            }
         }
         
         // Handle students and bookings based on user role
         if ($user->role === 'admin') {
             // Admin can see all archived students (system-wide)
-            $archivedStudentsQuery = Student::query();
             if (Schema::hasColumn('students', 'archived_at')) {
-                $archivedStudentsQuery->whereNotNull('archived_at');
-            }
-            $archivedStudents = $archivedStudentsQuery->with(['tenant'])
-                ->get()
+                $archivedStudentsQuery = Student::whereNotNull('archived_at');
+                $archivedStudents = $archivedStudentsQuery->with(['tenant'])
+                    ->get()
                 ->map(function ($student) {
                     return [
                         'id' => $student->student_id,
@@ -107,16 +109,18 @@ class ArchiveController extends Controller
                         'data' => $student,
                     ];
                 });
+            } else {
+                // If column doesn't exist, show no students
+                $archivedStudents = collect();
+            }
             
             // Admin does NOT see bookings - those are managed by individual managers
             $archivedBookings = collect();
         } else {
             // Manager can only see students and bookings from their own tenant
-            $archivedStudentsQuery = Student::where('tenant_id', $user->tenant_id);
             if (Schema::hasColumn('students', 'archived_at')) {
-                $archivedStudentsQuery->whereNotNull('archived_at');
-            }
-            $archivedStudents = $archivedStudentsQuery->get()
+                $archivedStudentsQuery = Student::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at');
+                $archivedStudents = $archivedStudentsQuery->get()
                 ->map(function ($student) {
                     return [
                         'id' => $student->student_id,
@@ -127,13 +131,15 @@ class ArchiveController extends Controller
                         'data' => $student,
                     ];
                 });
-                
-            $archivedBookingsQuery = Booking::where('tenant_id', $user->tenant_id);
-            if (Schema::hasColumn('bookings', 'archived_at')) {
-                $archivedBookingsQuery->whereNotNull('archived_at');
+            } else {
+                // If column doesn't exist, show no students
+                $archivedStudents = collect();
             }
-            $archivedBookings = $archivedBookingsQuery->with(['student', 'room'])
-                ->get()
+                
+            if (Schema::hasColumn('bookings', 'archived_at')) {
+                $archivedBookingsQuery = Booking::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at');
+                $archivedBookings = $archivedBookingsQuery->with(['student', 'room'])
+                    ->get()
                 ->map(function ($booking) {
                     return [
                         'id' => $booking->booking_id,
@@ -145,6 +151,10 @@ class ArchiveController extends Controller
                         'data' => $booking,
                     ];
                 });
+            } else {
+                // If column doesn't exist, show no bookings
+                $archivedBookings = collect();
+            }
         }
         
         // Handle archived applications based on user role
