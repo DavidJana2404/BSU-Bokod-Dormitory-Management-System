@@ -42,9 +42,14 @@ class ArchiveController extends Controller
                 });
             
             // Admin can see archived staff users (managers and cashiers)
-            $archivedUsers = User::onlyTrashed()
-                ->whereIn('role', ['manager', 'cashier'])
-                ->with('tenant')
+            $archivedUsersQuery = User::whereIn('role', ['manager', 'cashier']);
+            if (Schema::hasColumn('users', 'archived_at')) {
+                $archivedUsersQuery->whereNotNull('archived_at');
+            } else {
+                // If archived_at column doesn't exist, return empty collection
+                $archivedUsersQuery->whereRaw('1 = 0');
+            }
+            $archivedUsers = $archivedUsersQuery->with('tenant')
                 ->get()
                 ->map(function ($staffUser) {
                     return [
@@ -52,7 +57,7 @@ class ArchiveController extends Controller
                         'type' => 'user',
                         'title' => $staffUser->name,
                         'subtitle' => $staffUser->email . ' - ' . ucfirst($staffUser->role) . ($staffUser->tenant ? ' (' . $staffUser->tenant->dormitory_name . ')' : ''),
-                        'archived_at' => $staffUser->archived_at,
+                        'archived_at' => $staffUser->archived_at ?? null,
                         'data' => $staffUser,
                     ];
                 });
@@ -225,7 +230,7 @@ class ArchiveController extends Controller
                 if ($user->role !== 'admin') {
                     return redirect()->back()->with('error', 'Unauthorized action.');
                 }
-                $item = User::withTrashed()->findOrFail($id);
+                $item = User::findOrFail($id);
                 break;
             case 'room':
                 $item = Room::findOrFail($id);
@@ -284,7 +289,7 @@ class ArchiveController extends Controller
                 if ($user->role !== 'admin') {
                     return redirect()->back()->with('error', 'Unauthorized action.');
                 }
-                $item = User::withTrashed()->findOrFail($id);
+                $item = User::findOrFail($id);
                 break;
             case 'room':
                 $item = Room::findOrFail($id);
@@ -342,7 +347,13 @@ class ArchiveController extends Controller
             }
             $dormitoriesCount = $dormitoriesQuery->count();
             
-            $usersCount = User::onlyTrashed()->whereIn('role', ['manager', 'cashier'])->count();
+            $usersQuery = User::whereIn('role', ['manager', 'cashier']);
+            if (Schema::hasColumn('users', 'archived_at')) {
+                $usersQuery->whereNotNull('archived_at');
+            } else {
+                $usersQuery->whereRaw('1 = 0');
+            }
+            $usersCount = $usersQuery->count();
             
             $studentsQuery = Student::query();
             if (Schema::hasColumn('students', 'archived_at')) {
@@ -362,7 +373,9 @@ class ArchiveController extends Controller
             if (Schema::hasColumn('tenants', 'archived_at')) {
                 Tenant::whereNotNull('archived_at')->delete();
             }
-            User::onlyTrashed()->whereIn('role', ['manager', 'cashier'])->forceDelete();
+            if (Schema::hasColumn('users', 'archived_at')) {
+                User::whereIn('role', ['manager', 'cashier'])->whereNotNull('archived_at')->delete();
+            }
             if (Schema::hasColumn('students', 'archived_at')) {
                 Student::whereNotNull('archived_at')->delete();
             }

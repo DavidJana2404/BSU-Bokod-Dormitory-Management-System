@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 // use Illuminate\Database\Eloquent\SoftDeletes;
 
 class User extends Authenticatable
@@ -69,4 +70,34 @@ class User extends Authenticatable
     // {
     //     return $query->whereNotNull('archived_at');
     // }
+    
+    /**
+     * Archive this user
+     */
+    public function archive()
+    {
+        // Only update archived_at if the column exists
+        if (Schema::hasColumn('users', 'archived_at')) {
+            $this->update(['archived_at' => now()]);
+        }
+    }
+    
+    /**
+     * Restore this user from archive
+     */
+    public function restore()
+    {
+        // Only update archived_at if the column exists
+        if (Schema::hasColumn('users', 'archived_at')) {
+            $this->update(['archived_at' => null]);
+        }
+    }
+    
+    /**
+     * Force delete is just a regular delete for now
+     */
+    public function forceDelete()
+    {
+        return $this->delete();
+    }
 }
