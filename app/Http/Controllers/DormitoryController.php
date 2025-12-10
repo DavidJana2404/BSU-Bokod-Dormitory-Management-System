@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Tenant;
 use App\Models\Room;
 use App\Models\Booking;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class DormitoryController extends Controller
@@ -16,9 +17,14 @@ class DormitoryController extends Controller
             $dormitories = collect([]);
             
             try {
-                $dormitoriesData = Tenant::select('tenant_id', 'dormitory_name', 'address', 'contact_number', 'created_at')
-                    ->whereNull('archived_at')
-                    ->orderBy('created_at', 'desc')
+                $query = Tenant::select('tenant_id', 'dormitory_name', 'address', 'contact_number', 'created_at');
+                
+                // Only filter by archived_at if the column exists
+                if (Schema::hasColumn('tenants', 'archived_at')) {
+                    $query->whereNull('archived_at');
+                }
+                
+                $dormitoriesData = $query->orderBy('created_at', 'desc')
                     ->limit(50)
                     ->get();
                 
@@ -31,19 +37,31 @@ class DormitoryController extends Controller
                         $manager = null;
                         
                         try {
-                            $totalRooms = Room::where('tenant_id', $dormitory->tenant_id)->whereNull('archived_at')->count();
+                            $roomsQuery = Room::where('tenant_id', $dormitory->tenant_id);
+                            if (Schema::hasColumn('rooms', 'archived_at')) {
+                                $roomsQuery->whereNull('archived_at');
+                            }
+                            $totalRooms = $roomsQuery->count();
                         } catch (\Exception $e) {
                             \Log::warning('Error counting rooms for dormitory', ['tenant_id' => $dormitory->tenant_id, 'error' => $e->getMessage()]);
                         }
                         
                         try {
-                            $totalStudents = \App\Models\Student::where('tenant_id', $dormitory->tenant_id)->whereNull('archived_at')->count();
+                            $studentsQuery = \App\Models\Student::where('tenant_id', $dormitory->tenant_id);
+                            if (Schema::hasColumn('students', 'archived_at')) {
+                                $studentsQuery->whereNull('archived_at');
+                            }
+                            $totalStudents = $studentsQuery->count();
                         } catch (\Exception $e) {
                             \Log::warning('Error counting students for dormitory', ['tenant_id' => $dormitory->tenant_id, 'error' => $e->getMessage()]);
                         }
                         
                         try {
-                            $totalBookings = Booking::where('tenant_id', $dormitory->tenant_id)->whereNull('archived_at')->count();
+                            $bookingsQuery = Booking::where('tenant_id', $dormitory->tenant_id);
+                            if (Schema::hasColumn('bookings', 'archived_at')) {
+                                $bookingsQuery->whereNull('archived_at');
+                            }
+                            $totalBookings = $bookingsQuery->count();
                         } catch (\Exception $e) {
                             \Log::warning('Error counting bookings for dormitory', ['tenant_id' => $dormitory->tenant_id, 'error' => $e->getMessage()]);
                         }
