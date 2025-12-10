@@ -150,12 +150,14 @@ class ArchiveController extends Controller
         // Handle archived applications based on user role
         if ($user->role === 'admin') {
             // Admin can see all archived applications (system-wide)
-            $archivedApplicationsQuery = Application::query();
-            if (Schema::hasColumn('applications', 'archived_at')) {
-                $archivedApplicationsQuery->whereNotNull('archived_at');
-            }
-            $archivedApplications = $archivedApplicationsQuery->with(['tenant'])
-                ->get()
+            // Check if applications table exists first
+            if (Schema::hasTable('applications')) {
+                $archivedApplicationsQuery = Application::query();
+                if (Schema::hasColumn('applications', 'archived_at')) {
+                    $archivedApplicationsQuery->whereNotNull('archived_at');
+                }
+                $archivedApplications = $archivedApplicationsQuery->with(['tenant'])
+                    ->get()
                 ->map(function ($application) {
                     return [
                         'id' => $application->id,
@@ -166,13 +168,18 @@ class ArchiveController extends Controller
                         'data' => $application,
                     ];
                 });
+            } else {
+                $archivedApplications = collect();
+            }
         } else {
             // Manager can only see applications from their own tenant
-            $archivedApplicationsQuery = Application::where('tenant_id', $user->tenant_id);
-            if (Schema::hasColumn('applications', 'archived_at')) {
-                $archivedApplicationsQuery->whereNotNull('archived_at');
-            }
-            $archivedApplications = $archivedApplicationsQuery->get()
+            // Check if applications table exists first
+            if (Schema::hasTable('applications')) {
+                $archivedApplicationsQuery = Application::where('tenant_id', $user->tenant_id);
+                if (Schema::hasColumn('applications', 'archived_at')) {
+                    $archivedApplicationsQuery->whereNotNull('archived_at');
+                }
+                $archivedApplications = $archivedApplicationsQuery->get()
                 ->map(function ($application) {
                     return [
                         'id' => $application->id,
@@ -183,6 +190,9 @@ class ArchiveController extends Controller
                         'data' => $application,
                     ];
                 });
+            } else {
+                $archivedApplications = collect();
+            }
         }
             
         // Combine all archived items and sort by archived date
@@ -361,11 +371,14 @@ class ArchiveController extends Controller
             }
             $studentsCount = $studentsQuery->count();
             
-            $applicationsQuery = Application::query();
-            if (Schema::hasColumn('applications', 'archived_at')) {
-                $applicationsQuery->whereNotNull('archived_at');
+            $applicationsCount = 0;
+            if (Schema::hasTable('applications')) {
+                $applicationsQuery = Application::query();
+                if (Schema::hasColumn('applications', 'archived_at')) {
+                    $applicationsQuery->whereNotNull('archived_at');
+                }
+                $applicationsCount = $applicationsQuery->count();
             }
-            $applicationsCount = $applicationsQuery->count();
             
             $deletedCount = $dormitoriesCount + $usersCount + $studentsCount + $applicationsCount;
             
@@ -379,7 +392,7 @@ class ArchiveController extends Controller
             if (Schema::hasColumn('students', 'archived_at')) {
                 Student::whereNotNull('archived_at')->delete();
             }
-            if (Schema::hasColumn('applications', 'archived_at')) {
+            if (Schema::hasTable('applications') && Schema::hasColumn('applications', 'archived_at')) {
                 Application::whereNotNull('archived_at')->delete();
             }
         } else {
@@ -402,11 +415,14 @@ class ArchiveController extends Controller
             }
             $bookingsCount = $bookingsQuery->count();
             
-            $applicationsQuery = Application::where('tenant_id', $user->tenant_id);
-            if (Schema::hasColumn('applications', 'archived_at')) {
-                $applicationsQuery->whereNotNull('archived_at');
+            $applicationsCount = 0;
+            if (Schema::hasTable('applications')) {
+                $applicationsQuery = Application::where('tenant_id', $user->tenant_id);
+                if (Schema::hasColumn('applications', 'archived_at')) {
+                    $applicationsQuery->whereNotNull('archived_at');
+                }
+                $applicationsCount = $applicationsQuery->count();
             }
-            $applicationsCount = $applicationsQuery->count();
             
             $deletedCount = $roomsCount + $studentsCount + $bookingsCount + $applicationsCount;
             
@@ -420,7 +436,7 @@ class ArchiveController extends Controller
             if (Schema::hasColumn('bookings', 'archived_at')) {
                 Booking::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at')->delete();
             }
-            if (Schema::hasColumn('applications', 'archived_at')) {
+            if (Schema::hasTable('applications') && Schema::hasColumn('applications', 'archived_at')) {
                 Application::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at')->delete();
             }
         }
