@@ -9,6 +9,7 @@ use App\Models\Booking;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Application;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class ArchiveController extends Controller
@@ -24,8 +25,11 @@ class ArchiveController extends Controller
         
         if ($user->role === 'admin') {
             // Admin can see archived dormitories (system-wide)
-            $archivedDormitories = Tenant::archived()
-                ->get()
+            $archivedDormitoriesQuery = Tenant::query();
+            if (Schema::hasColumn('tenants', 'archived_at')) {
+                $archivedDormitoriesQuery->whereNotNull('archived_at');
+            }
+            $archivedDormitories = $archivedDormitoriesQuery->get()
                 ->map(function ($dormitory) {
                     return [
                         'id' => $dormitory->tenant_id,
@@ -62,9 +66,11 @@ class ArchiveController extends Controller
             $archivedUsers = collect();
             
             // Manager can only see rooms from their own tenant
-            $archivedRooms = Room::where('tenant_id', $user->tenant_id)
-                ->archived()
-                ->get()
+            $archivedRoomsQuery = Room::where('tenant_id', $user->tenant_id);
+            if (Schema::hasColumn('rooms', 'archived_at')) {
+                $archivedRoomsQuery->whereNotNull('archived_at');
+            }
+            $archivedRooms = $archivedRoomsQuery->get()
                 ->map(function ($room) {
                     return [
                         'id' => $room->room_id,
@@ -80,8 +86,11 @@ class ArchiveController extends Controller
         // Handle students and bookings based on user role
         if ($user->role === 'admin') {
             // Admin can see all archived students (system-wide)
-            $archivedStudents = Student::archived()
-                ->with(['tenant'])
+            $archivedStudentsQuery = Student::query();
+            if (Schema::hasColumn('students', 'archived_at')) {
+                $archivedStudentsQuery->whereNotNull('archived_at');
+            }
+            $archivedStudents = $archivedStudentsQuery->with(['tenant'])
                 ->get()
                 ->map(function ($student) {
                     return [
@@ -98,9 +107,11 @@ class ArchiveController extends Controller
             $archivedBookings = collect();
         } else {
             // Manager can only see students and bookings from their own tenant
-            $archivedStudents = Student::where('tenant_id', $user->tenant_id)
-                ->archived()
-                ->get()
+            $archivedStudentsQuery = Student::where('tenant_id', $user->tenant_id);
+            if (Schema::hasColumn('students', 'archived_at')) {
+                $archivedStudentsQuery->whereNotNull('archived_at');
+            }
+            $archivedStudents = $archivedStudentsQuery->get()
                 ->map(function ($student) {
                     return [
                         'id' => $student->student_id,
@@ -112,9 +123,11 @@ class ArchiveController extends Controller
                     ];
                 });
                 
-            $archivedBookings = Booking::where('tenant_id', $user->tenant_id)
-                ->archived()
-                ->with(['student', 'room'])
+            $archivedBookingsQuery = Booking::where('tenant_id', $user->tenant_id);
+            if (Schema::hasColumn('bookings', 'archived_at')) {
+                $archivedBookingsQuery->whereNotNull('archived_at');
+            }
+            $archivedBookings = $archivedBookingsQuery->with(['student', 'room'])
                 ->get()
                 ->map(function ($booking) {
                     return [
@@ -132,8 +145,11 @@ class ArchiveController extends Controller
         // Handle archived applications based on user role
         if ($user->role === 'admin') {
             // Admin can see all archived applications (system-wide)
-            $archivedApplications = Application::archived()
-                ->with(['tenant'])
+            $archivedApplicationsQuery = Application::query();
+            if (Schema::hasColumn('applications', 'archived_at')) {
+                $archivedApplicationsQuery->whereNotNull('archived_at');
+            }
+            $archivedApplications = $archivedApplicationsQuery->with(['tenant'])
                 ->get()
                 ->map(function ($application) {
                     return [
@@ -147,9 +163,11 @@ class ArchiveController extends Controller
                 });
         } else {
             // Manager can only see applications from their own tenant
-            $archivedApplications = Application::where('tenant_id', $user->tenant_id)
-                ->archived()
-                ->get()
+            $archivedApplicationsQuery = Application::where('tenant_id', $user->tenant_id);
+            if (Schema::hasColumn('applications', 'archived_at')) {
+                $archivedApplicationsQuery->whereNotNull('archived_at');
+            }
+            $archivedApplications = $archivedApplicationsQuery->get()
                 ->map(function ($application) {
                     return [
                         'id' => $application->id,
@@ -318,32 +336,80 @@ class ArchiveController extends Controller
         
         if ($user->role === 'admin') {
             // Admin can clear dormitories, users, students, and applications (system-wide, but not bookings)
-            $dormitoriesCount = Tenant::archived()->count();
+            $dormitoriesQuery = Tenant::query();
+            if (Schema::hasColumn('tenants', 'archived_at')) {
+                $dormitoriesQuery->whereNotNull('archived_at');
+            }
+            $dormitoriesCount = $dormitoriesQuery->count();
+            
             $usersCount = User::onlyTrashed()->whereIn('role', ['manager', 'cashier'])->count();
-            $studentsCount = Student::archived()->count();
-            $applicationsCount = Application::archived()->count();
+            
+            $studentsQuery = Student::query();
+            if (Schema::hasColumn('students', 'archived_at')) {
+                $studentsQuery->whereNotNull('archived_at');
+            }
+            $studentsCount = $studentsQuery->count();
+            
+            $applicationsQuery = Application::query();
+            if (Schema::hasColumn('applications', 'archived_at')) {
+                $applicationsQuery->whereNotNull('archived_at');
+            }
+            $applicationsCount = $applicationsQuery->count();
             
             $deletedCount = $dormitoriesCount + $usersCount + $studentsCount + $applicationsCount;
             
             // Force delete all archived items system-wide
-            Tenant::archived()->forceDelete();
+            if (Schema::hasColumn('tenants', 'archived_at')) {
+                Tenant::whereNotNull('archived_at')->delete();
+            }
             User::onlyTrashed()->whereIn('role', ['manager', 'cashier'])->forceDelete();
-            Student::archived()->forceDelete();
-            Application::archived()->forceDelete();
+            if (Schema::hasColumn('students', 'archived_at')) {
+                Student::whereNotNull('archived_at')->delete();
+            }
+            if (Schema::hasColumn('applications', 'archived_at')) {
+                Application::whereNotNull('archived_at')->delete();
+            }
         } else {
             // Manager can clear rooms, students, bookings, applications from their tenant
-            $roomsCount = Room::where('tenant_id', $user->tenant_id)->archived()->count();
-            $studentsCount = Student::where('tenant_id', $user->tenant_id)->archived()->count();
-            $bookingsCount = Booking::where('tenant_id', $user->tenant_id)->archived()->count();
-            $applicationsCount = Application::where('tenant_id', $user->tenant_id)->archived()->count();
+            $roomsQuery = Room::where('tenant_id', $user->tenant_id);
+            if (Schema::hasColumn('rooms', 'archived_at')) {
+                $roomsQuery->whereNotNull('archived_at');
+            }
+            $roomsCount = $roomsQuery->count();
+            
+            $studentsQuery = Student::where('tenant_id', $user->tenant_id);
+            if (Schema::hasColumn('students', 'archived_at')) {
+                $studentsQuery->whereNotNull('archived_at');
+            }
+            $studentsCount = $studentsQuery->count();
+            
+            $bookingsQuery = Booking::where('tenant_id', $user->tenant_id);
+            if (Schema::hasColumn('bookings', 'archived_at')) {
+                $bookingsQuery->whereNotNull('archived_at');
+            }
+            $bookingsCount = $bookingsQuery->count();
+            
+            $applicationsQuery = Application::where('tenant_id', $user->tenant_id);
+            if (Schema::hasColumn('applications', 'archived_at')) {
+                $applicationsQuery->whereNotNull('archived_at');
+            }
+            $applicationsCount = $applicationsQuery->count();
             
             $deletedCount = $roomsCount + $studentsCount + $bookingsCount + $applicationsCount;
             
             // Force delete all archived items for this tenant
-            Room::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
-            Student::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
-            Booking::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
-            Application::where('tenant_id', $user->tenant_id)->archived()->forceDelete();
+            if (Schema::hasColumn('rooms', 'archived_at')) {
+                Room::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at')->delete();
+            }
+            if (Schema::hasColumn('students', 'archived_at')) {
+                Student::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at')->delete();
+            }
+            if (Schema::hasColumn('bookings', 'archived_at')) {
+                Booking::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at')->delete();
+            }
+            if (Schema::hasColumn('applications', 'archived_at')) {
+                Application::where('tenant_id', $user->tenant_id)->whereNotNull('archived_at')->delete();
+            }
         }
         
         $message = $deletedCount > 0 
