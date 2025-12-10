@@ -170,8 +170,14 @@ class DormitoryController extends Controller
     public function archive($id)
     {
         $dormitory = Tenant::findOrFail($id);
-        $dormitory->archive();
         
-        return redirect()->route('dormitories.index')->with('success', 'Dormitory archived successfully.');
+        // Check if archived_at column exists
+        if (Schema::hasColumn('tenants', 'archived_at')) {
+            $dormitory->archive();
+            return redirect()->route('dormitories.index')->with('success', 'Dormitory archived successfully.');
+        } else {
+            // If column doesn't exist, prevent archiving
+            return redirect()->route('dormitories.index')->with('error', 'Archive functionality is not available yet. Database migration pending.');
+        }
     }
 }
