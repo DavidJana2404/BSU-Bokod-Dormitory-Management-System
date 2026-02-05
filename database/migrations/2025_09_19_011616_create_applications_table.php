@@ -25,8 +25,13 @@ return new class extends Migration
             $table->timestamp('processed_at')->nullable();
             $table->timestamps();
             
-            $table->foreign('tenant_id')->references('tenant_id')->on('tenants')->onDelete('set null');
-            $table->foreign('processed_by')->references('id')->on('users')->onDelete('set null');
+            // Add foreign key constraints with proper names for PostgreSQL
+            $table->foreign('tenant_id', 'fk_applications_tenant_id')
+                  ->references('tenant_id')->on('tenants')
+                  ->onDelete('set null');
+            $table->foreign('processed_by', 'fk_applications_processed_by')
+                  ->references('id')->on('users')
+                  ->onDelete('set null');
         });
     }
 

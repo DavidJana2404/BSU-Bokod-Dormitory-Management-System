@@ -100,33 +100,64 @@ php /var/www/html/docker/check-env.php || {
 }
 
 # Test database connection before proceeding
-echo "Testing database connection..."
+echo "Testing database connection before proceeding..."
 echo "Waiting for database to be ready..."
 sleep 5
 
-# Try to connect and show detailed error if it fails
-if ! php artisan migrate:status --no-interaction 2>&1; then
-    echo "⚠️ Database might not be ready yet, waiting..."
-    sleep 10
+# Test basic database connection first
+echo "Testing basic database connectivity..."
+if ! php artisan tinker --execute="try { DB::connection()->getPdo(); echo '✅ Database connection successful'; } catch(Exception \$e) { echo '❌ Database connection failed: ' . \$e->getMessage(); exit(1); }" --no-interaction; then
+    echo "❌ Basic database connection failed!"
+    echo "Checking database configuration..."
+    echo "DB_HOST: $DB_HOST"
+    echo "DB_PORT: $DB_PORT" 
+    echo "DB_DATABASE: $DB_DATABASE"
+    echo "DB_USERNAME: $DB_USERNAME"
+    exit 1
 fi
+
+# Check if migrations table exists and get status
+echo "Checking migration status..."
+php artisan migrate:status --no-interaction 2>/dev/null || echo "Migrations table doesn't exist yet, will run fresh migrations"
 
 echo "Running migrations with detailed output..."
 echo "================================================"
-php artisan migrate --force --no-interaction -vvv 2>&1 || {
+
+# Run migrations with better error handling
+php artisan migrate --force --no-interaction --step 2>&1 | {
+    while IFS= read -r line; do
+        echo "$line"
+        # Check for specific PostgreSQL errors
+        if [[ "$line" == *"SQLSTATE"* ]] || [[ "$line" == *"constraint"* ]] || [[ "$line" == *"foreign key"* ]]; then
+            echo "❌ PostgreSQL constraint error detected!"
+            echo "This might be due to foreign key dependency issues"
+        fi
+    done
+}
+
+MIGRATION_EXIT_CODE=${PIPESTATUS[0]}
+
+if [ $MIGRATION_EXIT_CODE -ne 0 ]; then
     echo "❌ Migration failed on first attempt!"
-    echo "Detailed error above. Retrying..."
-    sleep 5
-    php artisan migrate --force --no-interaction -vvv 2>&1 || {
+    echo "Waiting 10 seconds before retry..."
+    sleep 10
+    
+    echo "Retrying migration..."
+    php artisan migrate --force --no-interaction --step 2>&1 || {
         echo "❌ Migration failed on second attempt!"
-        echo "Trying one more time..."
-        sleep 10
-        php artisan migrate --force --no-interaction -vvv 2>&1 || {
+        echo "Trying with --force flag one more time..."
+        sleep 15
+        php artisan migrate --force --no-interaction 2>&1 || {
             echo "❌ CRITICAL: Migrations failed after 3 attempts"
-            echo "Check the error messages above"
-            echo "Continuing anyway to see if app works..."
+            echo "Last error details above"
+            echo "Attempting to continue anyway - app might not work properly"
+            
+            # Show what migrations are pending
+            echo "Pending migrations:"
+            php artisan migrate:status --no-interaction 2>/dev/null || echo "Could not get migration status"
         }
     }
-}
+fi
 echo "================================================"
 echo "✅ Migration process completed"
 
